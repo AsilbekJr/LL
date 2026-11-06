@@ -144,10 +144,60 @@ export function usesTerm(text: string, target: string): boolean {
   return false;
 }
 
+const CONTRACTIONS: Record<string, string> = {
+  "can't": "can not",
+  cannot: "can not",
+  "won't": "will not",
+  "shan't": "shall not",
+  "let's": "let us",
+  "ain't": "is not",
+};
+const SUFFIX_EXPANSIONS: [string, string][] = [
+  ["n't", " not"],
+  ["'m", " am"],
+  ["'re", " are"],
+  ["'ve", " have"],
+  ["'ll", " will"],
+  ["'d", " would"],
+];
+/** "it's" / "what's" / "there's" … ("Tom's car" stays possessive). */
+const IS_CONTRACTIONS = new Set([
+  "it's",
+  "that's",
+  "what's",
+  "there's",
+  "here's",
+  "he's",
+  "she's",
+  "who's",
+  "where's",
+  "how's",
+]);
+
+/**
+ * Word tokens with contractions spelled out ("I'm" → "i am", "can't" → "can not"),
+ * so "I am not" and "I'm not" compare as equal. Speech recognisers pick
+ * either form at random.
+ */
+export function expandedTokens(text: string): string[] {
+  const out: string[] = [];
+  for (const t of wordTokens(text)) {
+    const whole = CONTRACTIONS[t] ?? (IS_CONTRACTIONS.has(t) ? `${t.slice(0, -2)} is` : null);
+    if (whole) {
+      out.push(...whole.split(" "));
+      continue;
+    }
+    const suf = SUFFIX_EXPANSIONS.find(([s]) => t.endsWith(s) && t.length > s.length);
+    if (suf) out.push(...(t.slice(0, -suf[0].length) + suf[1]).split(" "));
+    else out.push(t);
+  }
+  return out;
+}
+
 /** Word-level similarity 0..1 (1 − normalized word edit distance), for shadowing. */
 export function wordSimilarity(said: string, expected: string): number {
-  const a = wordTokens(said);
-  const b = wordTokens(expected);
+  const a = expandedTokens(said);
+  const b = expandedTokens(expected);
   if (!b.length) return a.length ? 0 : 1;
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {

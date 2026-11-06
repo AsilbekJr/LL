@@ -6,6 +6,8 @@ import { AlertTriangle } from "lucide-react";
 import { EmptyState } from "@/components/common/empty-state";
 import { ColumnChart, SegmentedBar, StatTile, type Column, type Segment } from "@/components/charts/charts";
 import { Button } from "@/components/ui/button";
+import { activeCount, spokenDays } from "@/lib/production/active";
+import { fetchSpokenUses } from "@/lib/production/api";
 import { fetchStats } from "@/lib/stats/api";
 import { denseSeries } from "@/lib/stats/calendar";
 import { addDays, type IsoDate } from "@/lib/srs/dates";
@@ -28,6 +30,11 @@ function Card({ title, sub, children }: { title: string; sub?: string; children:
 export function StatsClient() {
   const t = uz.stats;
   const q = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(getSupabaseBrowserClient()) });
+  const uses = useQuery({
+    queryKey: ["spoken-uses"],
+    queryFn: () => fetchSpokenUses(getSupabaseBrowserClient()),
+  });
+  const active = useMemo(() => (uses.data ? activeCount(spokenDays(uses.data)) : null), [uses.data]);
 
   const charts = useMemo(() => {
     if (!q.data) return null;
@@ -111,6 +118,11 @@ export function StatsClient() {
         <StatTile label={t.streak} value={d.streak} sub={uz.today.days} />
         <StatTile label={t.studyTime} value={t.minutes(d.studySeconds7)} />
         <StatTile label={t.speakingTime} value={t.minutes(d.speakingSeconds7)} />
+        <StatTile
+          label={uz.speaking.activeTitle}
+          value={active === null ? "—" : active.toLocaleString("en-US")}
+          sub={t.activeSub}
+        />
       </div>
 
       <Card title={t.reviewsTitle}>

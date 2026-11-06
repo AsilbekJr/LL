@@ -132,6 +132,13 @@ Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) 
   (CC BY-SA 4.0); o'zbekcha tarjimalar `data/vocab/uz/*.tsv` da. Qayta yig'ish:
   `node scripts/vocab/normalize.mjs && node scripts/vocab/build.mjs` (batafsil:
   `data/vocab/source/README.md`).
+- **Nutq mashqi** (`/nutq`): *Qoliplar* (60 ta gap qolipi, A1–C2, kutubxonadagi so'z bilan
+  to'ldirib aytiladi), *Tarjima* (o'zbekcha gap → inglizcha og'zaki), *Erkin nutq*, *Shadowing*.
+  So'z 3 xil kunda nutqda to'g'ri ishlatilgach "faol" sanaladi (statistikada ko'rinadi).
+  Gaplar: [Tatoeba](https://tatoeba.org) (CC BY 2.0 FR) → `public/sentences/*.json`.
+  Qayta yig'ish: `eng_sentences.tsv` ni [Tatoeba eksportidan](https://downloads.tatoeba.org/exports/per_language/eng/)
+  yuklab, `node scripts/vocab/sentences.mjs <papka>`; tarjima mashqlari
+  `data/vocab/sentences/uz/*.tsv` dan: `node scripts/vocab/translations.mjs`.
 
 ## Env o'zgaruvchilar
 

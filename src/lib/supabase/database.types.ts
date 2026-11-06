@@ -180,7 +180,7 @@ export type Database = {
           card_id: string | null;
           client_id: string;
           mode: "written" | "spoken";
-          exercise: "sentence" | "situation" | "shadowing" | "drill";
+          exercise: "sentence" | "situation" | "shadowing" | "drill" | "pattern" | "translation";
           drill_id: string | null;
           context: string | null;
           prompt: string | null;
@@ -198,7 +198,7 @@ export type Database = {
           card_id?: string | null;
           client_id?: string;
           mode: "written" | "spoken";
-          exercise?: "sentence" | "situation" | "shadowing" | "drill";
+          exercise?: "sentence" | "situation" | "shadowing" | "drill" | "pattern" | "translation";
           drill_id?: string | null;
           context?: string | null;
           prompt?: string | null;

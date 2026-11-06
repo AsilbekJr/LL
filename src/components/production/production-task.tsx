@@ -271,7 +271,7 @@ export function WritingTask({
 
 // ---------- spoken ----------------------------------------------------------
 
-function useRecorder() {
+export function useRecorder() {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<SttError | null>(null);
@@ -300,7 +300,7 @@ function useRecorder() {
   return { text, setText, recording, error, durationMs, start, stop: () => listener.current?.stop() };
 }
 
-function MicButton({
+export function MicButton({
   recording,
   onStart,
   onStop,
@@ -337,7 +337,7 @@ function MicButton({
   );
 }
 
-function sttMessage(e: SttError | null): string | null {
+export function sttMessage(e: SttError | null): string | null {
   if (e === "not-allowed") return uz.production.sttDenied;
   if (e === "no-speech") return uz.production.sttNoSpeech;
   if (e === "unsupported") return uz.production.sttUnsupported;

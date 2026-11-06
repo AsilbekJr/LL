@@ -6,6 +6,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   AudioLines,
+  Languages,
+  LayoutTemplate,
   CheckCircle2,
   Circle,
   Loader2,
@@ -21,16 +23,23 @@ import { Notice, Textarea } from "@/components/ui/form-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   fetchPracticeItems,
+  fetchSpokenUses,
   saveProductions,
   type DrillItem,
   type ProductionWrite,
 } from "@/lib/production/api";
+import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
 import { pickContext } from "@/lib/production/contexts";
 import { DRILL_MAX_SECONDS, pickDrillTargets, scoreDrill, shadowSentence } from "@/lib/production/drill";
 import { canRecognize, listen, type Listener } from "@/lib/speech/stt";
+import type { CefrLevel } from "@/lib/supabase/database.types";
+import { VOCAB_LEVELS } from "@/lib/vocab/dictionary";
+import { loadExamples } from "@/lib/vocab/sentences";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
+import { PatternDrill } from "./pattern-drill";
+import { TranslationDrill } from "./translation-drill";
 
 const sb = () => getSupabaseBrowserClient();
 
@@ -41,6 +50,16 @@ function useSave() {
 export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoice: string | null }) {
   const t = uz.speaking;
   const items = useQuery({ queryKey: ["practice-items"], queryFn: () => fetchPracticeItems(sb()) });
+  const uses = useQuery({ queryKey: ["spoken-uses"], queryFn: () => fetchSpokenUses(sb()) });
+  const progress = useMemo(() => spokenDays(uses.data ?? []), [uses.data]);
+  const save = useSave();
+  const speech = useMemo(() => ({ rate: ttsRate, voice: ttsVoice }), [ttsRate, ttsVoice]);
+  const onSave = (rows: ProductionWrite[]) => {
+    void save
+      .mutateAsync(rows)
+      .then(() => uses.refetch())
+      .catch(() => undefined);
+  };
 
   if (items.isPending) {
     return <div className="h-64 animate-pulse rounded-2xl bg-sunken" aria-busy="true" />;
@@ -71,24 +90,65 @@ export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoic
   }
 
   return (
-    <Tabs defaultValue="drill">
-      <TabsList className="w-full sm:w-auto">
-        <TabsTrigger value="drill">
-          <Mic aria-hidden />
-          {t.drillTab}
-        </TabsTrigger>
-        <TabsTrigger value="shadow">
-          <AudioLines aria-hidden />
-          {t.shadowTab}
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="drill">
-        <Drill items={items.data} />
-      </TabsContent>
-      <TabsContent value="shadow">
-        <Shadowing items={items.data} speech={{ rate: ttsRate, voice: ttsVoice }} />
-      </TabsContent>
-    </Tabs>
+    <div className="flex flex-col gap-5">
+      <ActiveVocabulary active={activeCount(progress)} total={items.data.length} />
+      <Tabs defaultValue="pattern">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="pattern">
+            <LayoutTemplate aria-hidden />
+            {t.patternTab}
+          </TabsTrigger>
+          <TabsTrigger value="translate">
+            <Languages aria-hidden />
+            {t.translateTab}
+          </TabsTrigger>
+          <TabsTrigger value="drill">
+            <Mic aria-hidden />
+            {t.drillTab}
+          </TabsTrigger>
+          <TabsTrigger value="shadow">
+            <AudioLines aria-hidden />
+            {t.shadowTab}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="pattern">
+          <PatternDrill items={items.data} speech={speech} progress={progress} onSave={onSave} />
+        </TabsContent>
+        <TabsContent value="translate">
+          <TranslationDrill items={items.data} speech={speech} progress={progress} onSave={onSave} />
+        </TabsContent>
+        <TabsContent value="drill">
+          <Drill items={items.data} />
+        </TabsContent>
+        <TabsContent value="shadow">
+          <Shadowing items={items.data} speech={speech} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ActiveVocabulary({ active, total }: { active: number; total: number }) {
+  const t = uz.speaking;
+  const pct = total ? Math.round((active / total) * 100) : 0;
+  return (
+    <section className="rounded-2xl border bg-card p-4 shadow-(--shadow-soft)">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-semibold">{t.activeTitle}</h2>
+        <p className="font-display text-xl font-semibold tabular-nums">{t.activeCount(active, total)}</p>
+      </div>
+      <div
+        className="mt-2 h-2 overflow-hidden rounded-full bg-sunken"
+        role="progressbar"
+        aria-label={t.activeTitle}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={active}
+      >
+        <div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{t.activeBody(ACTIVE_DAYS)}</p>
+    </section>
   );
 }
 
@@ -290,14 +350,40 @@ function Shadowing({
 }) {
   const t = uz.speaking;
   const save = useSave();
-  const candidates = useMemo(() => items.filter((i) => shadowSentence(i)), [items]);
-  const [index, setIndex] = useState(() => Math.floor(Math.random() * Math.max(1, candidates.length)));
+  // Items without their own example get one from the sentence bank (by level; unknown level → all).
+  const levels = useMemo(() => {
+    const need = items.filter((i) => !shadowSentence(i));
+    if (!need.length) return [] as CefrLevel[];
+    return need.some((i) => !i.cefr_level) ? VOCAB_LEVELS : [...new Set(need.map((i) => i.cefr_level!))];
+  }, [items]);
+  const bank = useQuery({
+    queryKey: ["sentences", "examples", levels.join(",")],
+    queryFn: async () =>
+      Object.assign({}, ...(await Promise.all(levels.map(loadExamples)))) as Record<string, string[]>,
+    enabled: levels.length > 0,
+    staleTime: Infinity,
+  });
+  const candidates = useMemo(() => {
+    const out: { item: DrillItem; sentence: string }[] = [];
+    for (const item of items) {
+      const own = shadowSentence(item);
+      if (own) out.push({ item, sentence: own });
+      else {
+        const list = bank.data?.[item.english] ?? bank.data?.[item.english.toLowerCase()];
+        for (const sentence of list ?? []) out.push({ item, sentence });
+      }
+    }
+    return out;
+  }, [items, bank.data]);
+  const [index, setIndex] = useState(() => Math.floor(Math.random() * 1000));
 
+  if (bank.isLoading) {
+    return <div className="h-64 animate-pulse rounded-2xl bg-sunken" aria-busy="true" />;
+  }
   if (!candidates.length) {
     return <EmptyState icon={AudioLines} title={t.emptyTitle} description={t.emptyBody} />;
   }
-  const item = candidates[index % candidates.length]!;
-  const sentence = shadowSentence(item)!;
+  const { item, sentence } = candidates[index % candidates.length]!;
 
   return (
     <ShadowingTask

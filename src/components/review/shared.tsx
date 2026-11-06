@@ -5,7 +5,7 @@ import { CheckCircle2, CircleAlert, Turtle, Volume2, XCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { checkTyped, type TypedCheck } from "@/lib/text/answer";
-import { canSpeak, preloadVoices, speak } from "@/lib/speech/tts";
+import { canAutoplay, canSpeak, isIOS, preloadVoices, speak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -52,12 +52,15 @@ export function SpeakButton({
   autoPlay?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const available = typeof window !== "undefined" && canSpeak();
 
   async function play(slow = false) {
     setPlaying(true);
-    await speak(text, { rate: prefs.rate * (slow ? 0.7 : 1), voice: prefs.voice });
+    setError(null);
+    const r = await speak(text, { rate: prefs.rate * (slow ? 0.7 : 1), voice: prefs.voice });
     setPlaying(false);
+    if (!r.ok) setError(r.error);
   }
 
   useEffect(() => {
@@ -65,25 +68,34 @@ export function SpeakButton({
   }, []);
 
   useEffect(() => {
-    if (autoPlay && available) void speak(text, { rate: prefs.rate, voice: prefs.voice });
+    // A failed autoplay is expected (no tap yet); only taps report errors.
+    if (autoPlay && available && canAutoplay()) void speak(text, { rate: prefs.rate, voice: prefs.voice });
   }, [autoPlay, available, text, prefs.rate, prefs.voice]);
 
   if (!available) return null;
   return (
-    <div className="flex justify-center gap-2">
-      <Button variant="secondary" onClick={() => play()} aria-label={uz.review.listen}>
-        <Volume2 className={cn(playing && "animate-pulse")} aria-hidden />
-        {uz.review.listen}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => play(true)}
-        aria-label={uz.review.listenSlow}
-        title={uz.review.listenSlow}
-      >
-        <Turtle aria-hidden />
-      </Button>
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex justify-center gap-2">
+        <Button variant="secondary" onClick={() => play()} aria-label={uz.review.listen}>
+          <Volume2 className={cn(playing && "animate-pulse")} aria-hidden />
+          {uz.review.listen}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => play(true)}
+          aria-label={uz.review.listenSlow}
+          title={uz.review.listenSlow}
+        >
+          <Turtle aria-hidden />
+        </Button>
+      </div>
+      {error ? (
+        <p role="alert" className="max-w-sm text-center text-sm text-destructive">
+          {isIOS() ? uz.review.ttsFailedIOS : uz.review.ttsFailedAndroid}{" "}
+          <span className="text-muted-foreground">({error})</span>
+        </p>
+      ) : null}
     </div>
   );
 }

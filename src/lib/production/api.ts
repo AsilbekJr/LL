@@ -9,7 +9,7 @@ export interface ProductionWrite {
   itemId: string;
   cardId?: string | null;
   mode: "written" | "spoken";
-  exercise: "sentence" | "situation" | "shadowing" | "drill";
+  exercise: "sentence" | "situation" | "shadowing" | "drill" | "pattern" | "translation";
   context?: string | null;
   prompt?: string | null;
   text: string;
@@ -75,13 +75,16 @@ export async function fetchMastered(sb: Client): Promise<MasteredItem[]> {
   }));
 }
 
-export type DrillItem = Pick<Tables<"items">, "id" | "english" | "uzbek" | "type" | "example_en">;
+export type DrillItem = Pick<
+  Tables<"items">,
+  "id" | "english" | "uzbek" | "type" | "example_en" | "part_of_speech" | "cefr_level"
+>;
 
 /** Items being learned or mastered, for free speaking drills and shadowing. */
 export async function fetchPracticeItems(sb: Client, limit = 200): Promise<DrillItem[]> {
   const { data, error } = await sb
     .from("items")
-    .select("id, english, uzbek, type, example_en, cards!inner(status)")
+    .select("id, english, uzbek, type, example_en, part_of_speech, cefr_level, cards!inner(status)")
     .in("cards.status", ["learning", "review", "mastered"])
     .order("updated_at", { ascending: false })
     .limit(limit)
@@ -91,4 +94,20 @@ export async function fetchPracticeItems(sb: Client, limit = 200): Promise<Drill
   return (data ?? [])
     .filter((i) => (seen.has(i.id) ? false : (seen.add(i.id), true)))
     .map(({ cards: _c, ...i }) => i);
+}
+
+export type SpokenUse = Pick<Tables<"productions">, "item_id" | "created_at">;
+
+/** Passed spoken productions (not shadowing) — the input for "active vocabulary". */
+export async function fetchSpokenUses(sb: Client): Promise<SpokenUse[]> {
+  const { data, error } = await sb
+    .from("productions")
+    .select("item_id, created_at")
+    .eq("passed", true)
+    .eq("mode", "spoken")
+    .neq("exercise", "shadowing")
+    .order("created_at", { ascending: false })
+    .limit(20000);
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

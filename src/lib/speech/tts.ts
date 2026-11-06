@@ -64,38 +64,97 @@ function bestVoice(
 // keeping a reference to the current one prevents that.
 let current: SpeechSynthesisUtterance | null = null;
 
+/** iPhone / iPad (iPadOS reports itself as a Mac with touch). */
+export function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+  );
+}
+
+/**
+ * Whether speech may start without a tap. iOS only speaks inside a tap, and an
+ * utterance queued outside one can leave the engine stuck, so never there.
+ */
+export function canAutoplay(): boolean {
+  if (!canSpeak() || isIOS()) return false;
+  const ua = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
+  return ua ? ua.hasBeenActive : true;
+}
+
+export type SpeakResult = { ok: true } | { ok: false; error: string };
+
 /**
  * Speak `text`. Starts synchronously (safe inside a click handler on mobile);
  * the returned promise resolves when speech ends, fails or times out.
+ *
+ * Mobile engines sometimes drop an utterance silently (Android right after
+ * `cancel()`, iOS after a blocked one), so if nothing has started shortly
+ * after, it is retried once; if it still does not start, the result says so.
  */
-export function speak(text: string, opts: { rate?: number; voice?: string | null } = {}): Promise<void> {
-  if (!canSpeak() || !text.trim()) return Promise.resolve();
+export function speak(
+  text: string,
+  opts: { rate?: number; voice?: string | null } = {},
+): Promise<SpeakResult> {
+  if (!canSpeak()) return Promise.resolve({ ok: false, error: "unsupported" });
+  if (!text.trim()) return Promise.resolve({ ok: true });
   const synth = window.speechSynthesis;
   const rate = Math.min(2, Math.max(0.5, opts.rate ?? 1));
-
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  u.rate = rate;
   const voice = bestVoice(voicesNow(), opts.voice ?? null);
-  if (voice) u.voice = voice;
 
-  synth.cancel(); // never queue up repeated taps
-  if (synth.paused) synth.resume(); // Chrome can get stuck in "paused"
-  current = u;
-
-  return new Promise<void>((resolve) => {
+  return new Promise<SpeakResult>((resolve) => {
     let settled = false;
-    const finish = () => {
+    let started = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const finish = (r: SpeakResult) => {
       if (settled) return;
       settled = true;
-      if (current === u) current = null;
-      resolve();
+      timers.forEach(clearTimeout);
+      current = null;
+      resolve(r);
     };
-    u.onend = finish;
-    u.onerror = finish;
+
+    const say = () => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = voice ? voice.lang.replace("_", "-") : "en-US";
+      u.rate = rate;
+      if (voice) u.voice = voice;
+      u.onstart = () => {
+        started = true;
+      };
+      u.onend = () => current === u && finish({ ok: true });
+      u.onerror = (e) => {
+        if (current !== u) return;
+        // Our own cancel() (a new tap) is not a failure.
+        if (e.error === "interrupted" || e.error === "canceled") finish({ ok: true });
+        else finish({ ok: false, error: e.error || "error" });
+      };
+      current = u;
+      synth.speak(u);
+    };
+
+    // Only cancel when something is queued: cancel() immediately followed by
+    // speak() makes some mobile engines drop the new utterance.
+    if (synth.speaking || synth.pending) synth.cancel();
+    if (synth.paused) synth.resume(); // Chrome can get stuck in "paused"
+    say();
+
+    const isStarted = () => started || synth.speaking;
+    timers.push(
+      setTimeout(() => {
+        if (settled || isStarted()) return;
+        synth.cancel();
+        say();
+        timers.push(
+          setTimeout(() => {
+            if (!settled && !isStarted()) finish({ ok: false, error: "not-started" });
+          }, 2000),
+        );
+      }, 900),
+    );
     // Some engines never fire onend: give up after a generous estimate.
-    setTimeout(finish, Math.max(4000, (text.length * 120) / rate));
-    synth.speak(u);
+    timers.push(setTimeout(() => finish({ ok: true }), 3000 + Math.max(4000, (text.length * 120) / rate)));
   });
 }
 
