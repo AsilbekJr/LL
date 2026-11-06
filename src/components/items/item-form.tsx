@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { Checkbox, Field, Select, Textarea } from "@/components/ui/form-controls
 import { CEFR_LEVELS, inferItemType, itemInputSchema, type ItemDraft } from "@/lib/schemas/item";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
+import type { VocabEntry } from "@/lib/vocab/dictionary";
+import { WordAutocomplete } from "./word-autocomplete";
 
 interface FormValues {
   english: string;
@@ -59,12 +61,23 @@ export function ItemForm({ initial, submitLabel, withSchedule, resetOnSuccess, o
     reset,
     setFocus,
     setError,
+    setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ defaultValues: toValues(initial) });
 
   const english = useWatch({ control, name: "english" });
   const guessed = english.trim() ? t.types[inferItemType(english)] : null;
+
+  // A dictionary pick fills the fields the learner has not filled yet.
+  function onPick(entry: VocabEntry) {
+    const opts = { shouldDirty: true, shouldValidate: false } as const;
+    if (!getValues("uzbek").trim()) setValue("uzbek", entry.uzbek, opts);
+    if (!getValues("cefr_level")) setValue("cefr_level", entry.level, opts);
+    if (!getValues("part_of_speech").trim()) setValue("part_of_speech", entry.pos, opts);
+    setFocus("uzbek");
+  }
 
   const submit = handleSubmit(async (v) => {
     const parsed = itemInputSchema.safeParse({
@@ -94,14 +107,25 @@ export function ItemForm({ initial, submitLabel, withSchedule, resetOnSuccess, o
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <Field id="english" label={t.english} error={errors.english?.message}>
-          <Input
-            autoFocus
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck
-            lang="en"
-            placeholder="break the ice"
-            {...register("english", { required: t.englishRequired })}
+          <Controller
+            control={control}
+            name="english"
+            rules={{ required: t.englishRequired }}
+            render={({ field }) => (
+              <WordAutocomplete
+                // Field cannot inject these through the Controller, so pass them here.
+                id="english"
+                aria-invalid={errors.english ? true : undefined}
+                aria-describedby={errors.english ? "english-error" : undefined}
+                autoFocus
+                placeholder="break the ice"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                inputRef={field.ref}
+                onPick={onPick}
+              />
+            )}
           />
         </Field>
         <Field id="uzbek" label={t.uzbek} error={errors.uzbek?.message}>

@@ -78,6 +78,7 @@ export const uz = {
     exampleUz: "Misol (o'zbekcha)",
     pos: "So'z turkumi",
     notes: "Izoh",
+    suggestionsHint: "Takliflar: tanlash uchun yuqori/pastki strelka va Enter.",
     scheduleNow: "Darhol takrorlashga qo'shish",
     scheduleNowHint: "O'chirilsa, so'z faqat kutubxonada saqlanadi.",
     status: {
@@ -429,6 +430,33 @@ export const uz = {
     noSessionTitle: "Oflayn sessiya yo'q",
     noSessionBody:
       "Bugun hali internet bilan ilova ochilmagan, shuning uchun takrorlashlar saqlanmagan. Internetga ulaning va qayta urinib ko'ring.",
+  },
+  vocab: {
+    tab: "Lug'atlar",
+    intro:
+      "8 600+ so'z CEFR darajalari bo'yicha. Darajani tanlang, lug'at ichiga kiring va yangi so'zlarni belgilab qo'shing.",
+    levelWords: (n: number) => `${n.toLocaleString("en-US")} so'z`,
+    classes: {
+      noun: "Otlar",
+      verb: "Fe'llar",
+      adjective: "Sifatlar",
+      adverb: "Ravishlar",
+      other: "Boshqa so'zlar",
+    },
+    part: (n: number, total: number) => (total > 1 ? `${n}-qism` : ""),
+    progress: (known: number, total: number) => `${known} / ${total} kutubxonada`,
+    allKnown: "Hammasi kutubxonada",
+    back: "Lug'atlar",
+    onlyNew: "Faqat yangilarini ko'rsatish",
+    selectAllNew: "Yangilarini tanlash",
+    clearSelection: "Tanlovni bekor qilish",
+    inLibrary: "Kutubxonada",
+    add: (n: number) => `${n} ta so'zni qo'shish`,
+    added: (n: number) => `${n} ta so'z kutubxonaga qo'shildi.`,
+    loadError: "Lug'atni yuklab bo'lmadi.",
+    search: "Lug'atdan qidirish",
+    attribution:
+      "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
   },
   common: {
     comingInPhase: (n: number) => `Bu bo'lim ${n}-fazada tayyor bo'ladi`,

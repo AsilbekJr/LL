@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "sources": [
+    "The CEFR-J Wordlist Version 1.5, compiled by Yukio Tono, Tokyo University of Foreign Studies",
+    "Octanove Vocabulary Profile C1/C2 1.0 by Octanove Labs (CC BY-SA 4.0)"
+  ],
+  "levels": [
+    {
+      "level": "A1",
+      "file": "a1.json",
+      "count": 1060
+    },
+    {
+      "level": "A2",
+      "file": "a2.json",
+      "count": 1241
+    },
+    {
+      "level": "B1",
+      "file": "b1.json",
+      "count": 2139
+    },
+    {
+      "level": "B2",
+      "file": "b2.json",
+      "count": 2417
+    },
+    {
+      "level": "C1",
+      "file": "c1.json",
+      "count": 913
+    },
+    {
+      "level": "C2",
+      "file": "c2.json",
+      "count": 875
+    }
+  ]
+}

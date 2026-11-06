@@ -5,7 +5,7 @@ import { CheckCircle2, CircleAlert, Turtle, Volume2, XCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { checkTyped, type TypedCheck } from "@/lib/text/answer";
-import { canSpeak, speak } from "@/lib/speech/tts";
+import { canSpeak, preloadVoices, speak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,10 @@ export function SpeakButton({
     await speak(text, { rate: prefs.rate * (slow ? 0.7 : 1), voice: prefs.voice });
     setPlaying(false);
   }
+
+  useEffect(() => {
+    preloadVoices();
+  }, []);
 
   useEffect(() => {
     if (autoPlay && available) void speak(text, { rate: prefs.rate, voice: prefs.voice });

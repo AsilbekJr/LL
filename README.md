@@ -124,6 +124,14 @@ Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) 
   mumkin (shu kuni ilova kamida bir marta internet bilan ochilgan bo'lsa). Kech yetib kelgan
   eski javob kartaning yangiroq holatini bosib ketmaydi: `cards` dagi trigger
   `last_reviewed_at` eskiroq bo'lgan yangilashni o'tkazib yuboradi (log saqlanadi).
+- **Lug'at** (`public/vocab/*.json`, 8 645 so'z, A1–C2): Import → "Lug'atlar" tabida daraja →
+  so'z turkumi bo'yicha ~60 so'zlik lug'atlar → yangi so'zlarni tanlab qo'shish; "Qo'shish"
+  sahifasida inglizcha maydon shu lug'atdan takliflar beradi (Downshift combobox).
+  Manba: [CEFR-J Wordlist 1.5](https://www.cefr-j.org/download.html) (© Tono Lab, TUFS) va
+  [Octanove Vocabulary Profile C1/C2](https://github.com/openlanguageprofiles/olp-en-cefrj)
+  (CC BY-SA 4.0); o'zbekcha tarjimalar `data/vocab/uz/*.tsv` da. Qayta yig'ish:
+  `node scripts/vocab/normalize.mjs && node scripts/vocab/build.mjs` (batafsil:
+  `data/vocab/source/README.md`).
 
 ## Env o'zgaruvchilar
 

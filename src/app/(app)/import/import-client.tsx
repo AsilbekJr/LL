@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
+  BookOpenText,
   AlertTriangle,
   Archive,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge, Checkbox, Notice } from "@/components/ui/form-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DictionaryBrowser } from "./dictionary-browser";
 import { useExistingKeys, useExportBackup, useImportPack, useRestoreBackup } from "@/hooks/use-items";
 import { dedupeItems } from "@/lib/items/dedupe";
 import { backupFileName, backupSchema } from "@/lib/schemas/backup";
@@ -70,8 +72,12 @@ export function ImportClient() {
           onError={(text) => setMsg({ tone: "danger", text })}
         />
       ) : (
-        <Tabs defaultValue="samples">
+        <Tabs defaultValue="dictionary">
           <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="dictionary">
+              <BookOpenText aria-hidden />
+              {uz.vocab.tab}
+            </TabsTrigger>
             <TabsTrigger value="samples">
               <Library aria-hidden />
               {t.samplesTab}
@@ -85,6 +91,9 @@ export function ImportClient() {
               {t.backupTab}
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="dictionary">
+            <DictionaryBrowser />
+          </TabsContent>
           <TabsContent value="samples">
             <Samples
               onPick={(p) => (setMsg(null), setPack(p))}

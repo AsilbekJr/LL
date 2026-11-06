@@ -76,7 +76,7 @@ export function Field({
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={id} className="flex items-baseline gap-2 text-sm font-semibold">
+      <label id={`${id}-label`} htmlFor={id} className="flex items-baseline gap-2 text-sm font-semibold">
         {label}
         {optional ? <span className="text-xs font-medium text-muted-foreground">ixtiyoriy</span> : null}
       </label>
