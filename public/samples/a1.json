@@ -1,0 +1,168 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "A1 · Kundalik hayot",
+  "cefr_level": "A1",
+  "description": "Har kuni ishlatiladigan eng zarur so'z va iboralar.",
+  "items": [
+    {
+      "english": "family",
+      "uzbek": "oila",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "I live with my family.",
+      "example_uz": "Men oilam bilan yashayman.",
+      "tags": [
+        "home"
+      ]
+    },
+    {
+      "english": "breakfast",
+      "uzbek": "nonushta",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "I have breakfast at seven.",
+      "example_uz": "Men soat yettida nonushta qilaman.",
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "english": "water",
+      "uzbek": "suv",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "Can I have some water, please?",
+      "example_uz": "Iltimos, menga suv bera olasizmi?",
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "english": "friend",
+      "uzbek": "do'st",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "She is my best friend.",
+      "example_uz": "U mening eng yaqin do'stim.",
+      "tags": [
+        "people"
+      ]
+    },
+    {
+      "english": "work",
+      "uzbek": "ishlamoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "My father works in a bank.",
+      "example_uz": "Otam bankda ishlaydi.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "cheap",
+      "uzbek": "arzon",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "This bag is cheap.",
+      "example_uz": "Bu sumka arzon.",
+      "tags": [
+        "shopping"
+      ]
+    },
+    {
+      "english": "expensive",
+      "uzbek": "qimmat",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "The hotel is very expensive.",
+      "example_uz": "Mehmonxona juda qimmat.",
+      "tags": [
+        "shopping"
+      ]
+    },
+    {
+      "english": "tomorrow",
+      "uzbek": "ertaga",
+      "type": "word",
+      "part_of_speech": "adverb",
+      "example_en": "See you tomorrow!",
+      "example_uz": "Ertaga ko'rishguncha!",
+      "tags": [
+        "time"
+      ]
+    },
+    {
+      "english": "hungry",
+      "uzbek": "och (qorni och)",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "I'm hungry. Let's eat.",
+      "example_uz": "Qornim och. Keling, ovqatlanamiz.",
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "english": "tired",
+      "uzbek": "charchagan",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "I'm tired after work.",
+      "example_uz": "Ishdan keyin charchaganman.",
+      "tags": [
+        "feelings"
+      ]
+    },
+    {
+      "english": "get up",
+      "uzbek": "o'rnidan turmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "I get up at six every day.",
+      "example_uz": "Men har kuni soat oltida turaman.",
+      "tags": [
+        "routine"
+      ]
+    },
+    {
+      "english": "How much is it?",
+      "uzbek": "Bu qancha turadi?",
+      "type": "sentence",
+      "tags": [
+        "shopping"
+      ]
+    },
+    {
+      "english": "Nice to meet you.",
+      "uzbek": "Tanishganimdan xursandman.",
+      "type": "sentence",
+      "tags": [
+        "social"
+      ]
+    },
+    {
+      "english": "weekend",
+      "uzbek": "dam olish kunlari",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "What do you do at the weekend?",
+      "example_uz": "Dam olish kunlari nima qilasiz?",
+      "tags": [
+        "time"
+      ]
+    },
+    {
+      "english": "between",
+      "uzbek": "orasida",
+      "type": "word",
+      "part_of_speech": "preposition",
+      "example_en": "The bank is between the shop and the park.",
+      "example_uz": "Bank do'kon va bog' orasida.",
+      "tags": [
+        "places"
+      ]
+    }
+  ]
+}

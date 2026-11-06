@@ -1,0 +1,177 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "C1 · Akademik va rasmiy til",
+  "cefr_level": "C1",
+  "description": "Rasmiy yozish va akademik matnlar uchun lug'at.",
+  "items": [
+    {
+      "english": "nevertheless",
+      "uzbek": "shunga qaramay",
+      "type": "word",
+      "part_of_speech": "adverb",
+      "example_en": "It was risky; nevertheless, they continued.",
+      "example_uz": "Bu xavfli edi; shunga qaramay, ular davom etishdi.",
+      "tags": [
+        "academic",
+        "ielts"
+      ]
+    },
+    {
+      "english": "comprehensive",
+      "uzbek": "har tomonlama, keng qamrovli",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "The report gives a comprehensive overview.",
+      "example_uz": "Hisobot har tomonlama sharh beradi.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "undermine",
+      "uzbek": "zaiflashtirmoq, putur yetkazmoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "Constant criticism can undermine confidence.",
+      "example_uz": "Doimiy tanqid ishonchga putur yetkazishi mumkin.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "by and large",
+      "uzbek": "umuman olganda",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "By and large, the project was a success.",
+      "example_uz": "Umuman olganda, loyiha muvaffaqiyatli bo'ldi.",
+      "tags": [
+        "opinion"
+      ]
+    },
+    {
+      "english": "a wide range of",
+      "uzbek": "keng doiradagi, turli xil",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "The store offers a wide range of products.",
+      "example_uz": "Do'konda turli xil mahsulotlar bor.",
+      "tags": [
+        "ielts"
+      ]
+    },
+    {
+      "english": "feasible",
+      "uzbek": "amalga oshirsa bo'ladigan",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "Is the plan financially feasible?",
+      "example_uz": "Reja moliyaviy jihatdan amalga oshirsa bo'ladimi?",
+      "tags": [
+        "academic",
+        "work"
+      ]
+    },
+    {
+      "english": "shed light on",
+      "uzbek": "oydinlik kiritmoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "The study sheds light on the causes.",
+      "example_uz": "Tadqiqot sabablarga oydinlik kiritadi.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "albeit",
+      "uzbek": "garchi ... bo'lsa ham",
+      "type": "word",
+      "part_of_speech": "conjunction",
+      "example_en": "It worked, albeit slowly.",
+      "example_uz": "Garchi sekin bo'lsa ham, u ishladi.",
+      "tags": [
+        "academic",
+        "grammar"
+      ]
+    },
+    {
+      "english": "in the long run",
+      "uzbek": "uzoq muddatda",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "It will save money in the long run.",
+      "example_uz": "Bu uzoq muddatda pulni tejaydi.",
+      "tags": [
+        "opinion"
+      ]
+    },
+    {
+      "english": "subsequently",
+      "uzbek": "keyinchalik",
+      "type": "word",
+      "part_of_speech": "adverb",
+      "example_en": "He was subsequently promoted.",
+      "example_uz": "Keyinchalik u lavozimga ko'tarildi.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "draw a conclusion",
+      "uzbek": "xulosa chiqarmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "It's too early to draw a conclusion.",
+      "example_uz": "Xulosa chiqarish hali erta.",
+      "tags": [
+        "academic",
+        "ielts"
+      ]
+    },
+    {
+      "english": "inevitable",
+      "uzbek": "muqarrar",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "Change is inevitable.",
+      "example_uz": "O'zgarish muqarrar.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "It is widely believed that…",
+      "uzbek": "Ko'pchilik shunday hisoblaydiki…",
+      "type": "sentence",
+      "tags": [
+        "academic",
+        "ielts"
+      ]
+    },
+    {
+      "english": "put forward",
+      "uzbek": "taklif qilmoq, ilgari surmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "She put forward a new proposal.",
+      "example_uz": "U yangi taklifni ilgari surdi.",
+      "tags": [
+        "work",
+        "academic"
+      ]
+    },
+    {
+      "english": "tackle",
+      "uzbek": "hal qilishga kirishmoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "We must tackle climate change.",
+      "example_uz": "Biz iqlim o'zgarishini hal qilishga kirishishimiz kerak.",
+      "tags": [
+        "ielts"
+      ]
+    }
+  ]
+}

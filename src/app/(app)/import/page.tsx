@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/common/coming-soon";
+import { PageHeader } from "@/components/common/page-header";
 import { uz } from "@/lib/i18n/uz";
+import { ImportClient } from "./import-client";
 
 export const metadata: Metadata = { title: uz.nav.import };
 
 export default function ImportPage() {
   return (
-    <ComingSoon
-      title={uz.nav.import}
-      phase={3}
-      description="JSON to'plam yuklash (A1–C2), ko'rib chiqish jadvali, dublikatlarni o'tkazib yuborish, zaxira nusxa."
-    />
+    <>
+      <PageHeader title={uz.nav.import} description={uz.import.description} />
+      <ImportClient />
+    </>
   );
 }

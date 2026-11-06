@@ -1,0 +1,44 @@
+[
+  {
+    "file": "a1.json",
+    "name": "A1 · Kundalik hayot",
+    "cefr_level": "A1",
+    "description": "Har kuni ishlatiladigan eng zarur so'z va iboralar.",
+    "count": 15
+  },
+  {
+    "file": "a2.json",
+    "name": "A2 · Sayohat va shahar",
+    "cefr_level": "A2",
+    "description": "Yo'lda, mehmonxonada va shaharda kerak bo'ladigan so'zlar.",
+    "count": 15
+  },
+  {
+    "file": "b1.json",
+    "name": "B1 · Ish va o'qish",
+    "cefr_level": "B1",
+    "description": "Ish joyida, o'qishda va rejalar haqida gapirish uchun.",
+    "count": 15
+  },
+  {
+    "file": "b2.json",
+    "name": "B2 · Fikr bildirish",
+    "cefr_level": "B2",
+    "description": "Munozara, fikr bildirish va bahslashish uchun iboralar.",
+    "count": 15
+  },
+  {
+    "file": "c1.json",
+    "name": "C1 · Akademik va rasmiy til",
+    "cefr_level": "C1",
+    "description": "Rasmiy yozish va akademik matnlar uchun lug'at.",
+    "count": 15
+  },
+  {
+    "file": "c2.json",
+    "name": "C2 · Idiomalar va nozik ma'nolar",
+    "cefr_level": "C2",
+    "description": "Ona tilida so'zlashuvchilar ishlatadigan idioma va nozik iboralar.",
+    "count": 15
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "To'plam nomi",
+  "cefr_level": "B1",
+  "description": "Ixtiyoriy tavsif",
+  "items": [
+    {
+      "english": "break the ice",
+      "uzbek": "muzni eritmoq (suhbatni boshlamoq)",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "He told a joke to break the ice.",
+      "example_uz": "U suhbatni boshlash uchun hazil aytdi.",
+      "notes": "Ixtiyoriy izoh",
+      "tags": ["social", "idiom"]
+    },
+    { "english": "apple", "uzbek": "olma" }
+  ]
+}

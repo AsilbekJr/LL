@@ -1,0 +1,174 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "B1 · Ish va o'qish",
+  "cefr_level": "B1",
+  "description": "Ish joyida, o'qishda va rejalar haqida gapirish uchun.",
+  "items": [
+    {
+      "english": "deadline",
+      "uzbek": "topshirish muddati",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "The deadline for the report is Friday.",
+      "example_uz": "Hisobotni topshirish muddati — juma.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "apply for",
+      "uzbek": "ariza bermoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "I'm going to apply for a new job.",
+      "example_uz": "Men yangi ishga ariza bermoqchiman.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "improve",
+      "uzbek": "yaxshilamoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "I want to improve my English.",
+      "example_uz": "Ingliz tilimni yaxshilamoqchiman.",
+      "tags": [
+        "study"
+      ]
+    },
+    {
+      "english": "experience",
+      "uzbek": "tajriba",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "Do you have any work experience?",
+      "example_uz": "Ish tajribangiz bormi?",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "take part in",
+      "uzbek": "qatnashmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "She took part in a conference.",
+      "example_uz": "U konferensiyada qatnashdi.",
+      "tags": [
+        "work",
+        "study"
+      ]
+    },
+    {
+      "english": "figure out",
+      "uzbek": "tushunib olmoq, aniqlamoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "I can't figure out this problem.",
+      "example_uz": "Bu muammoni tushunib ololmayapman.",
+      "tags": [
+        "study"
+      ]
+    },
+    {
+      "english": "reliable",
+      "uzbek": "ishonchli",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "He is a reliable colleague.",
+      "example_uz": "U ishonchli hamkasb.",
+      "tags": [
+        "work",
+        "people"
+      ]
+    },
+    {
+      "english": "make progress",
+      "uzbek": "oldinga siljimoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "You're making good progress.",
+      "example_uz": "Siz yaxshi rivojlanyapsiz.",
+      "tags": [
+        "study"
+      ]
+    },
+    {
+      "english": "salary",
+      "uzbek": "maosh",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "The salary is paid monthly.",
+      "example_uz": "Maosh har oy to'lanadi.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "set up",
+      "uzbek": "tashkil qilmoq, sozlamoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "They set up a small company.",
+      "example_uz": "Ular kichik kompaniya tashkil qilishdi.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "in charge of",
+      "uzbek": "...ga mas'ul",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "Who is in charge of this project?",
+      "example_uz": "Bu loyihaga kim mas'ul?",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "get used to",
+      "uzbek": "...ga ko'nikmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "I'm getting used to my new schedule.",
+      "example_uz": "Yangi jadvalimga ko'nikyapman.",
+      "tags": [
+        "daily"
+      ]
+    },
+    {
+      "english": "I'll get back to you.",
+      "uzbek": "Sizga keyinroq javob beraman.",
+      "type": "sentence",
+      "tags": [
+        "work",
+        "phrases"
+      ]
+    },
+    {
+      "english": "efficient",
+      "uzbek": "samarali",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "We need a more efficient system.",
+      "example_uz": "Bizga samaraliroq tizim kerak.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "point of view",
+      "uzbek": "nuqtai nazar",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "From my point of view, it's a good idea.",
+      "example_uz": "Mening nuqtai nazarimdan, bu yaxshi fikr.",
+      "tags": [
+        "opinion"
+      ]
+    }
+  ]
+}

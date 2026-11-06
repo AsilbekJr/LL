@@ -1,0 +1,176 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "C2 · Idiomalar va nozik ma'nolar",
+  "cefr_level": "C2",
+  "description": "Ona tilida so'zlashuvchilar ishlatadigan idioma va nozik iboralar.",
+  "items": [
+    {
+      "english": "the elephant in the room",
+      "uzbek": "hamma biladigan, lekin gapirilmaydigan muammo",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "Nobody mentioned the budget — the elephant in the room.",
+      "example_uz": "Hech kim byudjetni tilga olmadi — hamma biladigan, lekin gapirilmaydigan muammo.",
+      "tags": [
+        "idiom"
+      ]
+    },
+    {
+      "english": "cut corners",
+      "uzbek": "ishni yengil-yelpi qilmoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "Don't cut corners on safety.",
+      "example_uz": "Xavfsizlik masalasida ishni yengil-yelpi qilmang.",
+      "tags": [
+        "idiom",
+        "work"
+      ]
+    },
+    {
+      "english": "a blessing in disguise",
+      "uzbek": "yomonlikdan chiqqan yaxshilik",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "Losing that job was a blessing in disguise.",
+      "example_uz": "U ishdan ayrilish aslida yaxshilikka bo'ldi.",
+      "tags": [
+        "idiom"
+      ]
+    },
+    {
+      "english": "ubiquitous",
+      "uzbek": "hamma joyda uchraydigan",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "Smartphones are now ubiquitous.",
+      "example_uz": "Smartfonlar endi hamma joyda.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "go the extra mile",
+      "uzbek": "kutilganidan ham ko'proq harakat qilmoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "She always goes the extra mile for her clients.",
+      "example_uz": "U mijozlari uchun doim kutilganidan ham ko'proq harakat qiladi.",
+      "tags": [
+        "idiom",
+        "work"
+      ]
+    },
+    {
+      "english": "by the same token",
+      "uzbek": "xuddi shu sababdan",
+      "type": "phrase",
+      "part_of_speech": "discourse marker",
+      "example_en": "By the same token, we should reduce costs.",
+      "example_uz": "Xuddi shu sababdan, xarajatlarni kamaytirishimiz kerak.",
+      "tags": [
+        "academic"
+      ]
+    },
+    {
+      "english": "pore over",
+      "uzbek": "sinchiklab o'rganmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "He pored over the documents all night.",
+      "example_uz": "U tun bo'yi hujjatlarni sinchiklab o'rgandi.",
+      "tags": [
+        "study"
+      ]
+    },
+    {
+      "english": "meticulous",
+      "uzbek": "o'ta sinchkov, puxta",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "She is meticulous about details.",
+      "example_uz": "U tafsilotlarga o'ta sinchkov.",
+      "tags": [
+        "people"
+      ]
+    },
+    {
+      "english": "take something with a grain of salt",
+      "uzbek": "biror narsaga shubha bilan qaramoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "Take his advice with a grain of salt.",
+      "example_uz": "Uning maslahatiga shubha bilan qarang.",
+      "tags": [
+        "idiom"
+      ]
+    },
+    {
+      "english": "hit the nail on the head",
+      "uzbek": "aynan nishonga urmoq, mohiyatini topmoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "You hit the nail on the head.",
+      "example_uz": "Siz aynan mohiyatini topdingiz.",
+      "tags": [
+        "idiom"
+      ]
+    },
+    {
+      "english": "ambivalent",
+      "uzbek": "ikkilanuvchi, aralash his-tuyg'uli",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "I feel ambivalent about moving.",
+      "example_uz": "Ko'chib o'tish haqida ikkilanib turibman.",
+      "tags": [
+        "feelings"
+      ]
+    },
+    {
+      "english": "in the nick of time",
+      "uzbek": "oxirgi lahzada",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "We arrived in the nick of time.",
+      "example_uz": "Biz oxirgi lahzada yetib keldik.",
+      "tags": [
+        "idiom",
+        "time"
+      ]
+    },
+    {
+      "english": "I couldn't agree more.",
+      "uzbek": "To'liq qo'shilaman.",
+      "type": "sentence",
+      "tags": [
+        "opinion",
+        "phrases"
+      ]
+    },
+    {
+      "english": "let the cat out of the bag",
+      "uzbek": "sirni oshkor qilib qo'ymoq",
+      "type": "phrase",
+      "part_of_speech": "idiom",
+      "example_en": "Who let the cat out of the bag?",
+      "example_uz": "Sirni kim oshkor qilib qo'ydi?",
+      "tags": [
+        "idiom"
+      ]
+    },
+    {
+      "english": "unprecedented",
+      "uzbek": "misli ko'rilmagan",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "The company saw unprecedented growth.",
+      "example_uz": "Kompaniya misli ko'rilmagan o'sishga erishdi.",
+      "tags": [
+        "academic",
+        "ielts"
+      ]
+    }
+  ]
+}

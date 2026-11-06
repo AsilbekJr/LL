@@ -1,0 +1,173 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "A2 · Sayohat va shahar",
+  "cefr_level": "A2",
+  "description": "Yo'lda, mehmonxonada va shaharda kerak bo'ladigan so'zlar.",
+  "items": [
+    {
+      "english": "ticket",
+      "uzbek": "chipta",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "I bought a train ticket online.",
+      "example_uz": "Men poyezd chiptasini internetdan sotib oldim.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "english": "luggage",
+      "uzbek": "yuk, bagaj",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "Where can I leave my luggage?",
+      "example_uz": "Yukimni qayerga qoldirsam bo'ladi?",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "english": "book a room",
+      "uzbek": "xona band qilmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "I'd like to book a room for two nights.",
+      "example_uz": "Ikki kechaga xona band qilmoqchiman.",
+      "tags": [
+        "travel",
+        "hotel"
+      ]
+    },
+    {
+      "english": "delay",
+      "uzbek": "kechikish",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "There is a two-hour delay.",
+      "example_uz": "Ikki soatlik kechikish bor.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "english": "get lost",
+      "uzbek": "adashib qolmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "We got lost in the old town.",
+      "example_uz": "Biz eski shaharda adashib qoldik.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "english": "crowded",
+      "uzbek": "odam gavjum",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "The bus was very crowded.",
+      "example_uz": "Avtobus juda gavjum edi.",
+      "tags": [
+        "city"
+      ]
+    },
+    {
+      "english": "turn left",
+      "uzbek": "chapga burilmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "Turn left at the traffic lights.",
+      "example_uz": "Svetoforda chapga buriling.",
+      "tags": [
+        "directions"
+      ]
+    },
+    {
+      "english": "receipt",
+      "uzbek": "chek",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "Can I have the receipt, please?",
+      "example_uz": "Chekni bera olasizmi?",
+      "tags": [
+        "shopping"
+      ]
+    },
+    {
+      "english": "borrow",
+      "uzbek": "qarzga olmoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "Can I borrow your pen?",
+      "example_uz": "Ruchkangizni olib tursam bo'ladimi?",
+      "tags": [
+        "daily"
+      ]
+    },
+    {
+      "english": "lend",
+      "uzbek": "qarzga bermoq",
+      "type": "word",
+      "part_of_speech": "verb",
+      "example_en": "Could you lend me some money?",
+      "example_uz": "Menga biroz pul qarz berib tura olasizmi?",
+      "tags": [
+        "daily"
+      ]
+    },
+    {
+      "english": "abroad",
+      "uzbek": "chet elda, chet elga",
+      "type": "word",
+      "part_of_speech": "adverb",
+      "example_en": "She wants to study abroad.",
+      "example_uz": "U chet elda o'qimoqchi.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "english": "look for",
+      "uzbek": "qidirmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "I'm looking for the station.",
+      "example_uz": "Men vokzalni qidiryapman.",
+      "tags": [
+        "directions"
+      ]
+    },
+    {
+      "english": "Is it far from here?",
+      "uzbek": "Bu yerdan uzoqmi?",
+      "type": "sentence",
+      "tags": [
+        "directions"
+      ]
+    },
+    {
+      "english": "on time",
+      "uzbek": "o'z vaqtida",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "The train arrived on time.",
+      "example_uz": "Poyezd o'z vaqtida keldi.",
+      "tags": [
+        "time"
+      ]
+    },
+    {
+      "english": "souvenir",
+      "uzbek": "esdalik sovg'a",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "I bought a souvenir for my sister.",
+      "example_uz": "Singlimga esdalik sovg'a sotib oldim.",
+      "tags": [
+        "travel",
+        "shopping"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "format": "ll-pack",
+  "version": 1,
+  "name": "B2 · Fikr bildirish",
+  "cefr_level": "B2",
+  "description": "Munozara, fikr bildirish va bahslashish uchun iboralar.",
+  "items": [
+    {
+      "english": "to be honest",
+      "uzbek": "rostini aytsam",
+      "type": "phrase",
+      "part_of_speech": "discourse marker",
+      "example_en": "To be honest, I didn't like the film.",
+      "example_uz": "Rostini aytsam, film menga yoqmadi.",
+      "tags": [
+        "opinion"
+      ]
+    },
+    {
+      "english": "on the other hand",
+      "uzbek": "boshqa tomondan",
+      "type": "phrase",
+      "part_of_speech": "discourse marker",
+      "example_en": "It's cheap. On the other hand, it's slow.",
+      "example_uz": "U arzon. Boshqa tomondan, sekin.",
+      "tags": [
+        "opinion",
+        "ielts"
+      ]
+    },
+    {
+      "english": "take into account",
+      "uzbek": "hisobga olmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "We should take the costs into account.",
+      "example_uz": "Xarajatlarni hisobga olishimiz kerak.",
+      "tags": [
+        "opinion",
+        "ielts"
+      ]
+    },
+    {
+      "english": "significant",
+      "uzbek": "sezilarli, muhim",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "There was a significant increase in prices.",
+      "example_uz": "Narxlarda sezilarli o'sish bo'ldi.",
+      "tags": [
+        "ielts"
+      ]
+    },
+    {
+      "english": "come up with",
+      "uzbek": "o'ylab topmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "She came up with a great idea.",
+      "example_uz": "U ajoyib g'oyani o'ylab topdi.",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "english": "drawback",
+      "uzbek": "kamchilik",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "The main drawback is the price.",
+      "example_uz": "Asosiy kamchiligi — narxi.",
+      "tags": [
+        "opinion",
+        "ielts"
+      ]
+    },
+    {
+      "english": "whereas",
+      "uzbek": "holbuki, ... esa",
+      "type": "word",
+      "part_of_speech": "conjunction",
+      "example_en": "I like tea, whereas my wife prefers coffee.",
+      "example_uz": "Men choyni yaxshi ko'raman, xotinim esa qahvani afzal ko'radi.",
+      "tags": [
+        "ielts",
+        "grammar"
+      ]
+    },
+    {
+      "english": "hold on",
+      "uzbek": "kutib turmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "Hold on, I'll check.",
+      "example_uz": "Kutib turing, tekshirib ko'raman.",
+      "tags": [
+        "daily"
+      ]
+    },
+    {
+      "english": "I see your point, but…",
+      "uzbek": "Fikringizni tushunaman, lekin…",
+      "type": "sentence",
+      "tags": [
+        "opinion",
+        "phrases"
+      ]
+    },
+    {
+      "english": "concern",
+      "uzbek": "xavotir",
+      "type": "word",
+      "part_of_speech": "noun",
+      "example_en": "Pollution is a growing concern.",
+      "example_uz": "Ifloslanish tobora ortib borayotgan xavotir.",
+      "tags": [
+        "ielts"
+      ]
+    },
+    {
+      "english": "rely on",
+      "uzbek": "...ga tayanmoq",
+      "type": "phrase",
+      "part_of_speech": "phrasal verb",
+      "example_en": "You can rely on me.",
+      "example_uz": "Menga tayanishingiz mumkin.",
+      "tags": [
+        "people"
+      ]
+    },
+    {
+      "english": "beneficial",
+      "uzbek": "foydali",
+      "type": "word",
+      "part_of_speech": "adjective",
+      "example_en": "Exercise is beneficial for health.",
+      "example_uz": "Jismoniy mashq sog'liq uchun foydali.",
+      "tags": [
+        "ielts"
+      ]
+    },
+    {
+      "english": "as far as I know",
+      "uzbek": "bilishimcha",
+      "type": "phrase",
+      "part_of_speech": "discourse marker",
+      "example_en": "As far as I know, the shop is closed today.",
+      "example_uz": "Bilishimcha, do'kon bugun yopiq.",
+      "tags": [
+        "opinion"
+      ]
+    },
+    {
+      "english": "tend to",
+      "uzbek": "...ga moyil bo'lmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "People tend to spend more online.",
+      "example_uz": "Odamlar internetda ko'proq pul sarflashga moyil.",
+      "tags": [
+        "ielts"
+      ]
+    },
+    {
+      "english": "raise awareness",
+      "uzbek": "xabardorlikni oshirmoq",
+      "type": "phrase",
+      "part_of_speech": "collocation",
+      "example_en": "The campaign raised awareness of the problem.",
+      "example_uz": "Kampaniya muammo haqida xabardorlikni oshirdi.",
+      "tags": [
+        "ielts"
+      ]
+    }
+  ]
+}

@@ -11,7 +11,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | --- | --- | --- |
 | 1 | Loyiha, Supabase sxema + RLS, auth, layout, PWA shell | ✅ |
 | 2 | SRS engine + unit testlar | ✅ |
-| 3 | Qo'shish / Kutubxona / Import / Backup | ⏳ |
+| 3 | Qo'shish / Kutubxona / Import / Backup | ✅ |
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ⏳ |
 | 5 | Production (yozish, gapirish, shadowing) + AI | ⏳ |
 | 6 | Kalendar, statistika, push, offline sync | ⏳ |
