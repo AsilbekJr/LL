@@ -104,25 +104,25 @@ Har 5 daqiqada pg_cron `send-reminders` Edge Function'ni chaqiradi; funksiya Soz
 eslatma vaqti kelgan va bugun takrorlashi bor foydalanuvchiga
 "Bugun 24 ta takrorlash, 5 tasi kechikkan" xabarini yuboradi (har vaqt uchun kuniga bir marta).
 
-1. VAPID kalitlari: `npx web-push generate-vapid-keys`
-2. `.env.local` va Vercel'ga: `NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public key>`
+1. VAPID kalitlari: `npx web-push generate-vapid-keys` (ushbu loyihada allaqachon
+   `.env.local` ga yozilgan: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+   `VAPID_SUBJECT`, `CRON_SECRET`).
+2. Vercel → Settings → Environment Variables: `NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public key>`,
+   keyin qayta deploy.
 3. Supabase: **Database → Extensions** da `pg_net` ni yoqing, migratsiyalarni yuboring
-   (`npx supabase db push`).
-4. Funksiya va uning secret'lari (`<random>` — istalgan uzun tasodifiy satr):
-
-   ```powershell
-   npx supabase functions deploy send-reminders
-   npx supabase secrets set CRON_SECRET=<random> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:siz@example.com
-   ```
-
-5. **SQL Editor** da (cron funksiyani shu qiymatlar bilan chaqiradi):
+   (`npx supabase db push`) va funksiyani deploy qiling
+   (`npx supabase functions deploy send-reminders`).
+4. **SQL Editor** da secret'larni Vault'ga yozing (`<random>` = `CRON_SECRET`):
 
    ```sql
    select vault.create_secret('https://<PROJECT-REF>.supabase.co', 'll_project_url');
    select vault.create_secret('<random>', 'll_cron_secret');
+   select vault.create_secret('<public key>', 'll_vapid_public_key');
+   select vault.create_secret('<private key>', 'll_vapid_private_key');
+   select vault.create_secret('https://<ilova manzili>', 'll_vapid_subject');
    ```
 
-6. Ilovada **Sozlamalar → Eslatmalar → Yoqish**.
+5. Ilovada **Sozlamalar → Eslatmalar → Yoqish**.
 
 **iPhone/iPad**: push faqat ilova **Bosh ekranga qo'shilganda** ishlaydi (Safari → Ulashish →
 "Bosh ekranga qo'shish"), keyin ilovani o'sha belgidan ochib eslatmalarni yoqing (iOS 16.4+).

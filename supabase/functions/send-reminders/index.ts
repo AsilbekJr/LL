@@ -1,12 +1,11 @@
 // Supabase Edge Function (Deno). Called every 5 minutes by pg_cron
 // (public.invoke_send_reminders) — see migration *_push_reminders.sql.
 //
-// Secrets (supabase secrets set ...):
-//   CRON_SECRET        same random string as the Vault secret ll_cron_secret
-//   VAPID_PUBLIC_KEY   = NEXT_PUBLIC_VAPID_PUBLIC_KEY of the web app
-//   VAPID_PRIVATE_KEY
-//   VAPID_SUBJECT      e.g. mailto:you@example.com
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
+// Configuration comes from Supabase Vault via public.reminder_config():
+//   ll_cron_secret, ll_vapid_public_key, ll_vapid_private_key, ll_vapid_subject
+// Function secrets CRON_SECRET / VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY /
+// VAPID_SUBJECT, if set, take precedence. SUPABASE_URL and
+// SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { reminderMessage } from "./message.ts";
@@ -25,15 +24,25 @@ const env = (k: string) => {
 };
 
 Deno.serve(async (req) => {
-  const secret = Deno.env.get("CRON_SECRET");
+  const sb = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+    auth: { persistSession: false },
+  });
+  const { data: cfg } = await sb.rpc("reminder_config");
+  const vault = (cfg ?? {}) as Record<string, string | undefined>;
+  const pick = (envName: string, vaultName: string) => Deno.env.get(envName) || vault[vaultName] || "";
+
+  const secret = pick("CRON_SECRET", "ll_cron_secret");
   if (!secret || req.headers.get("Authorization") !== `Bearer ${secret}`) {
     return new Response("unauthorized", { status: 401 });
   }
 
-  webpush.setVapidDetails(env("VAPID_SUBJECT"), env("VAPID_PUBLIC_KEY"), env("VAPID_PRIVATE_KEY"));
-  const sb = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
-    auth: { persistSession: false },
-  });
+  const subject = pick("VAPID_SUBJECT", "ll_vapid_subject");
+  const publicKey = pick("VAPID_PUBLIC_KEY", "ll_vapid_public_key");
+  const privateKey = pick("VAPID_PRIVATE_KEY", "ll_vapid_private_key");
+  if (!subject || !publicKey || !privateKey) {
+    return Response.json({ error: "VAPID keys are not configured" }, { status: 500 });
+  }
+  webpush.setVapidDetails(subject, publicKey, privateKey);
 
   const { data, error } = await sb.rpc("claim_due_reminders");
   if (error) return Response.json({ error: error.message }, { status: 500 });

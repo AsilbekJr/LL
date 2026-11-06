@@ -5,8 +5,12 @@
 --
 -- One-time setup (SQL editor), see README "Push eslatmalar":
 --   select vault.create_secret('https://<ref>.supabase.co', 'll_project_url');
---   select vault.create_secret('<random string>', 'll_cron_secret');
--- The same random string goes to the function secret CRON_SECRET.
+--   select vault.create_secret('<random string>',            'll_cron_secret');
+--   select vault.create_secret('<VAPID public key>',         'll_vapid_public_key');
+--   select vault.create_secret('<VAPID private key>',        'll_vapid_private_key');
+--   select vault.create_secret('https://<your app url>',     'll_vapid_subject');
+-- The Edge Function reads them through reminder_config(), so no function
+-- secrets are needed (env vars of the same meaning still take precedence).
 -- =====================================================================
 
 create extension if not exists pg_net;
@@ -81,6 +85,21 @@ $$;
 
 revoke execute on function public.claim_due_reminders(timestamptz, int) from public, anon, authenticated;
 grant execute on function public.claim_due_reminders(timestamptz, int) to service_role;
+
+-- Push configuration for the Edge Function (service role only).
+create or replace function public.reminder_config()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(name, decrypted_secret), '{}'::jsonb)
+  from vault.decrypted_secrets
+  where name in ('ll_cron_secret', 'll_vapid_public_key', 'll_vapid_private_key', 'll_vapid_subject');
+$$;
+revoke execute on function public.reminder_config() from public, anon, authenticated;
+grant execute on function public.reminder_config() to service_role;
 
 -- Keep the log small.
 create or replace function public.prune_push_reminder_log()
