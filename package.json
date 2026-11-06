@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
-    "db:push": "supabase db push"
+    "db:push": "supabase db push",
+    "test:ai-live": "node --env-file=.env.local node_modules/vitest/vitest.mjs run --config tests/live/vitest.live.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

@@ -255,7 +255,9 @@ export const uz = {
     tryAgain: "Qayta urinish",
     aiCheck: "AI bilan tekshirish",
     aiLoading: "AI tekshirmoqda…",
-    aiError: "AI hozir javob bera olmadi.",
+    aiError: "AI hozir javob bera olmadi — oddiy tekshiruv natijasi qabul qilindi.",
+    aiWordWrong: (term: string) =>
+      `AI: “${term}” bu gapda noto'g'ri ma'noda yoki grammatik xato bilan ishlatilgan.`,
     aiCorrect: "Grammatik jihatdan to'g'ri!",
     aiCorrected: "To'g'rilangan variant:",
     aiTip: "Maslahat",

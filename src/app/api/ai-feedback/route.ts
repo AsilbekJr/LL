@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { AI_MODEL, aiFeedbackEnabled } from "@/lib/ai/config";
+import { aiFeedbackEnabled, aiModel, aiProvider } from "@/lib/ai/config";
+import { GeminiError, geminiJson } from "@/lib/ai/gemini";
 import {
   AI_FEEDBACK_JSON_SCHEMA,
   aiFeedbackRequestSchema,
@@ -12,8 +13,8 @@ import { getCurrentUserId } from "@/lib/supabase/server";
 
 /**
  * POST /api/ai-feedback — grammar and word-usage feedback on one learner
- * sentence. Server-only: the API key never reaches the browser. Signed-in
- * users only, with a small per-user rate limit.
+ * sentence via Gemini (free tier) or Anthropic. Server-only: the API key
+ * never reaches the browser. Signed-in users only, with a small per-user rate limit.
  */
 export const runtime = "nodejs";
 
@@ -68,10 +69,53 @@ export async function POST(request: Request) {
   const parsed = aiFeedbackRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "bad_request" }, { status: 400 });
 
+  const provider = aiProvider()!;
+  const model = aiModel(provider);
+  if (provider === "gemini") return gemini(model, parsed.data);
+  return anthropic(model, parsed.data);
+}
+
+function respond(text: string) {
+  try {
+    const feedback = aiFeedbackSchema.safeParse(JSON.parse(text));
+    if (!feedback.success) return NextResponse.json({ error: "bad_output" }, { status: 502 });
+    return NextResponse.json({ feedback: feedback.data });
+  } catch {
+    return NextResponse.json({ error: "bad_output" }, { status: 502 });
+  }
+}
+
+async function gemini(model: string, r: AiFeedbackRequest) {
+  try {
+    const text = await geminiJson({
+      model,
+      system: SYSTEM,
+      user: userMessage(r),
+      schema: AI_FEEDBACK_JSON_SCHEMA,
+      signal: AbortSignal.timeout(12_000),
+    });
+    return respond(text);
+  } catch (error) {
+    if (error instanceof GeminiError) {
+      const status = { rate_limited: 429, misconfigured: 503, refused: 422, truncated: 502, upstream: 502 }[
+        error.kind
+      ];
+      if (error.kind === "misconfigured" || error.kind === "upstream")
+        console.error(`AI feedback: ${error.message}`);
+      return NextResponse.json({ error: error.kind }, { status });
+    }
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return NextResponse.json({ error: "upstream" }, { status: 504 });
+    }
+    throw error;
+  }
+}
+
+async function anthropic(model: string, r: AiFeedbackRequest) {
   client ??= new Anthropic(); // reads ANTHROPIC_API_KEY
   try {
     const response = await client.beta.messages.create({
-      model: AI_MODEL,
+      model,
       max_tokens: 4000,
       // A refusal is re-run server-side on Anthropic's recommended fallback model.
       betas: ["server-side-fallback-2026-07-01"],
@@ -79,7 +123,7 @@ export async function POST(request: Request) {
       // Short, well-specified task: low effort keeps it fast and cheap.
       output_config: { effort: "low", format: { type: "json_schema", schema: AI_FEEDBACK_JSON_SCHEMA } },
       system: SYSTEM,
-      messages: [{ role: "user", content: userMessage(parsed.data) }],
+      messages: [{ role: "user", content: userMessage(r) }],
     });
 
     if (response.stop_reason === "refusal") {
@@ -89,10 +133,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "truncated" }, { status: 502 });
     }
 
-    const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-    const feedback = aiFeedbackSchema.safeParse(JSON.parse(text));
-    if (!feedback.success) return NextResponse.json({ error: "bad_output" }, { status: 502 });
-    return NextResponse.json({ feedback: feedback.data });
+    return respond(response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(""));
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
       return NextResponse.json({ error: "rate_limited" }, { status: 429 });
@@ -104,9 +145,6 @@ export async function POST(request: Request) {
     if (error instanceof Anthropic.APIError) {
       console.error(`AI feedback: API error ${error.status}`, error.message);
       return NextResponse.json({ error: "upstream" }, { status: 502 });
-    }
-    if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "bad_output" }, { status: 502 });
     }
     throw error;
   }

@@ -126,7 +126,10 @@ function Outcome({
 }) {
   const t = uz.production;
   const [feedback, setFeedback] = useState<AiFeedback | null>(null);
-  const [aiState, setAiState] = useState<"idle" | "loading" | "error">("idle");
+  // A locally passed sentence is checked by AI automatically (when enabled):
+  // "the word is there" is not enough — it must be used with the right meaning.
+  const auto = aiEnabled && check.passed;
+  const [aiState, setAiState] = useState<"idle" | "loading" | "error">(auto ? "loading" : "idle");
 
   async function runAi() {
     setAiState("loading");
@@ -138,29 +141,59 @@ function Outcome({
     }
   }
 
+  const request = useRef(aiRequest);
+  useEffect(() => {
+    if (!auto) return;
+    let live = true;
+    request.current().then(
+      (fb) => live && (setFeedback(fb), setAiState("idle")),
+      () => live && setAiState("error"),
+    );
+    return () => {
+      live = false;
+    };
+  }, [auto]);
+
+  // AI can only make a local pass stricter; if AI fails, the local check stands.
+  const aiRejected = feedback !== null && !feedback.word_used_correctly;
+  const passed = check.passed && !aiRejected;
+  const checking = auto && aiState === "loading";
+
   return (
     <div className="flex flex-col gap-3">
       <div
         role="status"
         className={cn(
           "animate-rise flex items-start gap-2 rounded-xl border px-4 py-3 text-sm font-semibold",
-          check.passed
-            ? "border-success/30 bg-success-soft text-success"
-            : "border-destructive/30 bg-destructive-soft text-destructive",
+          checking
+            ? "border-border bg-sunken text-muted-foreground"
+            : passed
+              ? "border-success/30 bg-success-soft text-success"
+              : "border-destructive/30 bg-destructive-soft text-destructive",
         )}
       >
-        {check.passed ? (
+        {checking ? (
+          <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" aria-hidden />
+        ) : passed ? (
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
         ) : (
           <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
         )}
-        {check.passed ? t.passed : !check.used ? t.notUsed(term) : t.tooShort}
+        {checking
+          ? t.aiLoading
+          : passed
+            ? t.passed
+            : aiRejected
+              ? t.aiWordWrong(term)
+              : !check.used
+                ? t.notUsed(term)
+                : t.tooShort}
       </div>
 
       {aiEnabled && check.used ? (
         feedback ? (
           <FeedbackCard feedback={feedback} />
-        ) : (
+        ) : auto ? null : (
           <Button variant="secondary" onClick={runAi} disabled={aiState === "loading"}>
             {aiState === "loading" ? (
               <Loader2 className="animate-spin" aria-hidden />
@@ -173,7 +206,7 @@ function Outcome({
       ) : null}
       {aiState === "error" ? <p className="text-center text-sm text-muted-foreground">{t.aiError}</p> : null}
 
-      {check.passed ? (
+      {checking ? null : passed ? (
         <Button size="lg" autoFocus onClick={() => onContinue(feedback)}>
           {uz.review.next}
         </Button>

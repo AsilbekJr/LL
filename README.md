@@ -13,7 +13,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | 2 | SRS engine + unit testlar | ✅ |
 | 3 | Qo'shish / Kutubxona / Import / Backup | ✅ |
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ✅ |
-| 5 | Production (yozish, gapirish, shadowing) + AI | ✅ |
+| 5 | Production (yozish, gapirish, shadowing) + AI (Gemini / Claude) | ✅ |
 | 6 | Kalendar, statistika, push, offline sync | ✅ |
 | 7 | Polish, Lighthouse, E2E, deploy | ✅ |
 
@@ -146,14 +146,21 @@ Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) 
 
 ### AI fikr-mulohaza (ixtiyoriy)
 
-Yozma/og'zaki mashqlarda "AI bilan tekshirish" tugmasi Claude orqali grammatika va so'z
-ishlatilishini tekshiradi. Yoqish uchun `.env.local` ga:
+Yozma/og'zaki mashqlarda gap oddiy tekshiruvdan o'tgach, AI avtomatik ravishda so'z to'g'ri
+ma'noda va grammatik to'g'ri ishlatilganini tekshiradi; noto'g'ri bo'lsa, mashq o'tilgan
+hisoblanmaydi (AI javob bermasa, oddiy tekshiruv natijasi qoladi). Standart provayder —
+**Gemini** (bepul tarif, `gemini-3.5-flash-lite`). Yoqish uchun `.env.local` ga (Vercel'da
+Environment Variables ga ham):
 
 ```
 AI_FEEDBACK_ENABLED=true
-ANTHROPIC_API_KEY=sk-ant-...      # https://platform.claude.com → API Keys
-# AI_MODEL=claude-opus-5-5        # ixtiyoriy, standart qiymat
+GEMINI_API_KEY=...                # https://aistudio.google.com/apikey
+# AI_PROVIDER=anthropic           # ixtiyoriy: Claude ishlatish uchun (ANTHROPIC_API_KEY bilan)
+# AI_MODEL=gemini-3.8-flash       # ixtiyoriy model
 ```
+
+Eslatma: Gemini bepul tarifida Google yuborilgan matnlardan mahsulotlarini yaxshilashda
+foydalanishi mumkin (faqat gap, so'z va mavzu yuboriladi; ism yoki email yuborilmaydi).
 
 Kalit faqat serverda (`/api/ai-feedback`) ishlatiladi, brauzerga yuborilmaydi. Har bir
 foydalanuvchiga daqiqasiga 20 tagacha so'rov.
