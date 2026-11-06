@@ -136,6 +136,20 @@ export function answerCard(s: SessionState, result: ReviewResult | null, ctx: An
   };
 }
 
+/**
+ * A production for `itemId` passed: every session card of that item now
+ * counts it towards the production gate. Call before `answerCard`.
+ */
+export function recordProduction(s: SessionState, itemId: string, mode: "written" | "spoken"): SessionState {
+  const key = mode === "written" ? "writtenPassed" : "spokenPassed";
+  const byId = { ...s.byId };
+  for (const [id, sc] of Object.entries(byId)) {
+    if (sc.item.id === itemId && !sc.production[key])
+      byId[id] = { ...sc, production: { ...sc.production, [key]: true } };
+  }
+  return { ...s, byId };
+}
+
 /** Share of graded answers that were not "again" (0..1), or null before any graded answer. */
 export function accuracy(stats: SessionStats): number | null {
   const graded = stats.again + stats.hard + stats.good + stats.easy;

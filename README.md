@@ -13,7 +13,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | 2 | SRS engine + unit testlar | ✅ |
 | 3 | Qo'shish / Kutubxona / Import / Backup | ✅ |
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ✅ |
-| 5 | Production (yozish, gapirish, shadowing) + AI | ⏳ |
+| 5 | Production (yozish, gapirish, shadowing) + AI | ✅ |
 | 6 | Kalendar, statistika, push, offline sync | ⏳ |
 | 7 | Polish, Lighthouse, E2E, deploy | ⏳ |
 
@@ -77,3 +77,17 @@ yoki HTTPS'da ishlaydi.)
 ## Env o'zgaruvchilar
 
 `.env.example` ga qarang. `NEXT_PUBLIC_*` dan boshqa kalitlar faqat serverda ishlatiladi.
+
+### AI fikr-mulohaza (ixtiyoriy)
+
+Yozma/og'zaki mashqlarda "AI bilan tekshirish" tugmasi Claude orqali grammatika va so'z
+ishlatilishini tekshiradi. Yoqish uchun `.env.local` ga:
+
+```
+AI_FEEDBACK_ENABLED=true
+ANTHROPIC_API_KEY=sk-ant-...      # https://platform.claude.com → API Keys
+# AI_MODEL=claude-opus-5-5        # ixtiyoriy, standart qiymat
+```
+
+Kalit faqat serverda (`/api/ai-feedback`) ishlatiladi, brauzerga yuborilmaydi. Har bir
+foydalanuvchiga daqiqasiga 20 tagacha so'rov.

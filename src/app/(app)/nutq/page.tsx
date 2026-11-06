@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/common/coming-soon";
+import { PageHeader } from "@/components/common/page-header";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { uz } from "@/lib/i18n/uz";
+import { SpeakingClient } from "./speaking-client";
 
 export const metadata: Metadata = { title: uz.nav.speaking };
 
-export default function SpeakingDrillPage() {
+export default async function SpeakingPage() {
+  const supabase = await getSupabaseServerClient();
+  const { data } = await supabase.from("settings").select("tts_rate, tts_voice").maybeSingle();
+
   return (
-    <ComingSoon
-      title={uz.nav.speaking}
-      phase={5}
-      description="Kunlik IELTS uslubidagi savol: bugungi 3–5 so'zni ishlatib 60–120 soniya gapiring."
-    />
+    <>
+      <PageHeader title={uz.nav.speaking} description={uz.speaking.description} />
+      <SpeakingClient ttsRate={Number(data?.tts_rate ?? 1)} ttsVoice={data?.tts_voice ?? null} />
+    </>
   );
 }

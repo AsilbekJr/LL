@@ -6,6 +6,7 @@ import {
   currentCard,
   isFinished,
   previewIntervals,
+  recordProduction,
   remaining,
 } from "@/lib/session/engine";
 import {
@@ -123,10 +124,16 @@ describe("planExercise", () => {
     expect(wo.tokens.join(" ")).not.toBe(wo.answer.join(" "));
   });
 
-  it("detects a card held by the production gate and uses recall for it", () => {
+  it("gives a held card the missing production: writing first, then speaking", () => {
     const held = sc("1", { stage: 6, ladderStep: 5 }, { production: NONE });
     expect(isProductionPending(held, env())).toBe(true);
-    expect(planExercise(held, env(pool)).kind).toBe("recall");
+    expect(planExercise(held, env(pool))).toMatchObject({ kind: "write", method: "writing" });
+    const halfway = sc(
+      "1",
+      { stage: 6, ladderStep: 5 },
+      { production: { writtenPassed: true, spokenPassed: false } },
+    );
+    expect(planExercise(halfway, env(pool))).toMatchObject({ kind: "speak", method: "speaking" });
     expect(isProductionPending(sc("1", { stage: 6, ladderStep: 5 }), env())).toBe(false);
   });
 
@@ -196,6 +203,27 @@ describe("session engine", () => {
     const r = answerCard(createSession([a, b]), "good", ctx);
     expect(r.outcome.itemMastered).toBe(false);
     expect(r.state.byId["b"]!.siblingComplete).toBe(true);
+  });
+
+  it("records a passed production for every card of the item, opening the gate", () => {
+    const it = item("w");
+    const a = sc(
+      "a",
+      { stage: 6, ladderStep: 5, status: "review" },
+      { item: it, production: { writtenPassed: true, spokenPassed: false } },
+    );
+    const b = sc(
+      "b",
+      { direction: "uz_en" },
+      { item: it, production: { writtenPassed: true, spokenPassed: false } },
+    );
+    const other = sc("c", {}, { production: NONE });
+    let s = recordProduction(createSession([a, b, other]), "w", "spoken");
+    expect(s.byId["a"]!.production).toEqual(DONE);
+    expect(s.byId["b"]!.production).toEqual(DONE);
+    expect(s.byId["c"]!.production).toEqual(NONE);
+    s = answerCard(s, "good", ctx).state; // gate open now → moves past rung 5
+    expect(s.byId["a"]!.card).toMatchObject({ ladderStep: 6, dueDate: "2026-12-11" });
   });
 
   it("previews intervals per grade", () => {

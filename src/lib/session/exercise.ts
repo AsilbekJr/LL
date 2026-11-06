@@ -1,5 +1,6 @@
 import { gateStartIndex } from "@/lib/srs/ladder";
-import { isProductionDone } from "@/lib/srs/mastery";
+import { isProductionDone, nextProductionMode } from "@/lib/srs/mastery";
+import { pickContext } from "@/lib/production/contexts";
 import { methodForStage } from "@/lib/srs/stages";
 import type { ItemType, ProductionProgress, ReviewMethod, SrsCard } from "@/lib/srs/types";
 import { clozeLongestWord, makeCloze, sentenceTokens } from "@/lib/text/answer";
@@ -39,7 +40,10 @@ export type Exercise =
   | { kind: "spelling"; method: "spelling"; prompt: string; answer: string }
   | { kind: "listening"; method: "listening"; say: string; answer: string; hint: string }
   | { kind: "cloze"; method: "cloze"; before: string; after: string; answer: string; hint: string }
-  | { kind: "order"; method: "word_order"; tokens: string[]; answer: string[]; hint: string };
+  | { kind: "order"; method: "word_order"; tokens: string[]; answer: string[]; hint: string }
+  /** Production gate: the learner writes / says their own sentence with the word. */
+  | { kind: "write"; method: "writing"; contextId: string }
+  | { kind: "speak"; method: "speaking"; contextId: string };
 
 export interface ExerciseEnv {
   /** Other items to draw multiple-choice distractors from. */
@@ -62,8 +66,8 @@ export function shuffle<T>(arr: T[], random: () => number): T[] {
 
 /**
  * The production gate is holding this card: the item still needs a written
- * and a spoken production (phase 5). Until those screens exist the card is
- * reviewed with active recall.
+ * and/or a spoken production, so the card gets that exercise instead of its
+ * normal method.
  */
 export function isProductionPending(
   sc: SessionCard,
@@ -158,7 +162,12 @@ function order(sc: SessionCard, random: () => number): Exercise | null {
 
 /** Build the exercise for a card from its stage, with graceful fallbacks. */
 export function planExercise(sc: SessionCard, env: ExerciseEnv): Exercise {
-  if (isProductionPending(sc, env)) return recall(sc);
+  if (isProductionPending(sc, env)) {
+    const contextId = pickContext(env.random).id;
+    return nextProductionMode(sc.production) === "spoken"
+      ? { kind: "speak", method: "speaking", contextId }
+      : { kind: "write", method: "writing", contextId };
+  }
 
   const method: ReviewMethod = methodForStage(sc.card.stage, sc.item.type);
   switch (method) {

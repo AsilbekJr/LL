@@ -15,6 +15,7 @@ import {
   SpellingView,
 } from "@/components/review/exercises";
 import type { SpeechPrefs } from "@/components/review/shared";
+import { SpeakingTask, WritingTask, type ProductionResult } from "@/components/production/production-task";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -26,16 +27,19 @@ import {
   currentCard,
   isFinished,
   previewIntervals,
+  recordProduction,
   remaining,
   type SessionState,
 } from "@/lib/session/engine";
-import { isProductionPending, planExercise } from "@/lib/session/exercise";
+import { planExercise } from "@/lib/session/exercise";
+import type { ProductionWrite } from "@/lib/production/api";
+import { productionPrompt } from "@/lib/production/contexts";
 import { canSpeak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
-export function SessionClient() {
+export function SessionClient({ aiEnabled }: { aiEnabled: boolean }) {
   const session = useQuery({
     queryKey: ["session"],
     queryFn: () => loadSession(getSupabaseBrowserClient()),
@@ -98,7 +102,14 @@ export function SessionClient() {
   }
 
   // A fresh Session (and fresh state) for every load.
-  return <Session key={session.dataUpdatedAt} data={session.data} onRestart={() => session.refetch()} />;
+  return (
+    <Session
+      key={session.dataUpdatedAt}
+      data={session.data}
+      aiEnabled={aiEnabled}
+      onRestart={() => session.refetch()}
+    />
+  );
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
@@ -164,7 +175,15 @@ function useAnswerWriter() {
   return { push, pending, failed, retry: flush };
 }
 
-function Session({ data, onRestart }: { data: LoadedSession; onRestart: () => void }) {
+function Session({
+  data,
+  aiEnabled,
+  onRestart,
+}: {
+  data: LoadedSession;
+  aiEnabled: boolean;
+  onRestart: () => void;
+}) {
   const { config } = data;
   const [state, setState] = useState<SessionState>(() => createSession(data.cards, data.load));
   const [startedAt] = useState(() => Date.now());
@@ -195,10 +214,12 @@ function Session({ data, onRestart }: { data: LoadedSession; onRestart: () => vo
   }, [state.position]);
 
   const onAnswer = useCallback(
-    (result: ReviewResult | null, responseText?: string) => {
-      if (!exercise) return;
+    (result: ReviewResult | null, responseText?: string, production?: ProductionWrite | null) => {
+      if (!exercise || !sc) return;
       const now = new Date();
-      const r = answerCard(state, result, { ...ctx, now });
+      // A passed production counts towards the gate before the card is graded.
+      const base = production?.passed ? recordProduction(state, sc.item.id, production.mode) : state;
+      const r = answerCard(base, result, { ...ctx, now });
       setState(r.state);
       if (isFinished(r.state)) setFinishedAt(now.getTime());
       writer.push({
@@ -210,9 +231,32 @@ function Session({ data, onRestart }: { data: LoadedSession; onRestart: () => vo
         responseMs: Math.round(performance.now() - shownAt.current),
         outcome: r.outcome,
         siblingPatch: r.siblingPatch,
+        production: production ?? null,
       });
     },
-    [state, ctx, exercise, writer],
+    [state, sc, ctx, exercise, writer],
+  );
+
+  // Writing / speaking stage: passed → Good (and counts for the gate); skipped → Hard.
+  const onProduction = useCallback(
+    (res: ProductionResult) => {
+      if (!sc || !exercise || (exercise.kind !== "write" && exercise.kind !== "speak")) return;
+      const mode = exercise.kind === "write" ? "written" : "spoken";
+      onAnswer(res.passed ? "good" : "hard", res.text, {
+        clientId: crypto.randomUUID(),
+        itemId: sc.item.id,
+        cardId: sc.card.id,
+        mode,
+        exercise: "sentence",
+        context: exercise.contextId,
+        prompt: productionPrompt(sc.item.english, exercise.contextId, mode),
+        text: res.text,
+        passed: res.passed,
+        durationMs: res.durationMs,
+        aiFeedback: res.feedback,
+      });
+    },
+    [sc, exercise, onAnswer],
   );
 
   const total = state.order.length;
@@ -264,14 +308,28 @@ function Session({ data, onRestart }: { data: LoadedSession; onRestart: () => vo
               {uz.review.methods[exercise.method]}
             </p>
 
-            {isProductionPending(sc, env) ? (
+            {exercise.kind === "write" || exercise.kind === "speak" ? (
               <p className="flex items-start gap-2 rounded-xl bg-highlight-soft px-4 py-3 text-sm text-highlight-foreground">
                 <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {uz.review.productionPending}
               </p>
             ) : null}
 
-            {exercise.kind === "encounter" ? (
+            {exercise.kind === "write" ? (
+              <WritingTask
+                item={sc.item}
+                contextId={exercise.contextId}
+                aiEnabled={aiEnabled}
+                onDone={onProduction}
+              />
+            ) : exercise.kind === "speak" ? (
+              <SpeakingTask
+                item={sc.item}
+                contextId={exercise.contextId}
+                aiEnabled={aiEnabled}
+                onDone={onProduction}
+              />
+            ) : exercise.kind === "encounter" ? (
               <EncounterView item={sc.item} speech={speech} onAnswer={onAnswer} />
             ) : exercise.kind === "choice" ? (
               <ChoiceView ex={exercise} speech={speech} onAnswer={onAnswer} />

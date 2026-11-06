@@ -39,6 +39,10 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const { pathname } = request.nextUrl;
 
   if (!signedIn && !isPublic(pathname)) {
+    // API callers get a JSON 401, not an HTML login page.
+    if (pathname.startsWith("/api/")) {
+      return copyCookies(response, NextResponse.json({ error: "unauthorized" }, { status: 401 }));
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;

@@ -12,6 +12,7 @@ import {
   type SrsSettings,
 } from "@/lib/srs/types";
 import type { Database, Json, Tables } from "@/lib/supabase/database.types";
+import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import type { SessionCard, SessionItem } from "./exercise";
 
 type Client = SupabaseClient<Database>;
@@ -208,10 +209,13 @@ export interface AnswerWrite {
   responseMs: number | null;
   outcome: ReviewOutcome;
   siblingPatch: { id: string; status: "mastered"; dueDate: IsoDate } | null;
+  /** Writing/speaking stage: the learner's sentence (saved before the card). */
+  production?: ProductionWrite | null;
 }
 
 export async function persistAnswer(sb: Client, w: AnswerWrite): Promise<void> {
   const c = w.outcome.card;
+  if (w.production) await saveProductions(sb, [w.production]);
   // Log first (idempotent on client_id), then the card state.
   const log = await sb.from("review_logs").upsert(
     {
