@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { BrandMark } from "@/components/common/brand-mark";
 import { uz } from "@/lib/i18n/uz";
@@ -13,7 +12,14 @@ const SAMPLE = [
   { en: "to keep up with", uz: "ortda qolmaslik" },
 ];
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  // Read ?next= on the server: with useSearchParams() the whole form would only
+  // render after JavaScript loads (client-side bailout), delaying LCP by seconds.
+  const { next } = await searchParams;
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       {/* Brand panel (desktop) */}
@@ -54,9 +60,7 @@ export default function LoginPage() {
             <h1 className="font-display text-4xl font-semibold">{uz.auth.title}</h1>
             <p className="mt-2 text-muted-foreground">{uz.auth.subtitle}</p>
           </div>
-          <Suspense>
-            <LoginForm />
-          </Suspense>
+          <LoginForm next={typeof next === "string" ? next : null} />
         </div>
       </main>
     </div>

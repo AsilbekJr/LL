@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Route } from "next";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,9 +25,8 @@ function safeNext(next: string | null): string {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/bugun";
 }
 
-export function LoginForm() {
+export function LoginForm({ next }: { next: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -51,7 +50,7 @@ export function LoginForm() {
       return;
     }
     // refresh() re-runs server components with the fresh session cookie.
-    router.replace(safeNext(searchParams.get("next")) as Route);
+    router.replace(safeNext(next) as Route);
     router.refresh();
   });
 
