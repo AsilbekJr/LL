@@ -19,7 +19,9 @@ import { SpeakingTask, WritingTask, type ProductionResult } from "@/components/p
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { loadSession, persistAnswer, type AnswerWrite, type LoadedSession } from "@/lib/session/api";
+import type { AnswerWrite, LoadedSession } from "@/lib/session/api";
+import { loadSessionOfflineFirst, NoOfflineSessionError } from "@/lib/offline/session-cache";
+import { enqueue, flushOutbox, onOutboxChange } from "@/lib/offline/outbox";
 import {
   accuracy,
   answerCard,
@@ -42,7 +44,7 @@ import { cn } from "@/lib/utils";
 export function SessionClient({ aiEnabled }: { aiEnabled: boolean }) {
   const session = useQuery({
     queryKey: ["session"],
-    queryFn: () => loadSession(getSupabaseBrowserClient()),
+    queryFn: () => loadSessionOfflineFirst(getSupabaseBrowserClient()),
     staleTime: Infinity,
     gcTime: 0,
     refetchOnWindowFocus: false,
@@ -62,12 +64,13 @@ export function SessionClient({ aiEnabled }: { aiEnabled: boolean }) {
   }
 
   if (session.isError) {
+    const noOffline = session.error instanceof NoOfflineSessionError;
     return (
       <Centered>
         <EmptyState
           icon={AlertTriangle}
-          title={uz.common.errorTitle}
-          description={uz.common.errorBody}
+          title={noOffline ? uz.offline.noSessionTitle : uz.common.errorTitle}
+          description={noOffline ? uz.offline.noSessionBody : uz.common.errorBody}
           action={<Button onClick={() => session.refetch()}>{uz.common.retry}</Button>}
           className="w-full"
         />
@@ -103,12 +106,23 @@ export function SessionClient({ aiEnabled }: { aiEnabled: boolean }) {
 
   // A fresh Session (and fresh state) for every load.
   return (
-    <Session
-      key={session.dataUpdatedAt}
-      data={session.data}
-      aiEnabled={aiEnabled}
-      onRestart={() => session.refetch()}
-    />
+    <>
+      {session.data.offline ? (
+        <p
+          role="status"
+          className="mx-auto mt-2 flex max-w-md items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground"
+        >
+          <CloudOff className="size-3.5 shrink-0" aria-hidden />
+          {uz.offline.cachedSession}
+        </p>
+      ) : null}
+      <Session
+        key={session.dataUpdatedAt}
+        data={session.data}
+        aiEnabled={aiEnabled}
+        onRestart={() => session.refetch()}
+      />
+    </>
   );
 }
 
@@ -120,56 +134,35 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Writes answers in order; failed writes stay queued until retried. */
+/**
+ * Answers go to the offline outbox (IndexedDB) first, then to Supabase in
+ * order — nothing is lost if the network or the tab goes away.
+ */
 function useAnswerWriter() {
-  const queue = useRef<AnswerWrite[]>([]);
-  const busy = useRef(false);
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(false);
 
   const flush = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
     setFailed(false);
-    const sb = getSupabaseBrowserClient();
-    try {
-      while (queue.current.length) {
-        await persistAnswer(sb, queue.current[0]!);
-        queue.current.shift();
-        setPending(queue.current.length);
-      }
-    } catch {
-      setFailed(true);
-    } finally {
-      busy.current = false;
-    }
+    const ok = await flushOutbox(getSupabaseBrowserClient());
+    setFailed(!ok);
   }, []);
 
   const push = useCallback(
     (w: AnswerWrite) => {
-      queue.current.push(w);
-      setPending(queue.current.length);
-      void flush();
+      void enqueue(w).then(flush);
     },
     [flush],
   );
 
-  // Warn before closing the tab with unsaved answers.
   useEffect(() => {
-    if (!pending) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = uz.review.leaveWarning;
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [pending]);
-
-  // Retry automatically when the connection comes back.
-  useEffect(() => {
+    const off = onOutboxChange(setPending);
     const onOnline = () => void flush();
     window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    return () => {
+      off();
+      window.removeEventListener("online", onOnline);
+    };
   }, [flush]);
 
   return { push, pending, failed, retry: flush };

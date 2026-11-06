@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/common/coming-soon";
+import { PageHeader } from "@/components/common/page-header";
 import { uz } from "@/lib/i18n/uz";
+import { StatsClient } from "./stats-client";
 
 export const metadata: Metadata = { title: uz.nav.stats };
 
 export default function StatsPage() {
   return (
-    <ComingSoon
-      title={uz.nav.stats}
-      phase={6}
-      description="Eslab qolish foizi, kunlik takrorlashlar, bosqichlar, eng qiyin so'zlar, haftalik gapirish daqiqalari."
-    />
+    <>
+      <PageHeader title={uz.nav.stats} description={uz.stats.description} />
+      <StatsClient />
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { OutboxSync } from "@/components/common/outbox-sync";
 import { Sidebar } from "@/components/layout/sidebar";
 import { getCurrentUserId } from "@/lib/supabase/server";
 
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <BottomNav />
+      <OutboxSync />
     </div>
   );
 }

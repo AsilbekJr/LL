@@ -15,3 +15,7 @@ enable_signup = false
 [auth.email]
 enable_signup = false
 enable_confirmations = false
+
+# Called by pg_cron with a shared secret (CRON_SECRET), not a user JWT.
+[functions.send-reminders]
+verify_jwt = false
