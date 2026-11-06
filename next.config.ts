@@ -1,16 +1,6 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
-// Serwist (service worker) needs the webpack build — hence `next build --webpack`.
-// In dev the SW is disabled so hot reload is not cached.
-const withSerwist = withSerwistInit({
-  swSrc: "src/app/sw.ts",
-  swDest: "public/sw.js",
-  cacheOnNavigation: true,
-  reloadOnOnline: false,
-  disable: process.env.NODE_ENV === "development",
-});
-
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -28,4 +18,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSerwist(nextConfig);
+// Serwist (service worker) needs the webpack build — hence `next build --webpack`.
+// In dev the plugin is not applied at all: even when disabled it injects a
+// `webpack` config, which makes `next dev` (Turbopack by default) refuse to
+// start. Skipping it in dev also keeps hot reload out of the SW cache.
+function withServiceWorker(config: NextConfig): NextConfig {
+  if (process.env.NODE_ENV === "development") return config;
+  return withSerwistInit({
+    swSrc: "src/app/sw.ts",
+    swDest: "public/sw.js",
+    cacheOnNavigation: true,
+    reloadOnOnline: false,
+  })(config);
+}
+
+export default withServiceWorker(nextConfig);
