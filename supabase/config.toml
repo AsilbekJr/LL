@@ -1,0 +1,16 @@
+# Minimal Supabase CLI config. Only used by the local stack (`supabase start`);
+# remote project auth settings are changed in the dashboard (see README).
+project_id = "ll-srs"
+
+[db]
+major_version = 17
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+# Personal app: create your account first, then keep sign-ups disabled.
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false

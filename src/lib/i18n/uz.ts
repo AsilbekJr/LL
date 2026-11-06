@@ -1,0 +1,47 @@
+/** All UI strings in one place (Uzbek, Latin script). */
+export const uz = {
+  app: {
+    name: "LL — So'z yodlash",
+    short: "LL",
+    description: "Inglizcha so'z va gaplarni takrorlash va faol ishlatish orqali yodlash",
+  },
+  nav: {
+    today: "Bugun",
+    review: "Takrorlash",
+    add: "Qo'shish",
+    library: "Kutubxona",
+    mastered: "Yodlanganlar",
+    calendar: "Kalendar",
+    import: "Import",
+    stats: "Statistika",
+    settings: "Sozlamalar",
+    speaking: "Nutq mashqi",
+    more: "Ko'proq",
+    signOut: "Chiqish",
+  },
+  auth: {
+    title: "Kirish",
+    subtitle: "Shaxsiy hisobingizga kiring",
+    email: "Email",
+    password: "Parol",
+    submit: "Kirish",
+    submitting: "Kirilmoqda…",
+    invalidEmail: "To'g'ri email kiriting",
+    passwordMin: "Parol kamida 6 ta belgi bo'lishi kerak",
+    failed: "Email yoki parol noto'g'ri",
+    network: "Internet aloqasi yo'q. Keyinroq urinib ko'ring.",
+  },
+  common: {
+    comingInPhase: (n: number) => `Bu bo'lim ${n}-fazada tayyor bo'ladi`,
+    retry: "Qayta urinish",
+    errorTitle: "Xatolik yuz berdi",
+    errorBody: "Nimadir noto'g'ri ketdi. Sahifani qayta yuklab ko'ring.",
+    notFoundTitle: "Sahifa topilmadi",
+    notFoundBody: "Bunday sahifa mavjud emas.",
+    backHome: "Bosh sahifaga",
+    loading: "Yuklanmoqda…",
+    offlineTitle: "Internet yo'q",
+    offlineBody:
+      "Hozir oflaynsiz. Avval ochilgan sahifalar ishlaydi, takrorlashlar esa internet qaytganda sinxronlanadi.",
+  },
+} as const;

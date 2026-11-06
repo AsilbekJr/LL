@@ -1,0 +1,8 @@
+.next
+node_modules
+public/sw.js
+public/swe-worker-*.js
+pnpm-lock.yaml
+package-lock.json
+src/lib/supabase/database.types.ts
+supabase/.temp

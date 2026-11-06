@@ -1,0 +1,33 @@
+# deps
+node_modules/
+
+# next
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# serwist (generated)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+
+# env
+.env
+.env.local
+.env.*.local
+
+# tests
+coverage/
+playwright-report/
+test-results/
+playwright/.auth/
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# misc
+.DS_Store
+.vercel
+*.log
