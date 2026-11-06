@@ -15,7 +15,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ✅ |
 | 5 | Production (yozish, gapirish, shadowing) + AI | ✅ |
 | 6 | Kalendar, statistika, push, offline sync | ✅ |
-| 7 | Polish, Lighthouse, E2E, deploy | ⏳ |
+| 7 | Polish, Lighthouse, E2E, deploy | 🟡 E2E va deploy tayyor; Lighthouse qayta o'lchanishi kerak |
 
 ## 1. O'rnatish (Windows, PowerShell)
 
@@ -61,6 +61,47 @@ npm run typecheck
 Telefonda sinash: kompyuter va telefon bir Wi-Fi'da bo'lsa, `npm run dev -- -H 0.0.0.0`
 va telefondan `http://<kompyuter-IP>:3000`. (Service worker faqat `npm run build && npm start`
 yoki HTTPS'da ishlaydi.)
+
+## 4. Testlar
+
+```powershell
+npm test            # unit testlar (Vitest) — SRS, sana chegaralari, import, oflayn
+npm run test:e2e    # Playwright: lokal build'ni ishga tushirib sinaydi
+```
+
+**E2E production'ga qarshi** (telefon 360px + desktop):
+
+```powershell
+$env:E2E_BASE_URL="https://ll-topaz-zeta.vercel.app"
+$env:E2E_EMAIL="e2e-test@example.com"      # alohida test hisobi
+$env:E2E_PASSWORD="<.env.local dagi E2E_PASSWORD>"
+npx playwright install chromium
+npm run test:e2e
+```
+
+- `tests/e2e/shell.spec.ts` — kirmagan foydalanuvchi: `/login` ga yo'naltirish, forma
+  validatsiyasi, 360px da gorizontal scroll yo'qligi, manifest.
+- `tests/e2e/app.spec.ts` — test hisobi bilan: bo'sh kutubxona, barcha ekranlar 360px ga
+  sig'ishi, so'z qo'shish + dublikat, ro'yxat qo'shish, qidiruv, import (xato fayl + namunaviy
+  to'plam), takrorlash sessiyasi **o'rtasida internet uziladi va qaytgach sinxronlanadi**,
+  kalendar, statistika, sozlamalar, oxirida tozalash.
+- Test hisobi haqiqiy hisobingizdan alohida (RLS ularni to'liq ajratadi). Uni yaratish:
+  Supabase → Authentication → Users → Add user (yoki SQL), parolni `.env.local` dagi
+  `E2E_EMAIL` / `E2E_PASSWORD` ga yozing.
+
+**Lighthouse (mobil)**: Chrome DevTools → Lighthouse → Mobile, yoki
+`npx lighthouse https://ll-topaz-zeta.vercel.app/login --form-factor=mobile --view`.
+
+## 5. Deploy (Vercel)
+
+1. GitHub repo Vercel'ga ulangan: `main` ga har push avtomatik production deploy.
+2. Vercel → Settings → Environment Variables: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+   ixtiyoriy `AI_FEEDBACK_ENABLED` + `ANTHROPIC_API_KEY`.
+3. Supabase → Authentication → URL Configuration: Site URL va Redirect URLs ga Vercel
+   manzilini qo'shing.
+4. Yangi migratsiyalar: `npx supabase db push`; Edge Function:
+   `npx supabase functions deploy send-reminders`.
 
 ## Muhim texnik qarorlar
 

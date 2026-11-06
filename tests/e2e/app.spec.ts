@@ -98,7 +98,7 @@ test("import rejects an invalid file and previews a sample pack", async ({ page 
   await expect(page.getByRole("alert").filter({ hasText: /JSON|qator|xato/i }).first()).toBeVisible();
 
   await page.getByRole("tab", { name: "Tayyor to'plamlar" }).click();
-  await page.getByRole("button", { name: "Tanlash" }).first().click();
+  await page.getByRole("button", { name: /^A1/ }).click(); // sample pack cards are buttons
   await expect(page.getByText(/ta yangi/).first()).toBeVisible();
   await page.getByRole("button", { name: "Bekor qilish" }).click();
 });
@@ -168,7 +168,8 @@ test("calendar shows today's reviewed words", async ({ page }) => {
     .filter({ has: page.getByText(String(todayNumber), { exact: true }) })
     .first()
     .click();
-  await expect(page.getByText("Takrorlangan so'zlar")).toBeVisible();
+  // Cards answered "again" stay due today, so today can show either list.
+  await expect(page.getByText(/Rejadagi so'zlar|Takrorlangan so'zlar/)).toBeVisible();
   await expect(page.getByText(word, { exact: false }).first()).toBeVisible();
 });
 
