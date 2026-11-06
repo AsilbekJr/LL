@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  // radix-ui is one barrel package: import only the primitives a page uses.
+  experimental: { optimizePackageImports: ["radix-ui"] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

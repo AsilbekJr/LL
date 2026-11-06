@@ -4,21 +4,20 @@ import { useState } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { uz } from "@/lib/i18n/uz";
 
-const loginSchema = z.object({
-  email: z.email(uz.auth.invalidEmail),
-  password: z.string().min(6, uz.auth.passwordMin),
-});
+interface LoginValues {
+  email: string;
+  password: string;
+}
 
-type LoginValues = z.infer<typeof loginSchema>;
+// Plain rules instead of zod: the login page is the only public page and
+// stays light. Supabase is loaded only when the form is submitted.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Only allow same-origin relative redirects (prevents open redirect). */
 function safeNext(next: string | null): string {
@@ -33,10 +32,7 @@ export function LoginForm({ next }: { next: string | null }) {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
-  });
+  } = useForm<LoginValues>({ defaultValues: { email: "", password: "" } });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -44,7 +40,11 @@ export function LoginForm({ next }: { next: string | null }) {
       setFormError(uz.auth.network);
       return;
     }
-    const { error } = await getSupabaseBrowserClient().auth.signInWithPassword(values);
+    const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+    const { error } = await getSupabaseBrowserClient().auth.signInWithPassword({
+      email: values.email.trim(),
+      password: values.password,
+    });
     if (error) {
       setFormError(uz.auth.failed);
       return;
@@ -66,7 +66,9 @@ export function LoginForm({ next }: { next: string | null }) {
           autoCapitalize="none"
           aria-invalid={errors.email ? true : undefined}
           aria-describedby={errors.email ? "email-error" : undefined}
-          {...register("email")}
+          {...register("email", {
+            validate: (v) => EMAIL_RE.test(v.trim()) || uz.auth.invalidEmail,
+          })}
         />
         {errors.email ? (
           <p id="email-error" className="text-sm text-destructive">
@@ -83,7 +85,7 @@ export function LoginForm({ next }: { next: string | null }) {
           autoComplete="current-password"
           aria-invalid={errors.password ? true : undefined}
           aria-describedby={errors.password ? "password-error" : undefined}
-          {...register("password")}
+          {...register("password", { minLength: { value: 6, message: uz.auth.passwordMin } })}
         />
         {errors.password ? (
           <p id="password-error" className="text-sm text-destructive">
