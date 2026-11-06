@@ -246,6 +246,8 @@ export async function fetchDayItems(
       .returns<PlannedRow[]>();
     if (error) throw new Error(error.message);
     const rows = (data ?? []).filter((r) => r.items);
+    // Today with nothing left to do: show what was reviewed instead.
+    if (rows.length === 0 && day === today) return fetchReviewed(sb, day, timezone);
     return {
       kind: "planned",
       truncated: rows.length > DAY_ITEMS_LIMIT,
@@ -261,6 +263,10 @@ export async function fetchDayItems(
     };
   }
 
+  return fetchReviewed(sb, day, timezone);
+}
+
+async function fetchReviewed(sb: Client, day: IsoDate, timezone: string): Promise<DayItems> {
   const from = startOfDayInTz(day, timezone).toISOString();
   const to = startOfDayInTz(addDays(day, 1), timezone).toISOString();
   const logs = await readAll((a, b) =>
