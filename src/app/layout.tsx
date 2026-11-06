@@ -1,8 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { Fraunces, Manrope } from "next/font/google";
 import { Providers } from "./providers";
 import { uz } from "@/lib/i18n/uz";
 import "./globals.css";
+
+// Self-hosted at build time by next/font (no runtime request to Google).
+const manrope = Manrope({ subsets: ["latin", "latin-ext"], variable: "--font-manrope", display: "swap" });
+const fraunces = Fraunces({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["SOFT", "WONK", "opsz"],
+});
 
 export const metadata: Metadata = {
   title: { default: uz.app.name, template: `%s · ${uz.app.short}` },
@@ -21,8 +31,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover", // enables env(safe-area-inset-*)
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbfcfe" },
-    { media: "(prefers-color-scheme: dark)", color: "#13151f" },
+    { media: "(prefers-color-scheme: light)", color: "#faf8f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#15161f" },
   ],
 };
 
@@ -31,7 +41,7 @@ const themeScript = `(function(){try{var t=localStorage.getItem('ll-theme');var 
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="uz" suppressHydrationWarning>
+    <html lang="uz" suppressHydrationWarning className={`${manrope.variable} ${fraunces.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

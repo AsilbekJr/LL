@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { addDays, daysBetween, diffDays, isIsoDate, overdueDays } from "@/lib/srs/dates";
+import {
+  addDays,
+  daysBetween,
+  diffDays,
+  hourInTz,
+  isIsoDate,
+  overdueDays,
+  startOfDayInTz,
+} from "@/lib/srs/dates";
 
 describe("calendar-day arithmetic", () => {
   it("addDays crosses month, year and leap day", () => {
@@ -39,6 +47,19 @@ describe("calendar-day arithmetic", () => {
       "2027-01-02",
     ]);
     expect(daysBetween("2026-11-06", "2026-11-05")).toEqual([]);
+  });
+
+  it("finds the start of a day in a timezone", () => {
+    expect(startOfDayInTz("2026-11-06", "Asia/Tashkent").toISOString()).toBe("2026-11-05T19:00:00.000Z");
+    expect(startOfDayInTz("2026-11-06", "UTC").toISOString()).toBe("2026-11-06T00:00:00.000Z");
+    // New York on a DST-change day (falls back 2026-11-01 at 02:00; midnight is still EDT, UTC−4).
+    expect(startOfDayInTz("2026-11-01", "America/New_York").toISOString()).toBe("2026-11-01T04:00:00.000Z");
+    expect(startOfDayInTz("2026-11-02", "America/New_York").toISOString()).toBe("2026-11-02T05:00:00.000Z");
+  });
+
+  it("reads the hour in a timezone", () => {
+    expect(hourInTz(new Date("2026-11-06T19:30:00Z"), "Asia/Tashkent")).toBe(0);
+    expect(hourInTz(new Date("2026-11-06T07:00:00Z"), "Asia/Tashkent")).toBe(12);
   });
 
   it("validates ISO dates", () => {

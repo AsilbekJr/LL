@@ -7,6 +7,7 @@ import {
   Home,
   Menu,
   Mic,
+  Plus,
   PlusCircle,
   Settings,
   Upload,
@@ -33,18 +34,24 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/sozlamalar", label: uz.nav.settings, icon: Settings },
 ];
 
-/** Mobile bottom tabs — max 5 for thumb reach; the rest live under "Ko'proq". */
+/**
+ * Mobile bottom tabs — max 5 for thumb reach; the rest live under "Ko'proq".
+ * "Qo'shish" sits in the middle and is rendered as the primary action.
+ */
 export const TAB_ITEMS: NavItem[] = [
   { href: "/bugun", label: uz.nav.today, icon: Home },
-  { href: "/qoshish", label: uz.nav.add, icon: PlusCircle },
   { href: "/kutubxona", label: uz.nav.library, icon: BookOpen },
+  { href: "/qoshish", label: uz.nav.add, icon: Plus },
   { href: "/kalendar", label: uz.nav.calendar, icon: CalendarDays },
   { href: "/koproq", label: uz.nav.more, icon: Menu },
 ];
 
+export const PRIMARY_TAB: Route = "/qoshish";
+
 export const MORE_ITEMS: NavItem[] = NAV_ITEMS.filter((i) => !TAB_ITEMS.some((t) => t.href === i.href));
 
 export function isActive(pathname: string, href: string): boolean {
-  if (href === "/koproq") return MORE_ITEMS.some((i) => pathname.startsWith(i.href)) || pathname === "/koproq";
+  if (href === "/koproq")
+    return MORE_ITEMS.some((i) => pathname.startsWith(i.href)) || pathname === "/koproq";
   return pathname === href || pathname.startsWith(`${href}/`);
 }

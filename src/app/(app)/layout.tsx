@@ -11,10 +11,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh">
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Asosiy qismga o&apos;tish
+      </a>
       <Sidebar />
       <main
         id="main"
-        className="mx-auto w-full max-w-3xl flex-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-8 md:pb-10"
+        className="animate-rise mx-auto w-full max-w-3xl flex-1 px-5 pt-[max(1.75rem,env(safe-area-inset-top))] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-12 md:pb-12"
       >
         {children}
       </main>

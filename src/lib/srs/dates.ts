@@ -76,6 +76,46 @@ export function overdueDays(dueDate: IsoDate, today: IsoDate): number {
   return Math.max(0, diffDays(today, dueDate));
 }
 
+/** Offset (ms) of timezone `tz` from UTC at `instant` (e.g. +5h for Tashkent). */
+export function tzOffsetMs(instant: Date, tz: string = DEFAULT_TZ): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
+  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
+}
+
+/** The instant the calendar day `day` begins in timezone `tz` (for timestamptz range queries). */
+export function startOfDayInTz(day: IsoDate, tz: string = DEFAULT_TZ): Date {
+  const utcMidnight = toUtcMs(day);
+  // Two passes handle a DST change between UTC midnight and local midnight.
+  let guess = utcMidnight - tzOffsetMs(new Date(utcMidnight), tz);
+  guess = utcMidnight - tzOffsetMs(new Date(guess), tz);
+  return new Date(guess);
+}
+
+/** Hour of the day (0–23) at `instant` in timezone `tz`. */
+export function hourInTz(instant: Date, tz: string = DEFAULT_TZ): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(instant),
+  );
+}
+
 /** Ordered list of days from `from` to `to`, inclusive. Empty if `to` < `from`. */
 export function daysBetween(from: IsoDate, to: IsoDate): IsoDate[] {
   const n = diffDays(to, from);
