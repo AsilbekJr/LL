@@ -93,6 +93,15 @@ Indekslar: `cards(user_id, due_date)`, `cards(user_id, status)`, `review_logs(us
 - "Fake passing" bloki: item'da ≥1 o'tilgan yozma VA ≥1 o'tilgan og'zaki production bo'lmaguncha card oxirgi 3 pog'onaga (35/60/100) chiqa olmaydi — o'sha joyda production bosqichi majburan beriladi.
 - Mastered: ikkala yo'nalish oxirgi pog'onadan o'tgan + production shartlari → status `mastered`, `due = +180 kun`.
 
+### 3.1. Engine'da qabul qilingan qarorlar (2-faza, `src/lib/srs/`)
+- `ladder_step` = o'tilgan pog'onalar soni. `s` qadamda Good → interval `ladder[s]`, `s+1`; Easy → `ladder[s+1]`, `s+2` (bitta pog'ona sakraladi).
+- Gate ushlab qolganda card oxirgi ochiq pog'onada qoladi (default: qadam 5, interval 20 kun) va `productionRequired` qaytariladi; sessiya avval yozma, keyin og'zaki production beradi.
+- Status: Again yoki `ladder_step < 2` → `learning`, aks holda `review`. Mastered card'da Again → `learning`, qadam −2.
+- Bosqichlar (card): 1 encounter (baholanmaydi) → 2 recognition → 3 recall → 4 spelling → 5 listening → 6 cloze. Gaplar uchun: 4 listening → 5 cloze → 6 word_order. Good/Easy +1, Hard o'zgarmaydi, Again −1 (2 dan pastga emas).
+- Kunlik navbat: eng ko'p kechikkanlar birinchi, `daily_review_limit` gacha. `daily_new_limit` — yangi **item**lar soni; `both` rejimida ikkala yo'nalish, `random` rejimida bitta tasodifiy yo'nalish. Yangilar takrorlashlar orasiga teng taqsimlanadi, bir item'ning ikki card'i ketma-ket kelmaydi.
+- Load balancing: ≥4 kunlik intervalda ±10% (max ±7 kun) oralig'ida eng bo'sh kun tanlanadi.
+- FSRS rejimi: interval ts-fsrs'dan (fuzz o'chiq), lekin `ladder_step`, bosqich, gate va mastery qoidalari ladder bilan bir xil ishlaydi; gate FSRS intervalini ham cheklaydi.
+
 ## 4. Spec'dan chetlanishlar
 1. **Versiyalarni tekshira olmadim** — ish muhitida npm registry'ga tarmoq yopiq. `package.json`da 2026 holatidagi ma'lum barqaror versiyalarni yozaman; o'zingiz `npm install` qilganda haqiqiy so'nggi versiyalar o'rnatiladi.
 2. `date-fns-tz` o'rniga `@date-fns/tz` (date-fns v4'ning rasmiy timezone paketi) — v4 bilan to'g'ri ishlaydi.
