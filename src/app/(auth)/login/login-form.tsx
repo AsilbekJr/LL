@@ -85,7 +85,10 @@ export function LoginForm({ next }: { next: string | null }) {
           autoComplete="current-password"
           aria-invalid={errors.password ? true : undefined}
           aria-describedby={errors.password ? "password-error" : undefined}
-          {...register("password", { minLength: { value: 6, message: uz.auth.passwordMin } })}
+          {...register("password", {
+            required: uz.auth.passwordMin,
+            minLength: { value: 6, message: uz.auth.passwordMin },
+          })}
         />
         {errors.password ? (
           <p id="password-error" className="text-sm text-destructive">

@@ -15,7 +15,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ✅ |
 | 5 | Production (yozish, gapirish, shadowing) + AI | ✅ |
 | 6 | Kalendar, statistika, push, offline sync | ✅ |
-| 7 | Polish, Lighthouse, E2E, deploy | 🟡 E2E va deploy tayyor; Lighthouse qayta o'lchanishi kerak |
+| 7 | Polish, Lighthouse, E2E, deploy | ✅ |
 
 ## 1. O'rnatish (Windows, PowerShell)
 
@@ -91,6 +91,10 @@ npm run test:e2e
 
 **Lighthouse (mobil)**: Chrome DevTools → Lighthouse → Mobile, yoki
 `npx lighthouse https://ll-topaz-zeta.vercel.app/login --form-factor=mobile --view`.
+
+Oxirgi o'lchov (`/login`, 2026-11-06): desktop — Performance 97, Accessibility 100,
+Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) — 94 / 100 /
+100 / 91; tuzatishlardan keyingi mobil o'lchov beqaror tarmoq sababli yakunlanmadi.
 
 ## 5. Deploy (Vercel)
 
