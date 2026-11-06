@@ -13,7 +13,7 @@
 -- secrets are needed (env vars of the same meaning still take precedence).
 -- =====================================================================
 
-create extension if not exists pg_net;
+create extension if not exists pg_net with schema extensions;
 
 -- One row per (user, local day, reminder time) that was already sent.
 create table public.push_reminder_log (
