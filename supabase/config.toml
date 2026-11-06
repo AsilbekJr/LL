@@ -7,7 +7,8 @@ major_version = 17
 
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000"]
+# Production: https://ll-topaz-zeta.vercel.app (set as Site URL in the hosted project dashboard)
+additional_redirect_urls = ["http://localhost:3000", "https://ll-topaz-zeta.vercel.app"]
 # Personal app: create your account first, then keep sign-ups disabled.
 enable_signup = false
 
