@@ -86,12 +86,31 @@ export function canAutoplay(): boolean {
 export type SpeakResult = { ok: true } | { ok: false; error: string };
 
 /**
+ * How an utterance is configured. Android engines often fail with
+ * "synthesis-failed" when given a voice object (or a language) that the
+ * phone's default TTS engine cannot render, so we fall back step by step:
+ * the chosen voice -> language only -> the engine's own defaults.
+ */
+type Mode = "voice" | "lang" | "bare";
+let workingMode: Mode | null = null;
+
+const isAndroid = () => typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
+function modes(hasVoice: boolean, userPicked: boolean): Mode[] {
+  const order: Mode[] = isAndroid() && !userPicked ? ["lang", "voice", "bare"] : ["voice", "lang", "bare"];
+  const list = order.filter((m) => m !== "voice" || hasVoice);
+  // Start with whatever worked last time on this device.
+  return workingMode && list.includes(workingMode)
+    ? [workingMode, ...list.filter((m) => m !== workingMode)]
+    : list;
+}
+
+/**
  * Speak `text`. Starts synchronously (safe inside a click handler on mobile);
  * the returned promise resolves when speech ends, fails or times out.
  *
- * Mobile engines sometimes drop an utterance silently (Android right after
- * `cancel()`, iOS after a blocked one), so if nothing has started shortly
- * after, it is retried once; if it still does not start, the result says so.
+ * If the engine reports an error or nothing starts shortly after, the next
+ * configuration is tried (see `Mode`); the result reports the last error.
  */
 export function speak(
   text: string,
@@ -102,59 +121,77 @@ export function speak(
   const synth = window.speechSynthesis;
   const rate = Math.min(2, Math.max(0.5, opts.rate ?? 1));
   const voice = bestVoice(voicesNow(), opts.voice ?? null);
+  const attempts = modes(Boolean(voice), Boolean(opts.voice));
 
   return new Promise<SpeakResult>((resolve) => {
     let settled = false;
     let started = false;
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    let attempt = -1;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    let lastError = "not-started";
+    // Declared before `finish` (which clears it); set once speaking has begun.
+    const deadline: { id?: ReturnType<typeof setTimeout> } = {};
     const finish = (r: SpeakResult) => {
       if (settled) return;
       settled = true;
-      timers.forEach(clearTimeout);
+      clearTimeout(watchdog);
+      clearTimeout(deadline.id);
       current = null;
       resolve(r);
     };
 
-    const say = () => {
+    const next = () => {
+      attempt++;
+      const mode = attempts[attempt];
+      if (!mode) return finish({ ok: false, error: lastError });
+      if (attempt > 0) synth.cancel();
+
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = voice ? voice.lang.replace("_", "-") : "en-US";
       u.rate = rate;
-      if (voice) u.voice = voice;
+      if (mode === "voice" && voice) {
+        u.voice = voice;
+        u.lang = voice.lang.replace("_", "-");
+      } else if (mode === "lang") {
+        u.lang = "en-US";
+      }
       u.onstart = () => {
         started = true;
+        workingMode = mode;
       };
-      u.onend = () => current === u && finish({ ok: true });
+      u.onend = () => {
+        if (current !== u) return;
+        if (started || synth.speaking) workingMode = mode;
+        finish({ ok: true });
+      };
       u.onerror = (e) => {
         if (current !== u) return;
         // Our own cancel() (a new tap) is not a failure.
-        if (e.error === "interrupted" || e.error === "canceled") finish({ ok: true });
-        else finish({ ok: false, error: e.error || "error" });
+        if (e.error === "interrupted" || e.error === "canceled") return finish({ ok: true });
+        lastError = e.error || "error";
+        if (started) return finish({ ok: false, error: lastError });
+        if (workingMode === mode) workingMode = null;
+        next();
       };
       current = u;
       synth.speak(u);
+
+      clearTimeout(watchdog);
+      watchdog = setTimeout(() => {
+        if (!settled && !started && !synth.speaking && current === u) next();
+      }, 1200);
     };
 
     // Only cancel when something is queued: cancel() immediately followed by
     // speak() makes some mobile engines drop the new utterance.
     if (synth.speaking || synth.pending) synth.cancel();
     if (synth.paused) synth.resume(); // Chrome can get stuck in "paused"
-    say();
+    next();
 
-    const isStarted = () => started || synth.speaking;
-    timers.push(
-      setTimeout(() => {
-        if (settled || isStarted()) return;
-        synth.cancel();
-        say();
-        timers.push(
-          setTimeout(() => {
-            if (!settled && !isStarted()) finish({ ok: false, error: "not-started" });
-          }, 2000),
-        );
-      }, 900),
-    );
     // Some engines never fire onend: give up after a generous estimate.
-    timers.push(setTimeout(() => finish({ ok: true }), 3000 + Math.max(4000, (text.length * 120) / rate)));
+    deadline.id = setTimeout(
+      () => finish({ ok: true }),
+      4000 * attempts.length + Math.max(4000, (text.length * 120) / rate),
+    );
   });
 }
 
