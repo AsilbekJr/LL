@@ -72,7 +72,7 @@ test("adds a word and rejects the duplicate", async ({ page }) => {
 test("adds a pasted list", async ({ page }) => {
   await page.goto("/qoshish");
   await page.getByRole("tab", { name: "Ro'yxat" }).click();
-  await page.getByLabel("Ro'yxat", { exact: true }).fill(listWords.map((w) => `${w} - ${w} uz`).join("\n"));
+  await page.getByRole("textbox", { name: "Ro'yxat" }).fill(listWords.map((w) => `${w} - ${w} uz`).join("\n"));
   await page.getByRole("button", { name: "2 ta so'zni qo'shish" }).click();
   await expect(page.getByText("2 ta so'z qo'shildi")).toBeVisible();
 });
@@ -94,7 +94,8 @@ test("import rejects an invalid file and previews a sample pack", async ({ page 
     .locator('input[type="file"]')
     .first()
     .setInputFiles({ name: "bad.json", mimeType: "application/json", buffer: Buffer.from('{"items": [ {') });
-  await expect(page.getByRole("alert").first()).toContainText(/JSON|qator|xato/i);
+  // Next's route announcer is also role="alert", so filter by text.
+  await expect(page.getByRole("alert").filter({ hasText: /JSON|qator|xato/i }).first()).toBeVisible();
 
   await page.getByRole("tab", { name: "Tayyor to'plamlar" }).click();
   await page.getByRole("button", { name: "Tanlash" }).first().click();
@@ -111,24 +112,27 @@ async function answerOne(page: Page): Promise<boolean> {
   const cont = page.getByRole("button", { name: "Davom etish" });
   const check = page.getByRole("button", { name: "Tekshirish" });
   const skip = page.getByRole("button", { name: "O'tkazib yuborish" });
+  const choice = page.locator("main ul[role=list] button").first();
+  const done = page.getByRole("heading", { name: "Sessiya tugadi!" });
 
-  await expect(gotIt.or(show).or(good).or(cont).or(check).or(skip).first()).toBeVisible({ timeout: 15_000 });
+  await expect(gotIt.or(show).or(good).or(cont).or(check).or(skip).or(choice).or(done).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  if (await done.isVisible()) return false;
   if (await gotIt.isVisible()) return gotIt.click().then(() => true);
   if (await show.isVisible()) await show.click();
   if (await good.isVisible()) return good.click().then(() => true);
   if (await cont.isVisible()) return cont.click().then(() => true);
   if (await check.isVisible()) {
-    // Typed / choice exercises: any answer is fine for the flow; override not needed.
+    // Typed exercises (spelling / listening / cloze): any answer keeps the flow going.
     const input = page.getByPlaceholder("Javobingiz…");
     if (await input.isVisible()) await input.fill("x");
-    else
-      await page
-        .getByRole("radio")
-        .or(page.locator("[data-choice]"))
-        .first()
-        .click()
-        .catch(() => undefined);
     await check.click();
+    await cont.click();
+    return true;
+  }
+  if (await choice.isVisible()) {
+    await choice.click(); // multiple choice answers on tap
     await cont.click();
     return true;
   }

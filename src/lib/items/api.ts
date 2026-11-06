@@ -93,6 +93,25 @@ export interface AddResult {
 }
 
 /** Insert new items (duplicates are skipped) and optionally schedule them. */
+/**
+ * Only real `items` columns go to the database. Drafts can carry UI-only
+ * fields (e.g. the pasted-list parser adds `line`), and PostgREST rejects
+ * unknown columns — which once broke "paste a list" in production.
+ */
+export function draftColumns(d: ItemDraft) {
+  return {
+    type: d.type,
+    english: d.english,
+    uzbek: d.uzbek,
+    cefr_level: d.cefr_level,
+    part_of_speech: d.part_of_speech,
+    example_en: d.example_en,
+    example_uz: d.example_uz,
+    notes: d.notes,
+    tags: d.tags,
+  } satisfies TablesInsert<"items">;
+}
+
 export async function addItems(
   sb: Client,
   drafts: ItemDraft[],
@@ -104,7 +123,7 @@ export async function addItems(
   const insertedIds: string[] = [];
   for (const part of chunk(fresh, WRITE_CHUNK)) {
     const rows: TablesInsert<"items">[] = part.map((d) => ({
-      ...d,
+      ...draftColumns(d),
       source: opts.source ?? "manual",
       pack_id: opts.packId ?? null,
     }));
@@ -123,7 +142,7 @@ export async function addItems(
 }
 
 export async function updateItem(sb: Client, id: string, draft: ItemDraft): Promise<void> {
-  const { error } = await sb.from("items").update(draft).eq("id", id);
+  const { error } = await sb.from("items").update(draftColumns(draft)).eq("id", id);
   if (error) fail(error, "Saqlab bo'lmadi");
 }
 
