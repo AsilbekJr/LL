@@ -172,16 +172,18 @@ export default async function TodayPage() {
           </div>
         </div>
 
-        {!allDone ? (
-          <div className="mt-6">
-            <Button size="lg" className="w-full text-base" disabled aria-describedby="start-hint">
+        {t.due > 0 || t.fresh > 0 ? (
+          <Button
+            asChild
+            size="lg"
+            className="mt-6 w-full text-base"
+            variant={allDone ? "secondary" : "default"}
+          >
+            <Link href="/takrorlash">
               <Play className="size-5 fill-current" aria-hidden />
-              {uz.today.start}
-            </Button>
-            <p id="start-hint" className="mt-2 text-center text-xs text-muted-foreground">
-              {uz.common.comingInPhase(4)}
-            </p>
-          </div>
+              {allDone ? uz.today.learnNew : uz.today.start}
+            </Link>
+          </Button>
         ) : null}
       </section>
 
