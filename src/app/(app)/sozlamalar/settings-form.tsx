@@ -123,7 +123,7 @@ export function SettingsForm({
   const reminderError = (errors.reminder_times as { message?: string } | undefined)?.message;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 pb-24 md:pb-0">
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
       <Section title={t.plan}>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
