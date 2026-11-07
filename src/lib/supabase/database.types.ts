@@ -308,6 +308,7 @@ export type Database = {
     Functions: {
       schedule_items: { Args: { p_item_ids: string[] }; Returns: number };
       today_tz: { Args: { tz?: string }; Returns: string };
+      reset_my_data: { Args: { p_mode: "all" | "progress"; p_reset_settings?: boolean }; Returns: Json };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

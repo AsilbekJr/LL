@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { uz } from "@/lib/i18n/uz";
+import { ResetData } from "./reset-data";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: uz.nav.settings };
@@ -18,7 +19,10 @@ export default async function SettingsPage() {
       {error || !data ? (
         <EmptyState icon={AlertTriangle} title={uz.common.errorTitle} description={uz.common.errorBody} />
       ) : (
-        <SettingsForm initial={data} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+        <div className="flex flex-col gap-5">
+          <SettingsForm initial={data} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+          <ResetData />
+        </div>
       )}
     </>
   );
