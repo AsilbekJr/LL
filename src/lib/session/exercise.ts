@@ -1,3 +1,4 @@
+import type { CefrLevel } from "@/lib/supabase/database.types";
 import { gateStartIndex } from "@/lib/srs/ladder";
 import { isProductionDone, nextProductionMode } from "@/lib/srs/mastery";
 import { pickContext } from "@/lib/production/contexts";
@@ -14,6 +15,7 @@ export interface SessionItem {
   example_uz: string | null;
   part_of_speech: string | null;
   notes: string | null;
+  cefr_level?: CefrLevel | null;
 }
 
 export interface SessionCard {

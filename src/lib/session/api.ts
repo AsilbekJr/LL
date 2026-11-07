@@ -14,11 +14,12 @@ import {
 import type { Database, Json, Tables } from "@/lib/supabase/database.types";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import type { SessionCard, SessionItem } from "./exercise";
+import { fillExamples } from "./examples";
 
 type Client = SupabaseClient<Database>;
 
 const STUDIED = ["learning", "review", "mastered"] as const;
-const ITEM_COLUMNS = "id, type, english, uzbek, example_en, example_uz, part_of_speech, notes";
+const ITEM_COLUMNS = "id, type, english, uzbek, example_en, example_uz, part_of_speech, notes, cefr_level";
 const CARD_COLUMNS = `id, item_id, direction, stage, ladder_step, due_date, lapses, reps, status, fsrs_state, items(${ITEM_COLUMNS})`;
 const LOAD_HORIZON_DAYS = 120;
 
@@ -168,6 +169,9 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       siblingId: sib?.id ?? null,
     };
   });
+
+  // Words without their own example get one from the sentence bank (cloze, listening).
+  await fillExamples(cards.map((c) => c.item));
 
   // Distractor pool: recent items plus everything in the session.
   const recent = check(

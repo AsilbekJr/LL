@@ -117,3 +117,14 @@ describe("translation bank", () => {
     expect(a1["book"]?.length).toBeGreaterThan(0);
   });
 });
+
+describe("session examples from the bank", async () => {
+  const { bankExample } = await import("@/lib/session/examples");
+  it("picks the shortest sentence with the exact word", () => {
+    expect(
+      bankExample({ english: "book" }, ["I read a book every night.", "This book is mine.", "He booked it."]),
+    ).toBe("This book is mine.");
+    expect(bankExample({ english: "abandon" }, ["They abandoned the car."])).toBeNull();
+    expect(bankExample({ english: "x" }, undefined)).toBeNull();
+  });
+});
