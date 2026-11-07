@@ -7,6 +7,8 @@
  * `speechSynthesis.speak()` before any `await`. Voices are therefore read
  * synchronously (they are cached as soon as the browser loads them).
  */
+import { markLocalBroken, preferCloud, speakCloud, stopCloud } from "./cloud-tts";
+
 export function canSpeak(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
@@ -112,10 +114,37 @@ function modes(hasVoice: boolean, userPicked: boolean): Mode[] {
  * If the engine reports an error or nothing starts shortly after, the next
  * configuration is tried (see `Mode`); the result reports the last error.
  */
-export function speak(
+/** Errors meaning this device's speech engine itself cannot speak English. */
+const ENGINE_ERRORS = new Set([
+  "synthesis-failed",
+  "synthesis-unavailable",
+  "language-unavailable",
+  "voice-unavailable",
+  "not-started",
+  "unsupported",
+]);
+
+/**
+ * Speak `text`: the device's own engine first (instant, offline); when that
+ * engine is broken, server speech (Gemini TTS) — remembered for a week.
+ * The local engine starts synchronously, so this is safe in a tap handler.
+ */
+export async function speak(
   text: string,
   opts: { rate?: number; voice?: string | null } = {},
 ): Promise<SpeakResult> {
+  if (!text.trim()) return { ok: true };
+  const rate = opts.rate ?? 1;
+  if (typeof window === "undefined") return { ok: false, error: "unsupported" };
+  if (preferCloud() || !canSpeak()) return speakCloud(text, rate);
+  const local = await speakLocal(text, opts);
+  if (local.ok || !ENGINE_ERRORS.has(local.error)) return local;
+  const cloud = await speakCloud(text, rate);
+  if (cloud.ok) markLocalBroken();
+  return cloud.ok ? cloud : local;
+}
+
+function speakLocal(text: string, opts: { rate?: number; voice?: string | null } = {}): Promise<SpeakResult> {
   if (!canSpeak()) return Promise.resolve({ ok: false, error: "unsupported" });
   if (!text.trim()) return Promise.resolve({ ok: true });
   const synth = window.speechSynthesis;
@@ -196,5 +225,6 @@ export function speak(
 }
 
 export function stopSpeaking(): void {
+  stopCloud();
   if (canSpeak()) window.speechSynthesis.cancel();
 }

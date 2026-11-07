@@ -91,3 +91,41 @@ export async function geminiJson(opts: {
   if (!text.trim()) throw new GeminiError("upstream", "empty response");
   return text;
 }
+
+/** Text-to-speech: returns WAV bytes (24 kHz mono 16-bit) from a Gemini TTS model. */
+export async function geminiSpeech(opts: {
+  model: string;
+  text: string;
+  voice: string;
+  signal?: AbortSignal;
+}): Promise<{ audio: Buffer; mimeType: string }> {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  if (!key) throw new GeminiError("misconfigured", "GEMINI_API_KEY is not set");
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(opts.model)}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      signal: opts.signal,
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: opts.text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: opts.voice } } },
+        },
+      }),
+    },
+  );
+  if (res.status === 429) throw new GeminiError("rate_limited", "Gemini TTS rate limit");
+  if (res.status === 400 || res.status === 401 || res.status === 403) {
+    const body = await res.text().catch(() => "");
+    throw new GeminiError("misconfigured", `Gemini TTS ${res.status}: ${body.slice(0, 300)}`);
+  }
+  if (!res.ok) throw new GeminiError("upstream", `Gemini TTS HTTP ${res.status}`);
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[];
+  };
+  const inline = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+  if (!inline?.data) throw new GeminiError("upstream", "no audio in response");
+  return { audio: Buffer.from(inline.data, "base64"), mimeType: inline.mimeType || "audio/wav" };
+}

@@ -103,3 +103,70 @@ describe("speak fallbacks", () => {
     expect(spoken[0]!.voice).toBeTruthy();
   });
 });
+
+describe("cloud fallback", () => {
+  function installCloud() {
+    const store = new Map<string, string>();
+    const played: { src: string; rate: number }[] = [];
+    class FakeAudio {
+      playbackRate = 1;
+      onended: (() => void) | null = null;
+      onpause: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public src: string) {}
+      play() {
+        played.push({ src: this.src, rate: this.playbackRate });
+        queueMicrotask(() => this.onended?.());
+        return Promise.resolve();
+      }
+      pause() {}
+    }
+    vi.stubGlobal("Audio", FakeAudio);
+    const fetchMock = vi.fn(async () => new Response(new Blob(["RIFF"], { type: "audio/wav" })));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:tts" }));
+    const w = globalThis.window as unknown as Record<string, unknown>;
+    w.localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+    };
+    return { played, fetchMock, store };
+  }
+
+  it("uses server speech when the device engine fails, and remembers it", async () => {
+    install(() => "fail");
+    const { played, fetchMock, store } = installCloud();
+    const { speak } = await import("@/lib/speech/tts");
+    const r = speak("cheap", { rate: 0.8 });
+    await vi.runAllTimersAsync();
+    expect(await r).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/tts");
+    expect(JSON.parse(init.body as string)).toEqual({ text: "cheap" });
+    expect(played).toEqual([{ src: "blob:tts", rate: 0.8 }]);
+    expect(store.has("ll.tts.engine")).toBe(true);
+
+    // Next time: straight to the server, local engine untouched; audio cached in memory.
+    const before = spoken.length;
+    const r2 = speak("cheap");
+    await vi.runAllTimersAsync();
+    expect(await r2).toEqual({ ok: true });
+    expect(spoken.length).toBe(before);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the local error when the server is unavailable", async () => {
+    install(() => "fail");
+    const { store } = installCloud();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 404 })),
+    );
+    const { speak } = await import("@/lib/speech/tts");
+    const r = speak("hello");
+    await vi.runAllTimersAsync();
+    expect(await r).toEqual({ ok: false, error: "synthesis-failed" });
+    expect(store.has("ll.tts.engine")).toBe(false);
+  });
+});
