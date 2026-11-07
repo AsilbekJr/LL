@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Notice, Select } from "@/components/ui/form-controls";
 import { Input } from "@/components/ui/input";
 import { MAX_REMINDERS, settingsFormSchema } from "@/lib/schemas/settings";
-import { englishVoices, speak } from "@/lib/speech/tts";
+import { englishVoices, testDeviceVoice, type VoiceTestResult } from "@/lib/speech/tts";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase/database.types";
 import { uz } from "@/lib/i18n/uz";
@@ -67,6 +67,7 @@ export function SettingsForm({
   const router = useRouter();
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceTest, setVoiceTest] = useState<"busy" | VoiceTestResult | null>(null);
   const timeZones = useMemo(() => {
     const all = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
     return all.includes(initial.timezone) ? all : [initial.timezone, ...all];
@@ -207,15 +208,42 @@ export function SettingsForm({
             />
           </Field>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          className="self-start"
-          onClick={() => void speak(t.ttsSample, { rate: Number(ttsRate), voice: ttsVoice || null })}
-        >
-          <Volume2 aria-hidden />
-          {t.ttsTest}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="self-start"
+            disabled={voiceTest === "busy"}
+            onClick={async () => {
+              setVoiceTest("busy");
+              setVoiceTest(
+                await testDeviceVoice(t.ttsSample, { rate: Number(ttsRate), voice: ttsVoice || null }),
+              );
+            }}
+          >
+            {voiceTest === "busy" ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <Volume2 aria-hidden />
+            )}
+            {t.ttsTest}
+          </Button>
+          {voiceTest && voiceTest !== "busy" ? (
+            <div role="status" className="text-sm text-muted-foreground">
+              <p>
+                {voiceTest.engine === "device"
+                  ? t.ttsEngineDevice
+                  : voiceTest.engine === "server"
+                    ? t.ttsEngineServer
+                    : t.ttsEngineNone(voiceTest.error ?? "")}
+              </p>
+              <p className="mt-1 font-mono text-xs">
+                {voiceTest.info}
+                {voiceTest.error ? ` · ${voiceTest.error}` : ""}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </Section>
 
       <Section title={t.reminders}>

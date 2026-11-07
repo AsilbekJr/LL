@@ -439,6 +439,10 @@ export const uz = {
     ttsVoiceDefault: "Avtomatik (en-US)",
     ttsRate: "Tezlik",
     ttsTest: "Sinab ko'rish",
+    ttsEngineDevice: "✓ Telefonning o'z ovozi ishlayapti — tez va internetsiz.",
+    ttsEngineServer:
+      "Telefon ovozi ishlamadi, server ovozi ishlatiladi. Google nutq xizmatini afzal dvigatel qilib, qayta sinab ko'ring.",
+    ttsEngineNone: (e: string) => `Ovoz chiqmadi (${e}). Internet va ovoz balandligini tekshiring.`,
     ttsSample: "Hello! This is how I will read your words.",
     noVoices: "Bu qurilmada inglizcha ovoz topilmadi.",
     time: "Vaqt",

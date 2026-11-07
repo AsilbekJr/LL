@@ -185,3 +185,21 @@ describe("cloud fallback", () => {
     expect(spoken).toHaveLength(0);
   });
 });
+
+describe("settings voice test", () => {
+  it("re-tries the device engine after a remembered failure", async () => {
+    install(() => "ok");
+    const store = new Map<string, string>([["ll.tts.engine", String(Date.now())]]);
+    (globalThis.window as unknown as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+      removeItem: (k: string) => store.delete(k),
+    };
+    const { testDeviceVoice } = await import("@/lib/speech/tts");
+    const r = testDeviceVoice("hello");
+    await vi.runAllTimersAsync();
+    expect(await r).toMatchObject({ engine: "device" });
+    expect(store.has("ll.tts.engine")).toBe(false);
+    expect(spoken).toHaveLength(1);
+  });
+});

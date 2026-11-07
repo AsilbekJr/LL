@@ -137,3 +137,12 @@ export function markLocalBroken(): void {
     // private mode: just use the cloud this time
   }
 }
+
+/** Forget that the device engine failed (e.g. after installing Google speech). */
+export function resetEngineChoice(): void {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // ignore
+  }
+}

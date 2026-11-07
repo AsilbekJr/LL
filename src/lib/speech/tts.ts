@@ -7,7 +7,14 @@
  * `speechSynthesis.speak()` before any `await`. Voices are therefore read
  * synchronously (they are cached as soon as the browser loads them).
  */
-import { markLocalBroken, prefetchCloud, preferCloud, speakCloud, stopCloud } from "./cloud-tts";
+import {
+  markLocalBroken,
+  prefetchCloud,
+  preferCloud,
+  resetEngineChoice,
+  speakCloud,
+  stopCloud,
+} from "./cloud-tts";
 
 export function canSpeak(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -149,6 +156,62 @@ export async function speak(
   markLocalBroken();
   const cloud = await speakCloud(text, rate);
   return cloud;
+}
+
+/**
+ * Settings "test": try the device's own engine again (forgetting an earlier
+ * failure). If it fails, the device goes back to server speech.
+ */
+export interface VoiceTestResult {
+  engine: "device" | "server" | "none";
+  /** Error from the device engine (if it failed) or from server speech. */
+  error?: string;
+  /** Short browser description for troubleshooting. */
+  info: string;
+}
+
+function browserInfo(): string {
+  const ua = navigator.userAgent;
+  const browser =
+    /; wv\)/.test(ua) || /Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(ua)
+      ? "WebView (ilova ichidagi brauzer)"
+      : (/SamsungBrowser\/(\d+)/.exec(ua)?.[0] ??
+        /MiuiBrowser\/(\d+)/.exec(ua)?.[0] ??
+        /EdgA?\/(\d+)/.exec(ua)?.[0] ??
+        /OPR\/(\d+)/.exec(ua)?.[0] ??
+        /Chrome\/(\d+)/.exec(ua)?.[0] ??
+        /Version\/([\d.]+).*Safari/.exec(ua)?.[0] ??
+        "noma'lum brauzer");
+  const standalone = window.matchMedia?.("(display-mode: standalone)").matches ? ", PWA" : "";
+  const voices = canSpeak() ? window.speechSynthesis.getVoices() : [];
+  const en = voices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("en")).length;
+  return `${browser}${standalone}; ovozlar: ${voices.length} (inglizcha ${en})`;
+}
+
+/**
+ * Settings "test": try the device's own engine again (forgetting an earlier
+ * failure). If it fails, the device goes back to server speech.
+ */
+export async function testDeviceVoice(
+  text: string,
+  opts: { rate?: number; voice?: string | null } = {},
+): Promise<VoiceTestResult> {
+  if (typeof window === "undefined") return { engine: "none", error: "unsupported", info: "" };
+  resetEngineChoice();
+  const id = ++request;
+  let localError = "unsupported";
+  if (canSpeak()) {
+    const local = await speakLocal(text, opts);
+    if (local.ok) return { engine: "device", info: browserInfo() };
+    localError = local.error;
+    if (id !== request) return { engine: "none", info: browserInfo() };
+    window.speechSynthesis.cancel();
+  }
+  markLocalBroken();
+  const cloud = await speakCloud(text, opts.rate ?? 1);
+  return cloud.ok
+    ? { engine: "server", error: localError, info: browserInfo() }
+    : { engine: "none", error: `${localError}; ${cloud.error}`, info: browserInfo() };
 }
 
 /** On devices that use server speech, download upcoming phrases ahead of time. */
