@@ -1,3 +1,4 @@
+import { DbWriteError } from "@/lib/supabase/write-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json, Tables, TablesInsert } from "@/lib/supabase/database.types";
 import type { AiFeedback } from "./feedback";
@@ -44,7 +45,7 @@ export async function saveProductions(sb: Client, writes: ProductionWrite[]): Pr
   const { error } = await sb
     .from("productions")
     .upsert(rows, { onConflict: "client_id", ignoreDuplicates: true });
-  if (error) throw new Error(error.message);
+  if (error) throw new DbWriteError(error);
 }
 
 export type MasteredItem = Pick<

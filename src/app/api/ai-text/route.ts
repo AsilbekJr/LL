@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { aiFeedbackEnabled, aiModel, aiProvider } from "@/lib/ai/config";
-import { GeminiError, geminiJson } from "@/lib/ai/gemini";
+import { aiFeedbackEnabled, aiModels, aiProvider } from "@/lib/ai/config";
+import { GeminiError, geminiJsonFallback } from "@/lib/ai/gemini";
 import {
   AI_TEXT_JSON_SCHEMA,
   AI_TEXT_SYSTEM,
@@ -48,8 +48,7 @@ export async function POST(request: Request) {
   ].join("\n");
 
   try {
-    const raw = await geminiJson({
-      model: aiModel("gemini"),
+    const raw = await geminiJsonFallback(aiModels("gemini"), {
       system: AI_TEXT_SYSTEM,
       user,
       schema: AI_TEXT_JSON_SCHEMA,

@@ -35,6 +35,32 @@ interface GeminiResponse {
   promptFeedback?: { blockReason?: string };
 }
 
+/**
+ * geminiJson over a list of models: a rate limit, a retired model (404) or
+ * an upstream error moves on to the next one, so one model being shut down
+ * or over quota does not switch AI checking off. A refusal or truncation is
+ * about the input, not the model, and is returned at once.
+ */
+export async function geminiJsonFallback(
+  models: readonly string[],
+  opts: Omit<Parameters<typeof geminiJson>[0], "model">,
+): Promise<string> {
+  let last: unknown = new GeminiError("misconfigured", "no Gemini model configured");
+  for (const model of models) {
+    if (opts.signal?.aborted) break;
+    try {
+      return await geminiJson({ ...opts, model });
+    } catch (error) {
+      last = error;
+      if (error instanceof GeminiError && (error.kind === "refused" || error.kind === "truncated"))
+        throw error;
+      if (!(error instanceof GeminiError)) throw error;
+      if (error.kind === "misconfigured" && error.message.includes("GEMINI_API_KEY")) throw error;
+    }
+  }
+  throw last;
+}
+
 export async function geminiJson(opts: {
   model: string;
   system: string;
@@ -72,6 +98,7 @@ export async function geminiJson(opts: {
     // A bad key and an invalid request both come back here; log the reason, never the key.
     throw new GeminiError("misconfigured", `Gemini ${res.status}: ${body.slice(0, 300)}`);
   }
+  if (res.status === 404) throw new GeminiError("upstream", `Gemini model not found: ${opts.model}`);
   if (!res.ok) throw new GeminiError("upstream", `Gemini HTTP ${res.status}`);
 
   const data = (await res.json()) as GeminiResponse;

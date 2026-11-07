@@ -613,6 +613,7 @@ export const uz = {
   common: {
     comingInPhase: (n: number) => `Bu bo'lim ${n}-fazada tayyor bo'ladi`,
     retry: "Qayta urinish",
+    reload: "Sahifani yangilash",
     close: "Yopish",
     errorTitle: "Xatolik yuz berdi",
     errorBody: "Nimadir noto'g'ri ketdi. Sahifani qayta yuklab ko'ring.",

@@ -1,3 +1,4 @@
+import { DbWriteError } from "@/lib/supabase/write-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { chunk } from "@/lib/items/dedupe";
 import { addDays, DEFAULT_TZ, startOfDayInTz, todayInTz, type IsoDate } from "@/lib/srs/dates";
@@ -238,7 +239,7 @@ export async function persistAnswer(sb: Client, w: AnswerWrite): Promise<void> {
     },
     { onConflict: "client_id", ignoreDuplicates: true },
   );
-  if (log.error) throw new Error(log.error.message);
+  if (log.error) throw new DbWriteError(log.error);
 
   const card = await sb
     .from("cards")
@@ -253,13 +254,13 @@ export async function persistAnswer(sb: Client, w: AnswerWrite): Promise<void> {
       last_reviewed_at: w.result === null ? undefined : w.reviewedAt,
     })
     .eq("id", c.id);
-  if (card.error) throw new Error(card.error.message);
+  if (card.error) throw new DbWriteError(card.error);
 
   if (w.siblingPatch) {
     const sib = await sb
       .from("cards")
       .update({ status: w.siblingPatch.status, due_date: w.siblingPatch.dueDate })
       .eq("id", w.siblingPatch.id);
-    if (sib.error) throw new Error(sib.error.message);
+    if (sib.error) throw new DbWriteError(sib.error);
   }
 }

@@ -9,7 +9,9 @@ import { uz } from "@/lib/i18n/uz";
 
 /**
  * Sends answers queued while offline: on app start, when the connection
- * returns, and when the tab becomes visible again. Afterwards it keeps a
+ * returns, when the tab becomes visible again, and every minute while
+ * something is still waiting (a temporary server error must not leave
+ * answers stuck until the next reload). Afterwards it keeps a
  * snapshot of today's review session in IndexedDB so reviews can start
  * without internet. Shows a small badge while anything is waiting.
  */
@@ -21,6 +23,8 @@ function subscribeOnline(cb: () => void) {
     window.removeEventListener("offline", cb);
   };
 }
+
+const RETRY_MS = 60_000;
 
 export function OutboxSync() {
   const [pending, setPending] = useState(0);
@@ -46,8 +50,13 @@ export function OutboxSync() {
     flush();
     window.addEventListener("online", flush);
     document.addEventListener("visibilitychange", onVisible);
+    const retry = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void pendingCount().then((n) => n > 0 && flush());
+    }, RETRY_MS);
     return () => {
       off();
+      window.clearInterval(retry);
       window.removeEventListener("online", flush);
       document.removeEventListener("visibilitychange", onVisible);
     };

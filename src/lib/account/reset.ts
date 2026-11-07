@@ -55,7 +55,7 @@ export async function fetchResetPreview(sb: Client): Promise<ResetPreview> {
  */
 export async function clearLocalLearningData(): Promise<void> {
   const db = getOfflineDb();
-  if (db) await Promise.all([db.outbox.clear(), db.session.clear(), db.local.clear()]);
+  if (db) await Promise.all([db.outbox.clear(), db.session.clear(), db.local.clear(), db.failed.clear()]);
   try {
     window.localStorage.removeItem("ll.speaking.level");
   } catch {

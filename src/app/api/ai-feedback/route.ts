@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { aiFeedbackEnabled, aiModel, aiProvider } from "@/lib/ai/config";
-import { GeminiError, geminiJson } from "@/lib/ai/gemini";
+import { aiFeedbackEnabled, aiModels, aiProvider } from "@/lib/ai/config";
+import { GeminiError, geminiJsonFallback } from "@/lib/ai/gemini";
 import {
   AI_FEEDBACK_JSON_SCHEMA,
   aiFeedbackRequestSchema,
@@ -70,9 +70,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "bad_request" }, { status: 400 });
 
   const provider = aiProvider()!;
-  const model = aiModel(provider);
-  if (provider === "gemini") return gemini(model, parsed.data);
-  return anthropic(model, parsed.data);
+  const models = aiModels(provider);
+  if (provider === "gemini") return gemini(models, parsed.data);
+  return anthropic(models[0]!, parsed.data);
 }
 
 function respond(text: string) {
@@ -85,10 +85,9 @@ function respond(text: string) {
   }
 }
 
-async function gemini(model: string, r: AiFeedbackRequest) {
+async function gemini(models: string[], r: AiFeedbackRequest) {
   try {
-    const text = await geminiJson({
-      model,
+    const text = await geminiJsonFallback(models, {
       system: SYSTEM,
       user: userMessage(r),
       schema: AI_FEEDBACK_JSON_SCHEMA,

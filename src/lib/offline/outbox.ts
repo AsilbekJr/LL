@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { persistAnswer, type AnswerWrite } from "@/lib/session/api";
+import { DbWriteError, isPermanentWriteError } from "@/lib/supabase/write-error";
 import { getOfflineDb } from "./db";
 import { localRowsFromAnswer } from "./local-progress";
 import { recordLocalRows } from "./session-cache";
@@ -13,7 +14,13 @@ import { recordLocalRows } from "./session-cache";
  * the database ignores a card update that is older than the card's last
  * review (see migration *_offline_sync_guard.sql), so a late-synced answer
  * from another device can never overwrite newer progress.
+ * An answer the database rejects for good (e.g. its card was deleted
+ * meanwhile) is moved to the `failed` table instead of being retried
+ * forever, so one bad row can never block every later answer.
  */
+
+/** Failed rows older than this are dropped (they are only kept for diagnosis). */
+const FAILED_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 
 type Listener = (pending: number) => void;
 const listeners = new Set<Listener>();
@@ -57,32 +64,69 @@ let flushing: Promise<boolean> | null = null;
  * Concurrent calls share one run.
  */
 export function flushOutbox(sb: SupabaseClient<Database>): Promise<boolean> {
-  flushing ??= (async () => {
-    try {
-      const d = getOfflineDb();
-      while (memory.length) {
+  // The run may finish synchronously-fast (empty queue); clear the shared
+  // promise only after it is assigned, or a stale resolved promise would
+  // turn every later flush into a no-op.
+  flushing ??= runFlush(sb).finally(() => {
+    flushing = null;
+  });
+  return flushing;
+}
+
+async function runFlush(sb: SupabaseClient<Database>): Promise<boolean> {
+  try {
+    const d = getOfflineDb();
+    while (memory.length) {
+      try {
         await persistAnswer(sb, memory[0]!);
-        memory.shift();
+      } catch (e) {
+        if (!isPermanentWriteError(e)) throw e;
+        console.warn("[outbox] dropped a rejected answer", e);
       }
-      if (!d) return true;
-      for (;;) {
-        const next = await d.outbox.orderBy("createdAt").first();
-        if (!next) return true;
-        try {
-          await persistAnswer(sb, next.payload);
-        } catch (e) {
+      memory.shift();
+    }
+    if (!d) return true;
+    for (;;) {
+      const next = await d.outbox.orderBy("createdAt").first();
+      if (!next) return true;
+      try {
+        await persistAnswer(sb, next.payload);
+        await d.outbox.delete(next.id!);
+      } catch (e) {
+        if (!isPermanentWriteError(e)) {
           await d.outbox.update(next.id!, { attempts: next.attempts + 1 });
           throw e;
         }
-        await d.outbox.delete(next.id!);
-        await notify();
+        await d.transaction("rw", d.outbox, d.failed, async () => {
+          await d.failed.add({
+            failedAt: Date.now(),
+            error: e instanceof Error ? e.message : String(e),
+            code: e instanceof DbWriteError ? (e.code ?? null) : null,
+            payload: next.payload,
+          });
+          await d.outbox.delete(next.id!);
+        });
+        console.warn("[outbox] moved a rejected answer to `failed`", e);
       }
-    } catch {
-      return false;
-    } finally {
-      flushing = null;
       await notify();
     }
-  })();
-  return flushing;
+  } catch {
+    return false;
+  } finally {
+    void pruneFailed();
+    await notify();
+  }
+}
+
+async function pruneFailed(): Promise<void> {
+  const d = getOfflineDb();
+  if (!d) return;
+  try {
+    await d.failed
+      .where("failedAt")
+      .below(Date.now() - FAILED_KEEP_MS)
+      .delete();
+  } catch {
+    // diagnosis data only
+  }
 }

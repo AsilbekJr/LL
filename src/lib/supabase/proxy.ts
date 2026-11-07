@@ -1,9 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import type { Database } from "./database.types";
 
-const PUBLIC_PATHS = ["/login", "/~offline", "/manifest.webmanifest", "/samples", "/robots.txt"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/~offline",
+  "/manifest.webmanifest",
+  "/samples",
+  "/robots.txt",
+  "/api/health",
+];
+
+/** Never let a slow Supabase hang every page: after this the session counts as "unknown". */
+const AUTH_TIMEOUT_MS = 4000;
+
+type AuthState = "signed-in" | "signed-out" | "unknown";
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -34,9 +47,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   );
 
   // Do not put code between client creation and getClaims(): it refreshes the token.
-  const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+  const state = await readAuthState(() => supabase.auth.getClaims());
   const { pathname } = request.nextUrl;
+
+  // Supabase unreachable / timed out: do NOT sign the user out. Let the
+  // request through; pages and API routes check the session themselves and
+  // show a retryable error instead of a surprise login screen.
+  if (state === "unknown") return response;
+  const signedIn = state === "signed-in";
 
   if (!signedIn && !isPublic(pathname)) {
     // API callers get a JSON 401, not an HTML login page.
@@ -57,6 +75,34 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   return response;
+}
+
+async function readAuthState(
+  getClaims: () => Promise<{ data: { claims?: { sub?: string } } | null; error: unknown }>,
+): Promise<AuthState> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), AUTH_TIMEOUT_MS);
+  });
+  try {
+    const result = await Promise.race([getClaims(), timeout]);
+    if (result === "timeout") return "unknown";
+    if (result.data?.claims?.sub) return "signed-in";
+    if (result.error && isTransientAuthError(result.error)) return "unknown";
+    return "signed-out";
+  } catch (error) {
+    // A thrown fetch failure is a network problem, not a missing session.
+    return isTransientAuthError(error) || error instanceof TypeError ? "unknown" : "signed-out";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Network failures and Supabase 5xx are temporary; 4xx means "no valid session". */
+function isTransientAuthError(error: unknown): boolean {
+  if (isAuthRetryableFetchError(error)) return true;
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === "number" && (status === 0 || status >= 500);
 }
 
 function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
