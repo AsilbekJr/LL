@@ -203,6 +203,8 @@ export const uz = {
     gotIt: "Tushundim",
     listen: "Tinglash",
     listenSlow: "Sekinroq",
+    ttsCloudBusy: "Server ovozi bir daqiqaga band (limit). Birozdan keyin qayta bosing.",
+    ttsCloudFailed: "Server ovozini olib bo'lmadi — internetni tekshirib, qayta bosing.",
     ttsFailedIOS:
       "Ovoz chiqmadi. Telefon yon tomonidagi ovozsiz rejim tugmasini o'chiring va ovoz balandligini tekshiring.",
     ttsFailedAndroid:

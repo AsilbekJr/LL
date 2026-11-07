@@ -36,7 +36,7 @@ import {
 import { planExercise } from "@/lib/session/exercise";
 import type { ProductionWrite } from "@/lib/production/api";
 import { productionPrompt } from "@/lib/production/contexts";
-import { canSpeak } from "@/lib/speech/tts";
+import { canSpeak, prefetchSpeech } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -205,6 +205,16 @@ function Session({
   useEffect(() => {
     shownAt.current = performance.now();
   }, [state.position]);
+
+  // Devices on server speech: fetch audio for this and the next few cards ahead of time.
+  useEffect(() => {
+    const ids = state.order.slice(state.position, state.position + 4);
+    const texts = ids.flatMap((id) => {
+      const item = state.byId[id]?.item;
+      return item ? [item.english, ...(item.example_en ? [item.example_en] : [])] : [];
+    });
+    prefetchSpeech([...new Set(texts)]);
+  }, [state.position]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onAnswer = useCallback(
     (result: ReviewResult | null, responseText?: string, production?: ProductionWrite | null) => {

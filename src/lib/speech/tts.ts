@@ -7,7 +7,7 @@
  * `speechSynthesis.speak()` before any `await`. Voices are therefore read
  * synchronously (they are cached as soon as the browser loads them).
  */
-import { markLocalBroken, preferCloud, speakCloud, stopCloud } from "./cloud-tts";
+import { markLocalBroken, prefetchCloud, preferCloud, speakCloud, stopCloud } from "./cloud-tts";
 
 export function canSpeak(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -129,6 +129,8 @@ const ENGINE_ERRORS = new Set([
  * engine is broken, server speech (Gemini TTS) — remembered for a week.
  * The local engine starts synchronously, so this is safe in a tap handler.
  */
+let request = 0;
+
 export async function speak(
   text: string,
   opts: { rate?: number; voice?: string | null } = {},
@@ -136,12 +138,23 @@ export async function speak(
   if (!text.trim()) return { ok: true };
   const rate = opts.rate ?? 1;
   if (typeof window === "undefined") return { ok: false, error: "unsupported" };
+  const id = ++request;
   if (preferCloud() || !canSpeak()) return speakCloud(text, rate);
   const local = await speakLocal(text, opts);
+  // A newer tap took over while the engine was failing: never play this one late.
+  if (id !== request) return { ok: true };
   if (local.ok || !ENGINE_ERRORS.has(local.error)) return local;
+  // The engine is broken on this device: silence it for good and use server speech.
+  if (canSpeak()) window.speechSynthesis.cancel();
+  markLocalBroken();
   const cloud = await speakCloud(text, rate);
-  if (cloud.ok) markLocalBroken();
-  return cloud.ok ? cloud : local;
+  return cloud;
+}
+
+/** On devices that use server speech, download upcoming phrases ahead of time. */
+export function prefetchSpeech(texts: string[]): void {
+  if (typeof window === "undefined" || !preferCloud()) return;
+  void prefetchCloud(texts);
 }
 
 function speakLocal(text: string, opts: { rate?: number; voice?: string | null } = {}): Promise<SpeakResult> {
@@ -184,6 +197,12 @@ function speakLocal(text: string, opts: { rate?: number; voice?: string | null }
         u.lang = "en-US";
       }
       u.onstart = () => {
+        // The engine started late, after we gave up on this attempt: silence it
+        // (otherwise the phrase plays twice — late here and from the fallback).
+        if (settled || current !== u) {
+          synth.cancel();
+          return;
+        }
         started = true;
         workingMode = mode;
       };
@@ -225,6 +244,7 @@ function speakLocal(text: string, opts: { rate?: number; voice?: string | null }
 }
 
 export function stopSpeaking(): void {
+  request++;
   stopCloud();
   if (canSpeak()) window.speechSynthesis.cancel();
 }

@@ -1,46 +1,79 @@
+import { normalizeSpeechText, ttsObjectPath, ttsPublicUrl } from "./tts-key";
+
 /**
- * Server speech (Gemini TTS via /api/tts) for devices whose own speech engine
- * fails. Audio is cached in memory and in the Cache Storage, so each phrase
- * is generated once per device.
+ * Server speech for devices whose own speech engine fails. Lookup order:
+ * memory -> Cache Storage (this device) -> shared CDN copy (Supabase Storage)
+ * -> generate via /api/tts (Gemini TTS, stored for everyone). Only the newest
+ * request plays, and identical requests share one download.
  */
 
-const CACHE = "ll-tts-v1";
+const CACHE = "ll-tts-v2";
 const memory = new Map<string, string>(); // text -> object URL
+const inflight = new Map<string, Promise<string>>();
 let current: HTMLAudioElement | null = null;
+let playId = 0;
 
 const cacheKey = (text: string) => new Request(`/__tts-cache/${encodeURIComponent(text)}`);
 
-async function audioUrl(text: string): Promise<string> {
-  const hit = memory.get(text);
-  if (hit) return hit;
-  let blob: Blob | null = null;
-  const store = typeof caches !== "undefined" ? await caches.open(CACHE).catch(() => null) : null;
-  const cached = await store?.match(cacheKey(text)).catch(() => undefined);
-  if (cached) blob = await cached.blob();
-  if (!blob) {
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) throw new Error(`cloud-${res.status}`);
-    blob = await res.blob();
-    void store
-      ?.put(cacheKey(text), new Response(blob, { headers: { "Content-Type": blob.type } }))
-      .catch(() => undefined);
+export class CloudSpeechError extends Error {}
+
+async function download(text: string): Promise<Blob> {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (base) {
+    try {
+      const cdn = await fetch(ttsPublicUrl(base, await ttsObjectPath(text)));
+      if (cdn.ok && cdn.headers.get("Content-Type")?.startsWith("audio/")) return await cdn.blob();
+    } catch {
+      // offline or blocked: try generating
+    }
   }
-  const url = URL.createObjectURL(blob);
-  memory.set(text, url);
-  return url;
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new CloudSpeechError(`cloud-${res.status}`);
+  return res.blob();
+}
+
+function audioUrl(raw: string): Promise<string> {
+  const text = normalizeSpeechText(raw);
+  const hit = memory.get(text);
+  if (hit) return Promise.resolve(hit);
+  let p = inflight.get(text);
+  if (!p) {
+    p = (async () => {
+      const store = typeof caches !== "undefined" ? await caches.open(CACHE).catch(() => null) : null;
+      const cached = await store?.match(cacheKey(text)).catch(() => undefined);
+      let blob = cached ? await cached.blob() : null;
+      if (!blob) {
+        blob = await download(text);
+        void store
+          ?.put(
+            cacheKey(text),
+            new Response(blob, { headers: { "Content-Type": blob.type || "audio/mpeg" } }),
+          )
+          .catch(() => undefined);
+      }
+      const url = URL.createObjectURL(blob);
+      memory.set(text, url);
+      return url;
+    })().finally(() => inflight.delete(text));
+    inflight.set(text, p);
+  }
+  return p;
 }
 
 export async function speakCloud(
   text: string,
   rate = 1,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  stopCloud();
+  const id = ++playId;
   try {
-    const url = await audioUrl(text.trim());
-    stopCloud();
+    const url = await audioUrl(text);
+    // A newer tap (or a stop) happened while downloading: stay silent.
+    if (id !== playId) return { ok: true };
     const audio = new Audio(url);
     audio.playbackRate = Math.min(2, Math.max(0.5, rate));
     current = audio;
@@ -61,7 +94,20 @@ export async function speakCloud(
   }
 }
 
+/** Download upcoming phrases in the background (one at a time) so taps play instantly. */
+export async function prefetchCloud(texts: string[]): Promise<void> {
+  for (const t of texts) {
+    if (!t.trim()) continue;
+    try {
+      await audioUrl(t);
+    } catch {
+      return; // rate limited / offline: stop prefetching
+    }
+  }
+}
+
 export function stopCloud(): void {
+  playId++;
   if (current) {
     const a = current;
     current = null;

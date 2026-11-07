@@ -83,14 +83,15 @@ describe("speak fallbacks", () => {
     const { speak } = await import("@/lib/speech/tts");
     const r = speak("hello");
     await vi.runAllTimersAsync();
-    expect(await r).toEqual({ ok: false, error: "not-started" });
+    // Engine never starts: 3 local attempts, then server speech (unavailable in this test).
+    expect((await r).ok).toBe(false);
     expect(spoken).toHaveLength(3);
 
     install(() => "fail");
     const { speak: speak2 } = await import("@/lib/speech/tts");
     const r2 = speak2("hello");
     await vi.runAllTimersAsync();
-    expect(await r2).toEqual({ ok: false, error: "synthesis-failed" });
+    expect((await r2).ok).toBe(false);
   });
 
   it("uses the voice first on desktop", async () => {
@@ -156,17 +157,31 @@ describe("cloud fallback", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the local error when the server is unavailable", async () => {
+  it("reports a server error and never plays the failed engine late", async () => {
     install(() => "fail");
-    const { store } = installCloud();
+    installCloud();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response("", { status: 404 })),
+      vi.fn(async () => new Response("", { status: 429 })),
     );
     const { speak } = await import("@/lib/speech/tts");
     const r = speak("hello");
     await vi.runAllTimersAsync();
-    expect(await r).toEqual({ ok: false, error: "synthesis-failed" });
-    expect(store.has("ll.tts.engine")).toBe(false);
+    expect(await r).toEqual({ ok: false, error: "cloud-429" });
+  });
+
+  it("only the newest request plays; identical phrases download once", async () => {
+    install(() => "ok");
+    const { played, fetchMock, store } = installCloud();
+    store.set("ll.tts.engine", String(Date.now()));
+    const { speak } = await import("@/lib/speech/tts");
+    const a = speak("same");
+    const b = speak("same");
+    await vi.runAllTimersAsync();
+    expect(await a).toEqual({ ok: true });
+    expect(await b).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(played).toHaveLength(1);
+    expect(spoken).toHaveLength(0);
   });
 });

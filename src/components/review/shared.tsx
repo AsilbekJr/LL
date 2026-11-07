@@ -5,7 +5,7 @@ import { CheckCircle2, CircleAlert, Turtle, Volume2, XCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { checkTyped, type TypedCheck } from "@/lib/text/answer";
-import { canAutoplay, canSpeak, isIOS, preloadVoices, speak } from "@/lib/speech/tts";
+import { canAutoplay, canSpeak, isIOS, prefetchSpeech, preloadVoices, speak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,10 @@ export function SpeakButton({
   }, []);
 
   useEffect(() => {
+    prefetchSpeech([text]);
+  }, [text]);
+
+  useEffect(() => {
     // A failed autoplay is expected (no tap yet); only taps report errors.
     if (autoPlay && available && canAutoplay()) void speak(text, { rate: prefs.rate, voice: prefs.voice });
   }, [autoPlay, available, text, prefs.rate, prefs.voice]);
@@ -92,7 +96,13 @@ export function SpeakButton({
       </div>
       {error ? (
         <p role="alert" className="max-w-sm text-center text-sm text-destructive">
-          {isIOS() ? uz.review.ttsFailedIOS : uz.review.ttsFailedAndroid}{" "}
+          {error === "cloud-429"
+            ? uz.review.ttsCloudBusy
+            : error.startsWith("cloud")
+              ? uz.review.ttsCloudFailed
+              : isIOS()
+                ? uz.review.ttsFailedIOS
+                : uz.review.ttsFailedAndroid}{" "}
           <span className="text-muted-foreground">({error})</span>
         </p>
       ) : null}
