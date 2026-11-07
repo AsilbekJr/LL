@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, Loader2, Plus, Search } from "lucide-react";
@@ -299,20 +300,29 @@ function SubDictionaryView({
         })}
       </ul>
 
-      {selected.size > 0 ? (
-        <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border bg-card p-3 shadow-(--shadow-lift) sm:flex-row sm:items-center md:bottom-6 md:left-[calc(16rem+1.5rem)]">
-          <Checkbox
-            className="flex-1"
-            label={uz.items.scheduleNow}
-            checked={schedule}
-            onChange={(e) => setSchedule(e.target.checked)}
-          />
-          <Button onClick={addSelected} disabled={add.isPending}>
-            {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
-            {t.add(selected.size)}
-          </Button>
-        </div>
-      ) : null}
+      {selected.size > 0
+        ? // Portal: an animated (transformed) ancestor would otherwise pin this
+          // "fixed" bar to the end of the list instead of the screen.
+          createPortal(
+            <div
+              role="region"
+              aria-label={t.add(selected.size)}
+              className="animate-rise fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border bg-card p-3 shadow-(--shadow-lift) md:bottom-6 md:left-[calc(16rem+1.5rem)]"
+            >
+              <Checkbox
+                className="min-w-0 flex-1 text-sm"
+                label={uz.items.scheduleNow}
+                checked={schedule}
+                onChange={(e) => setSchedule(e.target.checked)}
+              />
+              <Button className="shrink-0" onClick={addSelected} disabled={add.isPending}>
+                {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
+                {t.add(selected.size)}
+              </Button>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
