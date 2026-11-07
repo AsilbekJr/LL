@@ -1,0 +1,68 @@
+[
+  {
+    "id": "a2-trip-to-samarkand",
+    "title": "A Trip to Samarkand",
+    "title_uz": "Samarqandga sayohat",
+    "words": ["trip", "train", "ancient", "beautiful", "photo", "tired"],
+    "sentences": [
+      ["Last summer, I went on a trip to Samarkand with my cousin.", "O'tgan yozda amakivachcham bilan Samarqandga sayohat qildim."],
+      ["We took the fast train from Tashkent, and it was very comfortable.", "Toshkentdan tezyurar poyezdga o'tirdik, u juda qulay edi."],
+      ["The journey took only two hours.", "Yo'l bor-yo'g'i ikki soat davom etdi."],
+      ["First, we visited the Registan.", "Avval Registonni ziyorat qildik."],
+      ["The ancient buildings were more beautiful than in the pictures.", "Qadimiy binolar suratlardagidan ham chiroyliroq edi."],
+      ["We took a lot of photos and bought some souvenirs.", "Ko'p suratga tushdik va bir nechta esdalik sovg'alar sotib oldik."],
+      ["For lunch, we tried the famous Samarkand bread.", "Tushlikda mashhur Samarqand nonini tatib ko'rdik."],
+      ["In the evening, we were tired but very happy.", "Kechqurun charchagan, lekin juda xursand edik."],
+      ["I want to go there again next year.", "Kelasi yili u yerga yana bormoqchiman."]
+    ]
+  },
+  {
+    "id": "a2-new-job",
+    "title": "My New Job",
+    "title_uz": "Yangi ishim",
+    "words": ["job", "nervous", "colleague", "helpful", "learn", "interesting"],
+    "sentences": [
+      ["Two weeks ago, I started a new job at a bank.", "Ikki hafta oldin bankda yangi ishni boshladim."],
+      ["On my first day, I was a little nervous.", "Birinchi kunim biroz hayajonlandim."],
+      ["My manager showed me the office and introduced me to everyone.", "Rahbarim menga ofisni ko'rsatdi va hammaga tanishtirdi."],
+      ["My colleagues are friendly and very helpful.", "Hamkasblarim samimiy va juda yordamchi."],
+      ["I have to learn many new things every day.", "Har kuni ko'p yangi narsalarni o'rganishim kerak."],
+      ["Sometimes it is difficult, but it is always interesting.", "Ba'zan qiyin, lekin doim qiziqarli."],
+      ["I usually finish work at six and walk home.", "Odatda ishni oltida tugatib, uyga piyoda qaytaman."],
+      ["I think I made the right decision.", "O'ylaymanki, to'g'ri qaror qildim."]
+    ]
+  },
+  {
+    "id": "a2-cooking-plov",
+    "title": "Cooking Plov",
+    "title_uz": "Palov pishirish",
+    "words": ["cook", "recipe", "rice", "carrot", "oil", "guest"],
+    "sentences": [
+      ["Plov is the most popular dish in Uzbekistan.", "Palov O'zbekistondagi eng mashhur taom."],
+      ["My grandfather cooks the best plov in our family.", "Oilamizda eng mazali palovni bobom pishiradi."],
+      ["Last Friday, he showed me his recipe.", "O'tgan juma u menga o'z retseptini ko'rsatdi."],
+      ["First, he heated oil in a big pot.", "Avval katta qozonda yog' qizdirdi."],
+      ["Then he added meat, onions and a lot of yellow carrots.", "Keyin go'sht, piyoz va ko'p sariq sabzi qo'shdi."],
+      ["After that, he washed the rice and put it on top.", "Shundan so'ng guruchni yuvib, ustiga soldi."],
+      ["We waited for about forty minutes.", "Taxminan qirq daqiqa kutdik."],
+      ["When the guests arrived, the plov was ready.", "Mehmonlar kelganda palov tayyor edi."],
+      ["Everyone said it was delicious.", "Hamma uni juda mazali dedi."]
+    ]
+  },
+  {
+    "id": "a2-rainy-day",
+    "title": "A Rainy Day",
+    "title_uz": "Yomg'irli kun",
+    "words": ["rain", "umbrella", "wet", "forget", "plan", "cozy"],
+    "sentences": [
+      ["Yesterday, I wanted to go for a walk in the park.", "Kecha parkda sayr qilmoqchi edim."],
+      ["But when I opened the door, it started to rain.", "Lekin eshikni ochganimda yomg'ir yog'a boshladi."],
+      ["I forgot my umbrella at work.", "Soyabonimni ishda unutib qoldiribman."],
+      ["After five minutes, my clothes were completely wet.", "Besh daqiqadan keyin kiyimlarim butunlay ho'l bo'ldi."],
+      ["So I changed my plan and went back home.", "Shuning uchun rejamni o'zgartirib, uyga qaytdim."],
+      ["I made a cup of hot tea and sat by the window.", "Bir piyola issiq choy damlab, deraza yoniga o'tirdim."],
+      ["I listened to the rain and read my favorite book.", "Yomg'irni tinglab, sevimli kitobimni o'qidim."],
+      ["It was a quiet and cozy evening.", "Bu sokin va shinam oqshom bo'ldi."]
+    ]
+  }
+]

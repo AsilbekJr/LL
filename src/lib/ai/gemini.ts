@@ -41,6 +41,7 @@ export async function geminiJson(opts: {
   user: string;
   schema: unknown;
   signal?: AbortSignal;
+  maxOutputTokens?: number;
 }): Promise<string> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new GeminiError("misconfigured", "GEMINI_API_KEY is not set");
@@ -57,7 +58,7 @@ export async function geminiJson(opts: {
         generationConfig: {
           responseMimeType: "application/json",
           responseJsonSchema: toGeminiSchema(opts.schema),
-          maxOutputTokens: 2048,
+          maxOutputTokens: opts.maxOutputTokens ?? 2048,
           // Short, well-specified task: minimal thinking keeps it fast (Flash-Lite supports MINIMAL).
           ...(opts.model.includes("flash-lite") ? { thinkingConfig: { thinkingLevel: "MINIMAL" } } : {}),
         },

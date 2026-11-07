@@ -132,6 +132,12 @@ Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) 
   (CC BY-SA 4.0); o'zbekcha tarjimalar `data/vocab/uz/*.tsv` da. Qayta yig'ish:
   `node scripts/vocab/normalize.mjs && node scripts/vocab/build.mjs` (batafsil:
   `data/vocab/source/README.md`).
+- **Matnlar** (`/matnlar`, "Matn zinapoyasi"): darajali matnlar (A1–C2, har birida 4 ta,
+  ilova uchun yozilgan, `data/texts/*.json` → `node scripts/texts/build.mjs` tekshiradi va
+  `public/texts/` ga chiqaradi) va Gemini kutubxonangizdagi so'zlar bilan yozadigan shaxsiy
+  matnlar (`/api/ai-text`). Mashq: 1) tinglash/o'qish (so'zni bossangiz tarjima + kutubxonaga
+  qo'shish), 2) gapma-gap shadowing, 3) o'zbekchadan eslab aytish, 4) kalit so'zlar bilan
+  qayta hikoya. Matn o'zi 1, 3, 7, 16, 35 kunlik oraliqda takrorlanadi (`reading_texts`).
 - **Nutq mashqi** (`/nutq`): *Qoliplar* (60 ta gap qolipi, A1–C2, kutubxonadagi so'z bilan
   to'ldirib aytiladi), *Tarjima* (o'zbekcha gap → inglizcha og'zaki), *Erkin nutq*, *Shadowing*.
   So'z 3 xil kunda nutqda to'g'ri ishlatilgach "faol" sanaladi (statistikada ko'rinadi).

@@ -271,6 +271,33 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["daily_snapshots"]["Row"]>;
         Relationships: Rel[];
       };
+      reading_texts: {
+        Row: {
+          id: string;
+          user_id: string;
+          source: "builtin" | "ai";
+          builtin_id: string | null;
+          level: CefrLevel;
+          title: string;
+          title_uz: string;
+          sentences: Json;
+          key_words: string[];
+          repetitions: number;
+          due_date: string | null;
+          last_score: number | null;
+          last_practiced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["reading_texts"]["Row"]> & {
+          source: "builtin" | "ai";
+          level: CefrLevel;
+          title: string;
+          sentences: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["reading_texts"]["Row"]>;
+        Relationships: Rel[];
+      };
     };
     Views: {
       cards_view: {

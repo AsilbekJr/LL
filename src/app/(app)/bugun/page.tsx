@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
+  BookOpenText,
   CalendarClock,
   Check,
   Flame,
@@ -37,7 +38,7 @@ async function getToday() {
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
   const cards = () => supabase.from("cards").select("id", { count: "exact", head: true });
-  const [due, overdue, fresh, doneToday, history] = await Promise.all([
+  const [due, overdue, fresh, doneToday, history, textsDue] = await Promise.all([
     cards()
       .in("status", [...STUDIED])
       .lte("due_date", today),
@@ -52,6 +53,7 @@ async function getToday() {
       .gt("done_count", 0)
       .order("day", { ascending: false })
       .limit(366),
+    supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
   ]);
 
   const error = due.error ?? overdue.error ?? fresh.error ?? doneToday.error ?? history.error;
@@ -68,6 +70,8 @@ async function getToday() {
     fresh: fresh.count ?? 0,
     done,
     streak: studyStreak(studiedDays, today),
+    // Optional extra: never fail the page if texts are unavailable.
+    textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
   };
 }
 
@@ -214,10 +218,16 @@ export default async function TodayPage() {
         >
           {uz.today.quickTitle}
         </h2>
-        <ul className="grid gap-2 sm:grid-cols-3">
+        <ul className="grid gap-2 sm:grid-cols-2">
           <QuickLink href="/qoshish" icon={Plus} label={uz.today.addWord} />
           <QuickLink href="/import" icon={Upload} label={uz.today.importPack} />
           <QuickLink href="/nutq" icon={Mic} label={uz.nav.speaking} />
+          <QuickLink
+            href="/matnlar"
+            icon={BookOpenText}
+            label={t.textsDue ? uz.today.textsDue(t.textsDue) : uz.nav.texts}
+            highlight={t.textsDue > 0}
+          />
         </ul>
       </section>
     </>
@@ -275,16 +285,21 @@ function QuickLink({
   href,
   icon: Icon,
   label,
+  highlight,
 }: {
-  href: "/qoshish" | "/import" | "/nutq";
+  href: "/qoshish" | "/import" | "/nutq" | "/matnlar";
   icon: LucideIcon;
   label: string;
+  highlight?: boolean;
 }) {
   return (
     <li>
       <Link
         href={href}
-        className="group flex h-14 items-center gap-3 rounded-xl border bg-card px-4 text-sm font-semibold shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 hover:bg-primary-soft/40 focus-visible:ring-2 focus-visible:ring-ring/50"
+        className={cn(
+          "group flex h-14 items-center gap-3 rounded-xl border bg-card px-4 text-sm font-semibold shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 hover:bg-primary-soft/40 focus-visible:ring-2 focus-visible:ring-ring/50",
+          highlight && "border-highlight/60 bg-highlight-soft",
+        )}
       >
         <span className="grid size-8 place-items-center rounded-lg bg-primary-soft text-primary-soft-foreground">
           <Icon className="size-4" aria-hidden />

@@ -2,6 +2,7 @@ import type { Route } from "next";
 import {
   BarChart3,
   BookOpen,
+  BookOpenText,
   CalendarDays,
   GraduationCap,
   Home,
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/yodlanganlar", label: uz.nav.mastered, icon: GraduationCap },
   { href: "/kalendar", label: uz.nav.calendar, icon: CalendarDays },
   { href: "/nutq", label: uz.nav.speaking, icon: Mic },
+  { href: "/matnlar", label: uz.nav.texts, icon: BookOpenText },
   { href: "/import", label: uz.nav.import, icon: Upload },
   { href: "/statistika", label: uz.nav.stats, icon: BarChart3 },
   { href: "/sozlamalar", label: uz.nav.settings, icon: Settings },

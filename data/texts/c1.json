@@ -1,0 +1,64 @@
+[
+  {
+    "id": "c1-attention-economy",
+    "title": "The Attention Economy",
+    "title_uz": "Diqqat iqtisodiyoti",
+    "words": ["attention", "deliberately", "exploit", "resist", "resource", "autonomy"],
+    "sentences": [
+      ["In an age of information overload, our attention has become the scarcest resource of all.", "Axborot to'lib-toshgan davrda diqqatimiz eng kamyob resursga aylandi."],
+      ["Tech companies earn money not from the products we use, but from the time we spend using them.", "Texnologiya kompaniyalari biz foydalanadigan mahsulotlardan emas, ulardan foydalanishga sarflagan vaqtimizdan pul ishlaydi."],
+      ["Consequently, many apps are deliberately designed to be as addictive as possible.", "Shu bois ko'plab ilovalar ataylab iloji boricha qaramlik uyg'otadigan qilib loyihalanadi."],
+      ["Endless scrolling, unpredictable rewards and red notification badges all exploit well-known weaknesses of the human brain.", "Cheksiz aylantirish, oldindan bilib bo'lmaydigan mukofotlar va qizil bildirishnoma belgilari inson miyasining yaxshi ma'lum zaif tomonlaridan foydalanadi."],
+      ["Critics argue that this business model gradually undermines our autonomy.", "Tanqidchilar bu biznes modeli asta-sekin mustaqilligimizni yemiradi, deb ta'kidlashadi."],
+      ["We may believe we are choosing freely, while in fact our choices are being carefully shaped.", "Biz erkin tanlayapmiz deb o'ylashimiz mumkin, holbuki aslida tanlovlarimiz puxta shakllantirilmoqda."],
+      ["Resisting such sophisticated systems through willpower alone is remarkably difficult.", "Bunday murakkab tizimlarga faqat iroda kuchi bilan qarshilik ko'rsatish g'oyat qiyin."],
+      ["A more realistic strategy is to change our environment, for instance by removing distracting apps altogether.", "Realroq strategiya — muhitimizni o'zgartirish, masalan, chalg'ituvchi ilovalarni butunlay o'chirib tashlash."]
+    ]
+  },
+  {
+    "id": "c1-bilingual-brain",
+    "title": "The Bilingual Brain",
+    "title_uz": "Ikki tilli miya",
+    "words": ["cognitive", "flexibility", "evidence", "switch", "delay", "acquire"],
+    "sentences": [
+      ["For a long time, it was assumed that raising children with two languages would confuse them.", "Uzoq vaqt davomida bolalarni ikki tilda tarbiyalash ularni chalkashtirib yuboradi, deb taxmin qilingan."],
+      ["Recent research, however, paints a very different picture.", "Biroq so'nggi tadqiqotlar butunlay boshqacha manzarani ko'rsatmoqda."],
+      ["Because bilinguals constantly switch between languages, their brains get regular training in controlling attention.", "Ikki tilli odamlar tillar orasida doimo almashib turgani uchun ularning miyasi diqqatni boshqarishda muntazam mashq qiladi."],
+      ["Some studies suggest this leads to greater cognitive flexibility and better problem-solving skills.", "Ba'zi tadqiqotlarga ko'ra, bu fikrlashning yuqoriroq moslashuvchanligi va muammolarni yaxshiroq hal qilishga olib keladi."],
+      ["There is even evidence that speaking two languages may delay the symptoms of dementia by several years.", "Hatto ikki tilda gapirish demensiya alomatlarini bir necha yilga kechiktirishi mumkinligi haqida dalillar bor."],
+      ["That said, the findings are not entirely consistent, and the advantages appear to vary from person to person.", "Shunday bo'lsa-da, natijalar to'liq izchil emas va afzalliklar har bir odamda turlicha ko'rinadi."],
+      ["What is clear is that it is never too late to acquire a new language.", "Aniq narsa shuki, yangi tilni o'zlashtirish uchun hech qachon kech emas."],
+      ["Adults may learn differently from children, but they bring strategies and discipline that children lack.", "Kattalar bolalardan boshqacha o'rganishi mumkin, lekin ular bolalarda yetishmaydigan usul va intizomga ega."]
+    ]
+  },
+  {
+    "id": "c1-failure",
+    "title": "Learning from Failure",
+    "title_uz": "Muvaffaqiyatsizlikdan saboq",
+    "words": ["failure", "setback", "resilience", "perspective", "persist", "acknowledge"],
+    "sentences": [
+      ["Most success stories hide a long list of failures that nobody talks about.", "Ko'pchilik muvaffaqiyat hikoyalari hech kim gapirmaydigan uzun muvaffaqiyatsizliklar ro'yxatini yashiradi."],
+      ["Many famous inventors, writers and entrepreneurs were rejected dozens of times before anyone took them seriously.", "Ko'plab mashhur ixtirochilar, yozuvchilar va tadbirkorlar jiddiy qabul qilinishidan oldin o'nlab marta rad etilgan."],
+      ["What distinguished them was not talent alone, but resilience: the ability to recover from setbacks.", "Ularni ajratib turgan narsa faqat iste'dod emas, balki chidamlilik — muvaffaqiyatsizliklardan keyin o'zini tiklash qobiliyati edi."],
+      ["Psychologists point out that people who persist usually see failure as information rather than as a verdict on their worth.", "Psixologlarning ta'kidlashicha, qat'iyatli odamlar odatda muvaffaqiyatsizlikni o'z qadriga chiqarilgan hukm emas, balki ma'lumot deb biladi."],
+      ["This shift in perspective changes the question from \"Why am I so bad at this?\" to \"What can I do differently next time?\"", "Bu nuqtai nazar o'zgarishi savolni \"Nega men bunga shunchalik qobiliyatsizman?\" dan \"Keyingi safar nimani boshqacha qila olaman?\" ga aylantiradi."],
+      ["Of course, it is important to acknowledge disappointment rather than pretend it does not exist.", "Albatta, hafsala pir bo'lganini yashirmasdan tan olish muhim."],
+      ["But once the emotion has passed, a careful analysis of what went wrong is often the fastest route to improvement.", "Lekin his-tuyg'u o'tgach, nima noto'g'ri ketganini sinchiklab tahlil qilish ko'pincha rivojlanishning eng tez yo'lidir."]
+    ]
+  },
+  {
+    "id": "c1-cities",
+    "title": "Cities of the Future",
+    "title_uz": "Kelajak shaharlari",
+    "words": ["urban", "sustainable", "congestion", "infrastructure", "density", "priority"],
+    "sentences": [
+      ["By 2050, almost seventy percent of the world's population is expected to live in urban areas.", "2050-yilga kelib dunyo aholisining qariyb yetmish foizi shaharlarda yashashi kutilmoqda."],
+      ["This rapid growth puts enormous pressure on housing, transport and public services.", "Bu tez o'sish uy-joy, transport va davlat xizmatlariga ulkan bosim o'tkazadi."],
+      ["Traffic congestion alone costs some cities billions of dollars a year in lost time.", "Faqat tirbandlikning o'zi ba'zi shaharlarga yo'qotilgan vaqt hisobiga yiliga milliardlab dollarga tushadi."],
+      ["Urban planners increasingly argue that the solution is not more roads, but better public transport and walkable neighbourhoods.", "Shaharsozlar tobora ko'proq yechim ko'proq yo'llar emas, balki yaxshiroq jamoat transporti va piyodalar uchun qulay mahallalar ekanini ta'kidlashmoqda."],
+      ["Higher density, if well designed, can actually make cities more sustainable and more pleasant to live in.", "Yuqori zichlik, agar yaxshi loyihalansa, shaharlarni aslida barqarorroq va yashash uchun yoqimliroq qilishi mumkin."],
+      ["Green spaces are no longer seen as a luxury but as essential infrastructure that cools streets and improves mental health.", "Yashil hududlar endi hashamat emas, balki ko'chalarni salqinlatadigan va ruhiy salomatlikni yaxshilaydigan zarur infratuzilma sifatida ko'rilmoqda."],
+      ["The challenge for governments is to make these improvements a priority without pushing poorer residents out of the city.", "Hukumatlar oldidagi vazifa — kambag'alroq aholini shahardan siqib chiqarmasdan bu yaxshilanishlarni ustuvor qilish."]
+    ]
+  }
+]
