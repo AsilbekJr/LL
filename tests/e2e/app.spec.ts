@@ -79,6 +79,9 @@ test("adds a word, goes home, and rejects the duplicate", async ({ page }) => {
   await add();
   await expect(page).toHaveURL(/\/bugun$/);
   await expect(page.getByRole("status").filter({ hasText: "takrorlashga tushdi" })).toBeVisible();
+  // The new word is in today's plan at once, counted as one word (not two cards).
+  await expect(page.getByText("1 ta yangi so'z sizni kutmoqda")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Boshlash" })).toBeVisible();
   await add();
   await expect(page.getByRole("status").filter({ hasText: "allaqachon bor" })).toBeVisible();
   await expect(page).toHaveURL(/\/qoshish$/);

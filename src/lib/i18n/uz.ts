@@ -43,11 +43,16 @@ export const uz = {
   today: {
     textsDue: (n: number) => `Matnlar: bugun ${n} ta takrorlash`,
     dueTitle: "Bugungi takrorlash",
-    dueBody: (n: number) => `${n} ta karta sizni kutmoqda`,
+    planBody: (reviews: number, words: number) =>
+      [reviews ? `${reviews} ta takrorlash` : "", words ? `${words} ta yangi so'z` : ""]
+        .filter(Boolean)
+        .join(" va ") + " sizni kutmoqda",
+    newLimitReached: (n: number) =>
+      `Bugungi yangi so'z limiti tugadi — yana ${n} ta so'z keyingi kunlarga navbatda turibdi.`,
+    words: "ta so'z",
     allDone: "Bugungi reja bajarildi",
     allDoneBody: "Ertaga yangi takrorlashlar bo'ladi. Xohlasangiz yangi so'z qo'shing.",
     start: "Boshlash",
-    learnNew: "Yangi so'zlarni o'rganish",
     progressLabel: "Bugungi progress",
     remaining: "qoldi",
     doneOf: (done: number, total: number) => `${done} / ${total}`,
@@ -366,7 +371,8 @@ export const uz = {
     dialogFinish: "Yakunlash",
     dialogError: "Savolni olib bo'lmadi.",
     dialogDone: "Suhbat tugadi",
-    dialogScore: (ok: number, total: number) => `${total} ta javobdan ${ok} tasi birinchi urinishdayoq to'g'ri.`,
+    dialogScore: (ok: number, total: number) =>
+      `${total} ta javobdan ${ok} tasi birinchi urinishdayoq to'g'ri.`,
     dialogNew: "Yangi suhbat",
     you: "Siz",
     coach: "Hamsuhbat",

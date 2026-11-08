@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/srs/dates";
+import { newWordsPlan } from "@/lib/srs/today";
 import { formatDayUz, greetingUz, studyStreak } from "@/lib/i18n/format";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -32,21 +33,25 @@ const STUDIED = ["learning", "review", "mastered"] as const;
 
 async function getToday() {
   const supabase = await getSupabaseServerClient();
-  const { data: settings } = await supabase.from("settings").select("timezone").maybeSingle();
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("timezone, daily_new_limit, direction_mode")
+    .maybeSingle();
   const tz = settings?.timezone ?? DEFAULT_TZ;
   const now = new Date();
   const today = todayInTz(tz, now);
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
   const cards = () => supabase.from("cards").select("id", { count: "exact", head: true });
-  const [due, overdue, fresh, doneToday, history, textsDue] = await Promise.all([
+  const [due, overdue, fresh, doneToday, history, textsDue, encounters] = await Promise.all([
     cards()
       .in("status", [...STUDIED])
       .lte("due_date", today),
     cards()
       .in("status", [...STUDIED])
       .lt("due_date", today),
-    cards().eq("status", "new"),
+    // New cards in creation order, as the session takes them.
+    supabase.from("cards").select("item_id, direction").eq("status", "new").order("created_at").limit(5000),
     supabase.from("review_logs").select("id", { count: "exact", head: true }).gte("reviewed_at", dayStart),
     supabase
       .from("daily_snapshots")
@@ -55,9 +60,23 @@ async function getToday() {
       .order("day", { ascending: false })
       .limit(366),
     supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
+    // Words first seen today count against the daily new-word limit.
+    supabase
+      .from("review_logs")
+      .select("cards(item_id)")
+      .eq("method", "encounter")
+      .gte("reviewed_at", dayStart)
+      .returns<{ cards: { item_id: string } | null }[]>(),
   ]);
 
-  const error = due.error ?? overdue.error ?? fresh.error ?? doneToday.error ?? history.error;
+  const error =
+    due.error ?? overdue.error ?? fresh.error ?? doneToday.error ?? history.error ?? encounters.error;
+  const newPlan = newWordsPlan({
+    newCards: fresh.data ?? [],
+    newLimit: settings?.daily_new_limit ?? 15,
+    newItemsDoneToday: new Set((encounters.data ?? []).map((e) => e.cards?.item_id).filter(Boolean)).size,
+    directionMode: settings?.direction_mode ?? "random",
+  });
   const done = doneToday.count ?? 0;
   const studiedDays = (history.data ?? []).map((r) => r.day);
   if (done > 0) studiedDays.push(today);
@@ -68,7 +87,7 @@ async function getToday() {
     hour: hourInTz(now, tz),
     due: due.count ?? 0,
     overdue: overdue.count ?? 0,
-    fresh: fresh.count ?? 0,
+    newPlan,
     done,
     streak: studyStreak(studiedDays, today),
     // Optional extra: never fail the page if texts are unavailable.
@@ -94,7 +113,7 @@ export default async function TodayPage() {
       <FlashNotice />
     </>
   );
-  const isEmpty = t.due === 0 && t.fresh === 0 && t.done === 0;
+  const isEmpty = t.due === 0 && t.newPlan.waitingWords === 0 && t.done === 0;
 
   if (isEmpty) {
     return (
@@ -125,8 +144,10 @@ export default async function TodayPage() {
     );
   }
 
-  const total = t.done + t.due;
-  const allDone = t.due === 0;
+  // Today's plan = due reviews + today's new words (within the daily limit).
+  const remaining = t.due + t.newPlan.todayCards;
+  const total = t.done + remaining;
+  const allDone = remaining === 0;
 
   return (
     <>
@@ -158,7 +179,7 @@ export default async function TodayPage() {
               <Check className="size-9 text-success" aria-hidden strokeWidth={2.5} />
             ) : (
               <span className="leading-none">
-                <span className="block font-display text-3xl font-semibold tabular-nums">{t.due}</span>
+                <span className="block font-display text-3xl font-semibold tabular-nums">{remaining}</span>
                 <span className="mt-1 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                   {uz.today.remaining}
                 </span>
@@ -171,7 +192,11 @@ export default async function TodayPage() {
               {allDone ? uz.today.allDone : uz.today.dueTitle}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {allDone ? uz.today.allDoneBody : uz.today.dueBody(t.due)}
+              {allDone
+                ? t.newPlan.laterWords > 0
+                  ? uz.today.newLimitReached(t.newPlan.laterWords)
+                  : uz.today.allDoneBody
+                : uz.today.planBody(t.due, t.newPlan.todayWords)}
             </p>
             {t.done > 0 && !allDone ? (
               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">
@@ -182,16 +207,11 @@ export default async function TodayPage() {
           </div>
         </div>
 
-        {t.due > 0 || t.fresh > 0 ? (
-          <Button
-            asChild
-            size="lg"
-            className="mt-6 w-full text-base"
-            variant={allDone ? "secondary" : "default"}
-          >
+        {!allDone ? (
+          <Button asChild size="lg" className="mt-6 w-full text-base">
             <Link href="/takrorlash">
               <Play className="size-5 fill-current" aria-hidden />
-              {allDone ? uz.today.learnNew : uz.today.start}
+              {uz.today.start}
             </Link>
           </Button>
         ) : null}
@@ -206,7 +226,12 @@ export default async function TodayPage() {
           icon={AlertTriangle}
           tone={t.overdue > 0 ? "danger" : undefined}
         />
-        <Stat label={uz.today.statNew} value={t.fresh} icon={Sparkles} />
+        <Stat
+          label={uz.today.statNew}
+          value={t.newPlan.waitingWords}
+          suffix={uz.today.words}
+          icon={Sparkles}
+        />
         <Stat
           label={uz.today.statStreak}
           value={t.streak}
