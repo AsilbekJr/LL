@@ -13,8 +13,17 @@ export interface DailyQueueInput<C extends QueueCard> {
   newLimit: number;
   /** Max due cards reviewed per day. */
   reviewLimit: number;
+  /** New WORDS (items) started today — counted against `newLimit`. */
   newItemsDoneToday?: number;
   reviewsDoneToday?: number;
+  /**
+   * Items already being learned in at least one direction. Their remaining new
+   * card is the word's second direction, not a new word: it does not use the
+   * new-word limit (it shares the review limit instead).
+   */
+  startedItems?: ReadonlySet<string>;
+  /** Items that had a card seen for the first time today. */
+  touchedToday?: ReadonlySet<string>;
   directionMode?: DirectionMode;
   /** Random source in [0, 1); injectable for tests. */
   random?: () => number;
@@ -24,7 +33,14 @@ export interface DailyQueue<C extends QueueCard> {
   /** Cards in the order to study them. */
   queue: C[];
   reviewCount: number;
+  /** New cards in the queue (new words plus second directions). */
   newCount: number;
+  /** New words (items) started in this queue. */
+  newWords: number;
+  /** Second-direction cards of words already being learned. */
+  secondCount: number;
+  /** New words not started yet, today's included. */
+  waitingWords: number;
   /** Due cards left out because of the review limit. */
   dueRemaining: number;
 }
@@ -33,6 +49,7 @@ export interface DailyQueue<C extends QueueCard> {
  * Today's study queue:
  * 1. Due cards (overdue roll over to today), most overdue first, up to the review limit.
  * 2. New items up to the new limit; 'both' adds both directions, 'random' one random direction.
+ *    The second direction of a started word comes on a later day ('random') within the review limit.
  * 3. New cards spread evenly between reviews, and two cards of the same item never back to back.
  */
 export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>): DailyQueue<C> {
@@ -52,24 +69,40 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
   const reviews = due.slice(0, reviewBudget);
 
   // Group new cards by item, keeping first-seen item order.
+  const started = input.startedItems ?? new Set<string>();
+  const touched = input.touchedToday ?? new Set<string>();
   const newByItem = new Map<string, C[]>();
+  const second: C[] = [];
   for (const c of input.cards) {
     if (c.status !== "new" || !allowed(c)) continue;
+    if (started.has(c.itemId)) {
+      // 'random' teaches one direction a day: the other one waits for a later day.
+      if (mode === "random" && touched.has(c.itemId)) continue;
+      second.push(c);
+      continue;
+    }
     const group = newByItem.get(c.itemId);
     if (group) group.push(c);
     else newByItem.set(c.itemId, [c]);
   }
   const newBudget = Math.max(0, input.newLimit - (input.newItemsDoneToday ?? 0));
+  const words = [...newByItem.values()].slice(0, newBudget);
   const fresh: C[] = [];
-  for (const group of [...newByItem.values()].slice(0, newBudget)) {
+  for (const group of words) {
     if (mode === "random" && group.length > 1) fresh.push(group[Math.floor(random() * group.length)]!);
     else fresh.push(...group);
   }
+  // Second directions share what is left of the review limit.
+  const seconds = second.slice(0, Math.max(0, reviewBudget - reviews.length));
+  fresh.push(...seconds);
 
   return {
     queue: separateSameItem(interleave(reviews, fresh)),
     reviewCount: reviews.length,
     newCount: fresh.length,
+    newWords: words.length,
+    secondCount: seconds.length,
+    waitingWords: newByItem.size,
     dueRemaining: due.length - reviews.length,
   };
 }

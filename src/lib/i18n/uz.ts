@@ -49,6 +49,8 @@ export const uz = {
         .join(" va ") + " sizni kutmoqda",
     newLimitReached: (n: number) =>
       `Bugungi yangi so'z limiti tugadi — yana ${n} ta so'z keyingi kunlarga navbatda turibdi.`,
+    reviewLimitReached: (n: number) =>
+      `Bugungi takrorlash limiti tugadi — yana ${n} ta karta ertaga ko'rsatiladi.`,
     words: "ta so'z",
     allDone: "Bugungi reja bajarildi",
     allDoneBody: "Ertaga yangi takrorlashlar bo'ladi. Xohlasangiz yangi so'z qo'shing.",
@@ -330,6 +332,11 @@ export const uz = {
     patternPassed: "Zo'r! Qolip va so'z to'g'ri ishlatildi.",
     patternRetry: "Hammasi eshitilmadi — belgilanmagan qismlarni qo'shib qayta ayting.",
     nextPattern: "Keyingi qolip",
+    pickingPattern: "So'zingizga ma'noli mos qolip tanlanmoqda…",
+    wordMissing: (w: string) =>
+      `Qolip to'g'ri, lekin „${w}” so'zi eshitilmadi. Namunani emas, o'z so'zingiz bilan gap tuzing.`,
+    showModel: "Shu so'z bilan namuna",
+    modelWithWord: (w: string) => `„${w}” bilan namuna`,
     otherWord: "Boshqa so'z",
     noFit:
       "Bu darajadagi qoliplar uchun mos so'z yo'q. Boshqa darajani tanlang yoki kutubxonaga so'z qo'shing.",

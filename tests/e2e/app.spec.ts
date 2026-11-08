@@ -241,6 +241,26 @@ test("speaking conversation: strict check, AI judge, next question", async ({ pa
   await noHorizontalScroll(page);
 });
 
+test("speaking patterns: a sensible frame for the word, or an honest 'no fit'", async ({ page }) => {
+  await page.goto("/nutq");
+  await page.getByRole("tab", { name: "Qoliplar" }).click();
+  await page.getByRole("radio", { name: "A1" }).click();
+  const card = page.getByText("Sizning so'zingiz");
+  const noFit = page.getByText(/Bu darajadagi qoliplar uchun mos so'z yo'q/);
+  await expect(card.or(noFit)).toBeVisible({ timeout: 45_000 });
+  if (await card.isVisible()) {
+    // The AI-checked model sentence uses the learner's own word.
+    const word = (await page.getByText(/^Sizning so'zingiz/).locator("..").locator("span[lang=en]").textContent())!;
+    const show = page.getByRole("button", { name: "Shu so'z bilan namuna" });
+    if (await show.isVisible()) {
+      await show.click();
+      await expect(page.getByText(new RegExp(`bilan namuna$`))).toBeVisible();
+      expect(word.trim().length).toBeGreaterThan(0);
+    }
+  }
+  await noHorizontalScroll(page);
+});
+
 test("calendar shows today's reviewed words", async ({ page }) => {
   await page.goto("/kalendar");
   const todayNumber = Number(

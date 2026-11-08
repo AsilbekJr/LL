@@ -1,41 +1,40 @@
-import type { DirectionMode } from "./queue";
-
 /**
- * New words in today's plan, counted the way the review session builds its
- * queue (buildDailyQueue): new words are WORDS (items), not cards — every
- * word has two cards (EN→UZ and UZ→EN) — and only `newLimit` words a day.
+ * Pure helpers for "what is left today", shared by the Bugun page and the
+ * review session so both count exactly the same way.
+ *
+ * Every word (item) has two cards: EN→UZ and UZ→EN. A word is NEW while both
+ * cards are new; once one direction is being learned, the other new card is
+ * the word's second direction (not a new word any more).
  */
-export interface NewWordsPlan {
-  /** Words that are new and not yet seen. */
-  waitingWords: number;
-  /** Of those, how many today's session will teach (daily limit applied). */
-  todayWords: number;
-  /** Cards those words put into today's session (matches the session length). */
-  todayCards: number;
-  /** Words left for the coming days because the daily limit is reached. */
-  laterWords: number;
+
+/** Items whose cards are not all new: listed with fewer than two new cards. */
+export function startedItemsOf(newCards: { item_id: string }[]): Set<string> {
+  const count = new Map<string, number>();
+  for (const c of newCards) count.set(c.item_id, (count.get(c.item_id) ?? 0) + 1);
+  return new Set([...count].filter(([, n]) => n < 2).map(([id]) => id));
 }
 
-export function newWordsPlan(input: {
-  newCards: { item_id: string; direction: string }[];
-  newLimit: number;
-  newItemsDoneToday: number;
-  directionMode: DirectionMode;
-}): NewWordsPlan {
-  const mode = input.directionMode;
-  const byItem = new Map<string, number>();
-  for (const c of input.newCards) {
-    if (mode !== "random" && mode !== "both" && c.direction !== mode) continue;
-    byItem.set(c.item_id, (byItem.get(c.item_id) ?? 0) + 1);
+/**
+ * Words started today: of the items touched today, those whose every
+ * non-new card had its first encounter today (so not a second direction of a
+ * word begun on an earlier day).
+ */
+export function wordsStartedToday(
+  encounteredToday: ReadonlySet<string>,
+  cardsOfTouchedItems: { id: string; item_id: string; status: string }[],
+): number {
+  const older = new Set<string>();
+  const items = new Set<string>();
+  for (const c of cardsOfTouchedItems) {
+    items.add(c.item_id);
+    if (c.status !== "new" && !encounteredToday.has(c.id)) older.add(c.item_id);
   }
-  const budget = Math.max(0, input.newLimit - input.newItemsDoneToday);
-  const today = [...byItem.values()].slice(0, budget);
-  // "random" shows one direction of each new word per day; the others show each allowed card.
-  const todayCards = mode === "random" ? today.length : today.reduce((n, c) => n + c, 0);
-  return {
-    waitingWords: byItem.size,
-    todayWords: today.length,
-    todayCards,
-    laterWords: byItem.size - today.length,
-  };
+  return [...items].filter((id) => !older.has(id)).length;
+}
+
+/** Drop the last item's rows when the scan hit its limit (its pair may be cut off). */
+export function trimCutItem<T extends { item_id: string }>(rows: T[], limit: number): T[] {
+  if (rows.length < limit || rows.length === 0) return rows;
+  const last = rows[rows.length - 1]!.item_id;
+  return rows.filter((r) => r.item_id !== last);
 }

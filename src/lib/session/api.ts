@@ -14,6 +14,7 @@ import {
 } from "@/lib/srs/types";
 import type { Database, Json, Tables } from "@/lib/supabase/database.types";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
+import { loadTodayState } from "./today-state";
 import type { SessionCard, SessionItem } from "./exercise";
 import { fillExamples } from "./examples";
 
@@ -92,21 +93,14 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
   const dayStart = startOfDayInTz(today, settings.timezone).toISOString();
   const newLimit = settingsRow?.daily_new_limit ?? 15;
 
-  const [due, fresh, logs, upcoming] = await Promise.all([
+  const [due, state, upcoming] = await Promise.all([
     sb
       .from("cards")
       .select(CARD_COLUMNS)
       .in("status", [...STUDIED])
       .lte("due_date", today)
       .returns<CardWithItem[]>(),
-    sb
-      .from("cards")
-      .select(CARD_COLUMNS)
-      .eq("status", "new")
-      .order("created_at")
-      .limit(Math.max(4, newLimit * 2 + 10))
-      .returns<CardWithItem[]>(),
-    sb.from("review_logs").select("card_id, method, result").gte("reviewed_at", dayStart),
+    loadTodayState(sb, dayStart),
     sb
       .from("cards")
       .select("due_date")
@@ -115,32 +109,45 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       .lte("due_date", addDays(today, LOAD_HORIZON_DAYS)),
   ]);
 
-  const rows = [...check(due), ...check(fresh)].filter((r) => r.items);
-  const todayLogs = check(logs);
-
-  // What was already done today, so the daily limits hold across sessions.
-  const encounteredCards = new Set(todayLogs.filter((l) => l.method === "encounter").map((l) => l.card_id));
-  const reviewedCards = new Set(todayLogs.filter((l) => l.result !== null).map((l) => l.card_id));
-  let newItemsDoneToday = 0;
-  if (encounteredCards.size) {
-    const enc = check(
-      await sb
-        .from("cards")
-        .select("item_id")
-        .in("id", [...encounteredCards]),
-    );
-    newItemsDoneToday = new Set(enc.map((c) => c.item_id)).size;
-  }
-
-  const queue = buildDailyQueue({
-    cards: rows.map((r) => ({ ...r, itemId: r.item_id, dueDate: r.due_date })),
+  const dueRows = check(due).filter((r) => r.items);
+  const plan = buildDailyQueue({
+    cards: [
+      ...dueRows.map((r) => ({
+        id: r.id,
+        itemId: r.item_id,
+        direction: r.direction,
+        dueDate: r.due_date,
+        status: r.status,
+      })),
+      ...state.newCards.map((r) => ({
+        id: r.id,
+        itemId: r.item_id,
+        direction: r.direction,
+        dueDate: today,
+        status: "new" as const,
+      })),
+    ],
     today,
     newLimit,
     reviewLimit: settingsRow?.daily_review_limit ?? 150,
-    newItemsDoneToday,
-    reviewsDoneToday: reviewedCards.size,
+    newItemsDoneToday: state.newItemsDoneToday,
+    reviewsDoneToday: state.reviewsDoneToday,
+    startedItems: state.startedItems,
+    touchedToday: state.touchedToday,
     directionMode: settingsRow?.direction_mode ?? "random",
   });
+
+  // Full rows for the new cards the plan picked.
+  const byId = new Map<string, CardWithItem>(dueRows.map((r) => [r.id, r]));
+  const newIds = plan.queue.filter((c) => !byId.has(c.id)).map((c) => c.id);
+  for (const ids of chunk(newIds, 150)) {
+    const rows = check(await sb.from("cards").select(CARD_COLUMNS).in("id", ids).returns<CardWithItem[]>());
+    for (const r of rows) if (r.items && r.status === "new") byId.set(r.id, r);
+  }
+  const queue = {
+    queue: plan.queue.map((c) => byId.get(c.id)).filter((r): r is CardWithItem => Boolean(r)),
+    dueRemaining: plan.dueRemaining,
+  };
 
   // Siblings (other direction) and production progress for every item in the queue.
   const itemIds = [...new Set(queue.queue.map((c) => c.item_id))];

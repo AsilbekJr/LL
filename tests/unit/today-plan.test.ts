@@ -1,47 +1,89 @@
 import { describe, expect, it } from "vitest";
-import { newWordsPlan } from "@/lib/srs/today";
+import { buildDailyQueue, type QueueCard } from "@/lib/srs/queue";
+import { startedItemsOf, trimCutItem, wordsStartedToday } from "@/lib/srs/today";
 
-const cards = (items: string[]) =>
-  items.flatMap((id) => [
-    { item_id: id, direction: "en_uz" },
-    { item_id: id, direction: "uz_en" },
-  ]);
+const TODAY = "2026-11-08";
+const newPair = (id: string): QueueCard[] => [
+  { id: `${id}e`, itemId: id, direction: "en_uz", dueDate: TODAY, status: "new" },
+  { id: `${id}u`, itemId: id, direction: "uz_en", dueDate: TODAY, status: "new" },
+];
+const rows = (cards: QueueCard[]) => cards.map((c) => ({ item_id: c.itemId }));
 
-describe("today's new words", () => {
-  it("counts words, not their two cards", () => {
-    const p = newWordsPlan({
-      newCards: cards(["a"]),
+describe("today's plan", () => {
+  it("one new word is one card in 'random' mode, two in 'both'", () => {
+    const cards = newPair("a");
+    const base = { cards, today: TODAY, newLimit: 15, reviewLimit: 150 };
+    expect(buildDailyQueue({ ...base, directionMode: "random" })).toMatchObject({
+      newWords: 1,
+      newCount: 1,
+      waitingWords: 1,
+    });
+    expect(buildDailyQueue({ ...base, directionMode: "both" }).newCount).toBe(2);
+  });
+
+  it("applies the daily limit, minus words started today", () => {
+    const cards = ["a", "b", "c", "d"].flatMap(newPair);
+    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 3, reviewLimit: 150, newItemsDoneToday: 1 });
+    expect(q).toMatchObject({ newWords: 2, waitingWords: 4 });
+  });
+
+  it("'random': the second direction never comes back the same day", () => {
+    // Word "a": its EN→UZ card was learned today, the UZ→EN card is still new.
+    const cards = [newPair("a")[1]!, ...newPair("b")];
+    const started = startedItemsOf(rows(cards));
+    expect(started).toEqual(new Set(["a"]));
+    const q = buildDailyQueue({
+      cards,
+      today: TODAY,
       newLimit: 15,
-      newItemsDoneToday: 0,
-      directionMode: "random",
-    });
-    expect(p).toEqual({ waitingWords: 1, todayWords: 1, todayCards: 1, laterWords: 0 });
-  });
-
-  it("applies the daily limit, minus words already seen today", () => {
-    const p = newWordsPlan({
-      newCards: cards(["a", "b", "c", "d"]),
-      newLimit: 3,
+      reviewLimit: 150,
       newItemsDoneToday: 1,
-      directionMode: "random",
+      startedItems: started,
+      touchedToday: new Set(["a"]),
     });
-    expect(p).toMatchObject({ waitingWords: 4, todayWords: 2, laterWords: 2 });
+    expect(q.queue.map((c) => c.itemId)).toEqual(["b"]);
+    expect(q).toMatchObject({ waitingWords: 1, secondCount: 0 });
   });
 
-  it("matches the session's card count per direction mode", () => {
-    const base = { newCards: cards(["a", "b"]), newLimit: 15, newItemsDoneToday: 0 };
-    expect(newWordsPlan({ ...base, directionMode: "both" }).todayCards).toBe(4);
-    expect(newWordsPlan({ ...base, directionMode: "en_uz" }).todayCards).toBe(2);
-    expect(newWordsPlan({ ...base, directionMode: "random" }).todayCards).toBe(2);
+  it("'random': the second direction comes on a later day without using the new-word limit", () => {
+    const cards = [newPair("a")[1]!, ...newPair("b")];
+    const q = buildDailyQueue({
+      cards,
+      today: TODAY,
+      newLimit: 1,
+      reviewLimit: 150,
+      startedItems: startedItemsOf(rows(cards)),
+    });
+    expect(new Set(q.queue.map((c) => c.id))).toEqual(new Set(["au", q.queue.find((c) => c.itemId === "b")!.id]));
+    expect(q).toMatchObject({ newWords: 1, secondCount: 1 });
   });
 
-  it("has nothing for today when the limit is used up", () => {
-    const p = newWordsPlan({
-      newCards: cards(["a"]),
-      newLimit: 2,
-      newItemsDoneToday: 5,
-      directionMode: "random",
+  it("second directions share the review limit", () => {
+    const cards = [newPair("a")[1]!, newPair("b")[1]!];
+    const q = buildDailyQueue({
+      cards,
+      today: TODAY,
+      newLimit: 15,
+      reviewLimit: 1,
+      startedItems: startedItemsOf(rows(cards)),
     });
-    expect(p).toMatchObject({ todayWords: 0, todayCards: 0, laterWords: 1 });
+    expect(q.secondCount).toBe(1);
+  });
+
+  it("counts only words begun today, not second directions", () => {
+    // a: first seen today (both cards). b: second direction today, first one earlier.
+    const cards = [
+      { id: "ae", item_id: "a", status: "learning" },
+      { id: "au", item_id: "a", status: "new" },
+      { id: "be", item_id: "b", status: "review" },
+      { id: "bu", item_id: "b", status: "learning" },
+    ];
+    expect(wordsStartedToday(new Set(["ae", "bu"]), cards)).toBe(1);
+  });
+
+  it("drops a pair cut by the scan limit", () => {
+    const r = [{ item_id: "a" }, { item_id: "a" }, { item_id: "b" }];
+    expect(trimCutItem(r, 3)).toEqual([{ item_id: "a" }, { item_id: "a" }]);
+    expect(trimCutItem(r, 4)).toBe(r);
   });
 });

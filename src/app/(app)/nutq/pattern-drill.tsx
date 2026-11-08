@@ -2,14 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, RefreshCw, RotateCcw, Shuffle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Loader2, RefreshCw, RotateCcw, Shuffle } from "lucide-react";
 import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/form-controls";
 import { ACTIVE_DAYS } from "@/lib/production/active";
 import type { DrillItem, ProductionWrite } from "@/lib/production/api";
-import { checkPattern, fitsSlot, pickPattern, type SpeakingPattern } from "@/lib/production/patterns";
+import { checkPattern, type SpeakingPattern } from "@/lib/production/patterns";
+import { fetchPatternFits } from "@/lib/speaking/client";
+import type { PatternFit } from "@/lib/speaking/fit";
 import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
+import { pickSensiblePattern } from "@/lib/speaking/pattern-pick";
 import { englishKey } from "@/lib/schemas/item";
 import { loadAll } from "@/lib/vocab/dictionary";
 import { uz } from "@/lib/i18n/uz";
@@ -19,13 +22,14 @@ import { Check, LevelPicker, SpokenAnswerInput, useSpeakingLevel, useSpokenAnswe
 /** Fill in missing parts of speech from the built-in dictionary, so slot matching works for hand-added words. */
 function useItemsWithPos(items: DrillItem[]) {
   const dict = useQuery({ queryKey: ["vocab", "all"], queryFn: loadAll, staleTime: Infinity });
-  return useMemo(() => {
+  const pool = useMemo(() => {
     if (!dict.data) return items;
     const pos = new Map(dict.data.map((e) => [englishKey(e.english), e.pos]));
     return items.map((i) =>
       i.part_of_speech?.trim() ? i : { ...i, part_of_speech: pos.get(englishKey(i.english)) ?? null },
     );
   }, [items, dict.data]);
+  return { pool, ready: !dict.isPending };
 }
 
 export function PatternDrill({
@@ -42,18 +46,47 @@ export function PatternDrill({
   aiEnabled: boolean;
 }) {
   const t = uz.speaking;
-  const pool = useItemsWithPos(items);
+  const { pool, ready } = useItemsWithPos(items);
   const [level, setLevel] = useSpeakingLevel(items);
-  const [pick, setPick] = useState(() => pickPattern(level, pool, Math.random));
   const answer = useSpokenAnswer();
 
-  // Re-pick when the level changes or the dictionary filled in parts of speech.
-  const [seenKey, setSeenKey] = useState(`${level}:${pool.length}:${pool === items}`);
-  const key = `${level}:${pool.length}:${pool === items}`;
-  if (key !== seenKey) {
-    setSeenKey(key);
-    if (!pick || pick.pattern.level !== level) setPick(pickPattern(level, pool, Math.random));
-  }
+  // Each request is one pick: a frame + a word that make a SENSIBLE sentence
+  // (checked by AI when on; part of speech alone gave "Can I have a guy?").
+  const [request, setRequest] = useState<{
+    n: number;
+    avoid?: string;
+    pattern?: string;
+    excludeItem?: string;
+  }>({
+    n: 0,
+  });
+  const picked = useQuery({
+    queryKey: ["pattern-pick", level, pool.length, aiEnabled, request],
+    queryFn: async () => {
+      const opts = {
+        level,
+        items: pool,
+        random: Math.random,
+        fits: aiEnabled ? fetchPatternFits : async () => null,
+        avoid: request.avoid,
+      };
+      if (request.pattern) {
+        const same = await pickSensiblePattern({
+          ...opts,
+          pattern: request.pattern,
+          excludeItem: request.excludeItem,
+        });
+        if (same) return same;
+      }
+      return pickSensiblePattern(opts);
+    },
+    enabled: ready,
+    staleTime: Infinity,
+    gcTime: 60_000,
+    retry: false,
+  });
+  const pick = picked.data ?? null;
+  const picking = !ready || picked.isPending;
 
   const check = pick && answer.answer ? checkPattern(answer.answer, pick.pattern, pick.item.english) : null;
   const restart = answer.answer ? findRestart(answer.answer) : null;
@@ -89,7 +122,7 @@ export function PatternDrill({
       ]);
     }
     answer.reset();
-    setPick(pickPattern(level, pool, Math.random, pick?.pattern.id));
+    setRequest((r) => ({ n: r.n + 1, avoid: pick?.pattern.id }));
   }
 
   return (
@@ -97,7 +130,15 @@ export function PatternDrill({
       <p className="text-sm text-muted-foreground">{t.patternIntro}</p>
       <LevelPicker value={level} onChange={setLevel} />
 
-      {!pick ? (
+      {picking ? (
+        <div
+          className="flex h-64 flex-col items-center justify-center gap-2 rounded-2xl border bg-card text-sm text-muted-foreground"
+          aria-busy="true"
+        >
+          <Loader2 className="size-5 animate-spin" aria-hidden />
+          {t.pickingPattern}
+        </div>
+      ) : !pick ? (
         <Notice tone="warning" icon={AlertTriangle}>
           {t.noFit}
         </Notice>
@@ -108,6 +149,7 @@ export function PatternDrill({
             word={pick.item}
             days={progress.get(pick.item.id) ?? 0}
             speech={speech}
+            model={pick.model}
           />
 
           {!answer.answer ? <SpokenAnswerInput state={answer} /> : null}
@@ -118,7 +160,15 @@ export function PatternDrill({
                 verdict={verdict}
                 said={answer.answer}
                 speech={speech}
-                localMessage={restart ? t.restart(restart) : !check.passed ? t.patternRetry : undefined}
+                localMessage={
+                  restart
+                    ? t.restart(restart)
+                    : !check.used && check.keys.every(Boolean)
+                      ? t.wordMissing(pick.item.english)
+                      : !check.passed
+                        ? t.patternRetry
+                        : undefined
+                }
                 localChecks={
                   <>
                     {pick.pattern.keys.map((k, i) => (
@@ -148,11 +198,9 @@ export function PatternDrill({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  const fits = pool.filter((i) => i.id !== pick.item.id && fitsSlot(pick.pattern.slot, i));
-                  if (fits.length)
-                    setPick({ pattern: pick.pattern, item: fits[Math.floor(Math.random() * fits.length)]! });
-                }}
+                onClick={() =>
+                  setRequest((r) => ({ n: r.n + 1, pattern: pick.pattern.id, excludeItem: pick.item.id }))
+                }
               >
                 <RefreshCw aria-hidden />
                 {t.otherWord}
@@ -170,13 +218,16 @@ function PatternCard({
   word,
   days,
   speech,
+  model,
 }: {
   pattern: SpeakingPattern;
   word: DrillItem;
   days: number;
   speech: SpeechPrefs;
+  model: PatternFit | null;
 }) {
   const t = uz.speaking;
+  const [shown, setShown] = useState<string | null>(null);
   const [before, after] = pattern.en.split("___");
   return (
     <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-lift)">
@@ -230,6 +281,32 @@ function PatternCard({
           <SpeakButton text={pattern.example} prefs={speech} />
         </div>
       </div>
+
+      {model ? (
+        <div className="mt-3 border-t pt-3">
+          {shown === model.sentence ? (
+            <>
+              <p className="text-xs font-semibold text-muted-foreground">{t.modelWithWord(word.english)}</p>
+              <p className="mt-1 font-semibold" lang="en">
+                {model.sentence}
+              </p>
+              {model.sentence_uz ? (
+                <p className="mt-0.5 text-sm text-muted-foreground" lang="uz">
+                  {model.sentence_uz}
+                </p>
+              ) : null}
+              <div className="mt-2">
+                <SpeakButton text={model.sentence} prefs={speech} />
+              </div>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setShown(model.sentence)}>
+              <Eye aria-hidden />
+              {t.showModel}
+            </Button>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
