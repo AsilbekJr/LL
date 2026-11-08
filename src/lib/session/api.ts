@@ -15,14 +15,14 @@ import {
 import type { Database, Json, Tables } from "@/lib/supabase/database.types";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import { loadTodayState } from "./today-state";
-import type { SessionCard, SessionItem } from "./exercise";
+import type { SessionCard, SessionItem, SiblingPatch } from "./exercise";
 import { fillExamples } from "./examples";
 
 type Client = SupabaseClient<Database>;
 
 const STUDIED = ["learning", "review", "mastered"] as const;
 const ITEM_COLUMNS = "id, type, english, uzbek, example_en, example_uz, part_of_speech, notes, cefr_level";
-const CARD_COLUMNS = `id, item_id, direction, stage, ladder_step, due_date, lapses, reps, status, fsrs_state, items(${ITEM_COLUMNS})`;
+const CARD_COLUMNS = `id, item_id, direction, stage, ladder_step, due_date, lapses, reps, status, fsrs_state, last_reviewed_at, items(${ITEM_COLUMNS})`;
 const LOAD_HORIZON_DAYS = 120;
 
 type CardWithItem = Pick<
@@ -37,6 +37,7 @@ type CardWithItem = Pick<
   | "reps"
   | "status"
   | "fsrs_state"
+  | "last_reviewed_at"
 > & { items: SessionItem | null };
 
 export interface SessionConfig {
@@ -118,6 +119,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
         direction: r.direction,
         dueDate: r.due_date,
         status: r.status,
+        lastReviewedAt: r.last_reviewed_at,
       })),
       ...state.newCards.map((r) => ({
         id: r.id,
@@ -148,6 +150,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
     queue: plan.queue.map((c) => byId.get(c.id)).filter((r): r is CardWithItem => Boolean(r)),
     dueRemaining: plan.dueRemaining,
   };
+  const deferredItems = new Set(plan.deferred.map((c) => c.itemId));
 
   // Siblings (other direction) and production progress for every item in the queue.
   const itemIds = [...new Set(queue.queue.map((c) => c.item_id))];
@@ -175,6 +178,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       },
       siblingComplete: (sib?.ladder_step ?? 0) >= ladderLength,
       siblingId: sib?.id ?? null,
+      deferSibling: deferredItems.has(row.item_id),
     };
   });
 
@@ -220,7 +224,7 @@ export interface AnswerWrite {
   responseText: string | null;
   responseMs: number | null;
   outcome: ReviewOutcome;
-  siblingPatch: { id: string; status: "mastered"; dueDate: IsoDate } | null;
+  siblingPatch: SiblingPatch | null;
   /** Writing/speaking stage: the learner's sentence (saved before the card). */
   production?: ProductionWrite | null;
 }
@@ -264,10 +268,13 @@ export async function persistAnswer(sb: Client, w: AnswerWrite): Promise<void> {
   if (card.error) throw new DbWriteError(card.error);
 
   if (w.siblingPatch) {
-    const sib = await sb
+    const p = w.siblingPatch;
+    let q = sb
       .from("cards")
-      .update({ status: w.siblingPatch.status, due_date: w.siblingPatch.dueDate })
-      .eq("id", w.siblingPatch.id);
+      .update(p.status ? { status: p.status, due_date: p.dueDate } : { due_date: p.dueDate })
+      .eq("id", p.id);
+    if (p.onlyIfDueBy) q = q.lte("due_date", p.onlyIfDueBy).in("status", [...STUDIED]);
+    const sib = await q;
     if (sib.error) throw new DbWriteError(sib.error);
   }
 }

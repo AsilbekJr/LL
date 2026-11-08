@@ -180,6 +180,16 @@ describe("session engine", () => {
     expect(s.load.get("2026-11-13")).toBe(1);
   });
 
+  it("'random': answering one direction moves the deferred other one to tomorrow", () => {
+    const a = sc("a", { status: "review", ladderStep: 2 }, { siblingId: "b", deferSibling: true });
+    const r = answerCard(createSession([a]), "good", ctx);
+    expect(r.siblingPatch).toEqual({ id: "b", dueDate: "2026-11-07", onlyIfDueBy: "2026-11-06" });
+    expect(
+      answerCard(createSession([sc("c", { status: "review" }, { siblingId: "d" })]), "good", ctx)
+        .siblingPatch,
+    ).toBeNull();
+  });
+
   it("promotes the sibling when the item becomes mastered", () => {
     const a = sc(
       "a",

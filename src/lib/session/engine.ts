@@ -1,7 +1,7 @@
 import { addDays, type IsoDate } from "@/lib/srs/dates";
 import { applyReview, type ReviewOutcome } from "@/lib/srs/scheduler";
 import type { ReviewResult, SrsSettings } from "@/lib/srs/types";
-import type { SessionCard } from "./exercise";
+import type { SessionCard, SiblingPatch } from "./exercise";
 
 /**
  * Pure review-session state. The UI keeps one `SessionState`, calls
@@ -66,7 +66,7 @@ export interface AnswerResult {
   state: SessionState;
   outcome: ReviewOutcome;
   /** When the item became mastered, the sibling card must be promoted too. */
-  siblingPatch: { id: string; status: "mastered"; dueDate: IsoDate } | null;
+  siblingPatch: SiblingPatch | null;
 }
 
 /** Preview the interval each grade would give (for button labels). Does not change state. */
@@ -101,6 +101,10 @@ export function answerCard(s: SessionState, result: ReviewResult | null, ctx: An
 
   // Keep the sibling in sync when it is part of this session.
   let siblingPatch: AnswerResult["siblingPatch"] = null;
+  if (sc.deferSibling && sc.siblingId && result !== null) {
+    // 'random': this word's other direction was due too; it moves to tomorrow.
+    siblingPatch = { id: sc.siblingId, dueDate: addDays(ctx.today, 1), onlyIfDueBy: ctx.today };
+  }
   if (sc.siblingId) {
     const sib = byId[sc.siblingId];
     if (outcome.itemMastered) {

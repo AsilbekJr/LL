@@ -54,7 +54,9 @@ describe("today's plan", () => {
       reviewLimit: 150,
       startedItems: startedItemsOf(rows(cards)),
     });
-    expect(new Set(q.queue.map((c) => c.id))).toEqual(new Set(["au", q.queue.find((c) => c.itemId === "b")!.id]));
+    expect(new Set(q.queue.map((c) => c.id))).toEqual(
+      new Set(["au", q.queue.find((c) => c.itemId === "b")!.id]),
+    );
     expect(q).toMatchObject({ newWords: 1, secondCount: 1 });
   });
 
@@ -85,5 +87,61 @@ describe("today's plan", () => {
     const r = [{ item_id: "a" }, { item_id: "a" }, { item_id: "b" }];
     expect(trimCutItem(r, 3)).toEqual([{ item_id: "a" }, { item_id: "a" }]);
     expect(trimCutItem(r, 4)).toBe(r);
+  });
+});
+
+describe("'random' reviews one direction per word a day", () => {
+  const due = (id: string, itemId: string, over: Partial<QueueCard> = {}): QueueCard => ({
+    id,
+    itemId,
+    direction: id.endsWith("u") ? "uz_en" : "en_uz",
+    dueDate: TODAY,
+    status: "learning",
+    ...over,
+  });
+
+  it("13 words with both directions due are 13 reviews, not 26", () => {
+    const cards = Array.from({ length: 13 }, (_, i) => [due(`${i}e`, `${i}`), due(`${i}u`, `${i}`)]).flat();
+    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 15, reviewLimit: 150 });
+    expect(q.reviewCount).toBe(13);
+    expect(new Set(q.queue.map((c) => c.itemId)).size).toBe(13);
+    expect(q.deferred).toHaveLength(13);
+    // 'both' still reviews every card.
+    expect(
+      buildDailyQueue({ cards, today: TODAY, newLimit: 15, reviewLimit: 150, directionMode: "both" })
+        .reviewCount,
+    ).toBe(26);
+  });
+
+  it("the more overdue direction comes first, then the one reviewed longer ago", () => {
+    const a = buildDailyQueue({
+      cards: [due("ae", "a"), due("au", "a", { dueDate: "2026-11-05" })],
+      today: TODAY,
+      newLimit: 0,
+      reviewLimit: 9,
+    });
+    expect(a.queue.map((c) => c.id)).toEqual(["au"]);
+    const b = buildDailyQueue({
+      cards: [
+        due("ae", "a", { lastReviewedAt: "2026-11-07T10:00:00Z" }),
+        due("au", "a", { lastReviewedAt: "2026-11-06T10:00:00Z" }),
+      ],
+      today: TODAY,
+      newLimit: 0,
+      reviewLimit: 9,
+    });
+    expect(b.queue.map((c) => c.id)).toEqual(["au"]);
+  });
+
+  it("a second direction waits while the word has a review today", () => {
+    const cards = [due("ae", "a"), { ...newPair("a")[1]! }];
+    const q = buildDailyQueue({
+      cards,
+      today: TODAY,
+      newLimit: 15,
+      reviewLimit: 9,
+      startedItems: new Set(["a"]),
+    });
+    expect(q.queue.map((c) => c.id)).toEqual(["ae"]);
   });
 });

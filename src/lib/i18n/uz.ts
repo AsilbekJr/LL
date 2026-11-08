@@ -43,10 +43,12 @@ export const uz = {
   today: {
     textsDue: (n: number) => `Matnlar: bugun ${n} ta takrorlash`,
     dueTitle: "Bugungi takrorlash",
-    planBody: (reviews: number, words: number) =>
-      [reviews ? `${reviews} ta takrorlash` : "", words ? `${words} ta yangi so'z` : ""]
+    planBody: (reviewWords: number, newWords: number, cards: number) =>
+      [reviewWords ? `${reviewWords} ta so'zni takrorlash` : "", newWords ? `${newWords} ta yangi so'z` : ""]
         .filter(Boolean)
-        .join(" va ") + " sizni kutmoqda",
+        .join(" va ") +
+      " sizni kutmoqda" +
+      (cards > reviewWords + newWords ? ` (${cards} ta karta — ikkala yo'nalish)` : ""),
     newLimitReached: (n: number) =>
       `Bugungi yangi so'z limiti tugadi — yana ${n} ta so'z keyingi kunlarga navbatda turibdi.`,
     reviewLimitReached: (n: number) =>
@@ -58,7 +60,7 @@ export const uz = {
     progressLabel: "Bugungi progress",
     remaining: "qoldi",
     doneOf: (done: number, total: number) => `${done} / ${total}`,
-    overdueBanner: (n: number) => `${n} ta kechikkan takrorlash bor — ular birinchi ko'rsatiladi.`,
+    overdueBanner: (n: number) => `${n} ta so'zning takrorlashi kechikkan — ular birinchi ko'rsatiladi.`,
     statDue: "Takrorlash",
     statOverdue: "Kechikkan",
     statNew: "Yangi",

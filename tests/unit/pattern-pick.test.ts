@@ -10,7 +10,13 @@ describe("pickSensiblePattern", () => {
   it("only uses a frame the AI says makes sense for the word", async () => {
     const fits = vi.fn(async (req: FitRequest) =>
       req.word.english === "water"
-        ? [{ id: "a1-can-have", sentence: "Can I have some water, please?", sentence_uz: "Suv bera olasizmi?" }]
+        ? [
+            {
+              id: "a1-can-have",
+              sentence: "Can I have some water, please?",
+              sentence_uz: "Suv bera olasizmi?",
+            },
+          ]
         : [],
     );
     const p = await pickSensiblePattern({ level: "A1", items: [guy, water], random: first, fits });
@@ -20,7 +26,9 @@ describe("pickSensiblePattern", () => {
   });
 
   it("asks only about frames of the right level and part of speech", async () => {
-    const fits = vi.fn(async (_req: FitRequest) => [] as { id: string; sentence: string; sentence_uz: string }[]);
+    const fits = vi.fn(
+      async (_req: FitRequest) => [] as { id: string; sentence: string; sentence_uz: string }[],
+    );
     await pickSensiblePattern({ level: "A1", items: [guy], random: first, fits });
     const asked = fits.mock.calls[0]![0].patterns.map((p: { id: string }) => p.id);
     expect(asked).toContain("a1-can-have");

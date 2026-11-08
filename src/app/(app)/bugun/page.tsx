@@ -48,7 +48,7 @@ async function getToday() {
   const [dueRes, stateRes, history, studiedYesterday, textsDue] = await Promise.all([
     supabase
       .from("cards")
-      .select("id, item_id, direction, due_date, status")
+      .select("id, item_id, direction, due_date, status, last_reviewed_at")
       .in("status", [...STUDIED])
       .lte("due_date", today)
       .limit(10000),
@@ -87,6 +87,7 @@ async function getToday() {
         direction: r.direction,
         dueDate: r.due_date,
         status: r.status,
+        lastReviewedAt: r.last_reviewed_at,
       })),
       ...(state?.newCards ?? []).map((r) => ({
         id: r.id,
@@ -107,6 +108,10 @@ async function getToday() {
     random: () => 0,
   });
 
+  // Count WORDS, as the library does: in 'both' mode a word brings two cards.
+  const started = state?.startedItems ?? new Set<string>();
+  const reviewCards = plan.queue.filter((c) => c.status !== "new" || started.has(c.itemId));
+  const reviewWords = new Set(reviewCards.map((c) => c.itemId));
   const done = state?.cardsDoneToday ?? 0;
   const studiedDays = (history.data ?? []).map((r) => r.day);
   if ((studiedYesterday.count ?? 0) > 0) studiedDays.push(yesterday);
@@ -117,8 +122,11 @@ async function getToday() {
     today,
     hour: hourInTz(now, tz),
     /** Reviews in today's plan: due cards (review limit applied) plus second directions. */
-    reviews: plan.reviewCount + plan.secondCount,
-    overdue: dueRows.filter((c) => c.due_date < today).length,
+    /** Words to review today (due reviews + second directions), and their cards. */
+    reviews: reviewWords.size,
+    reviewCards: reviewCards.length,
+    /** Words in today's plan that are overdue. */
+    overdue: new Set(reviewCards.filter((c) => c.dueDate < today).map((c) => c.itemId)).size,
     dueLater: plan.dueRemaining,
     newWords: plan.newWords,
     waitingWords: plan.waitingWords,
@@ -234,7 +242,7 @@ export default async function TodayPage() {
                   : t.dueLater > 0
                     ? uz.today.reviewLimitReached(t.dueLater)
                     : uz.today.allDoneBody
-                : uz.today.planBody(t.reviews, t.newWords)}
+                : uz.today.planBody(t.reviews, t.newWords, t.remaining)}
             </p>
             {t.done > 0 && !allDone ? (
               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">
@@ -257,10 +265,11 @@ export default async function TodayPage() {
 
       {/* Stats */}
       <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label={uz.today.statDue} value={t.reviews} icon={CalendarClock} />
+        <Stat label={uz.today.statDue} value={t.reviews} suffix={uz.today.words} icon={CalendarClock} />
         <Stat
           label={uz.today.statOverdue}
           value={t.overdue}
+          suffix={uz.today.words}
           icon={AlertTriangle}
           tone={t.overdue > 0 ? "danger" : undefined}
         />

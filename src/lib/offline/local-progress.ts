@@ -23,7 +23,9 @@ export function localRowsFromAnswer(w: AnswerWrite): LocalRow[] {
       at: w.reviewedAt,
       kind: "card",
       key: w.siblingPatch.id,
-      data: { status: w.siblingPatch.status, dueDate: w.siblingPatch.dueDate },
+      data: w.siblingPatch.status
+        ? { status: w.siblingPatch.status, dueDate: w.siblingPatch.dueDate }
+        : { dueDate: w.siblingPatch.dueDate },
     });
   }
   if (w.production?.passed) {

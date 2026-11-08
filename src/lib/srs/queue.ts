@@ -3,7 +3,10 @@ import { isDue } from "./overdue";
 import type { SrsCard } from "./types";
 
 export type DirectionMode = "random" | "en_uz" | "uz_en" | "both";
-export type QueueCard = Pick<SrsCard, "id" | "itemId" | "direction" | "dueDate" | "status">;
+export type QueueCard = Pick<SrsCard, "id" | "itemId" | "direction" | "dueDate" | "status"> & {
+  /** When the card was last graded (null = never); breaks ties so both directions take turns. */
+  lastReviewedAt?: string | null;
+};
 
 export interface DailyQueueInput<C extends QueueCard> {
   /** All of the user's cards. New cards should come in the order they should be introduced. */
@@ -43,11 +46,18 @@ export interface DailyQueue<C extends QueueCard> {
   waitingWords: number;
   /** Due cards left out because of the review limit. */
   dueRemaining: number;
+  /**
+   * 'random' only: due cards left for another day because the other direction
+   * of the same word is reviewed today (one direction per word per day).
+   */
+  deferred: C[];
 }
 
 /**
  * Today's study queue:
  * 1. Due cards (overdue roll over to today), most overdue first, up to the review limit.
+ *    'random' reviews one direction per word a day: if both are due, the more overdue one
+ *    (on a tie the one reviewed longer ago) comes today and the other is deferred.
  * 2. New items up to the new limit; 'both' adds both directions, 'random' one random direction.
  *    The second direction of a started word comes on a later day ('random') within the review limit.
  * 3. New cards spread evenly between reviews, and two cards of the same item never back to back.
@@ -58,13 +68,30 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
   const random = input.random ?? Math.random;
   const allowed = (c: C) => mode === "random" || mode === "both" || c.direction === mode;
 
-  const due = input.cards
+  const tie = new Map<string, number>();
+  const allDue = input.cards
     .filter((c) => allowed(c) && isDue(c, today))
+    .map((c) => {
+      if (mode === "random") tie.set(c.id, random());
+      return c;
+    })
     .sort(
       (a, b) =>
         overdueDays(b.dueDate, today) - overdueDays(a.dueDate, today) ||
+        (a.lastReviewedAt ?? "").localeCompare(b.lastReviewedAt ?? "") ||
+        (tie.get(a.id) ?? 0) - (tie.get(b.id) ?? 0) ||
         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     );
+  const deferred: C[] = [];
+  const dueItems = new Set<string>();
+  const due = allDue.filter((c) => {
+    if (mode === "random" && dueItems.has(c.itemId)) {
+      deferred.push(c);
+      return false;
+    }
+    dueItems.add(c.itemId);
+    return true;
+  });
   const reviewBudget = Math.max(0, input.reviewLimit - (input.reviewsDoneToday ?? 0));
   const reviews = due.slice(0, reviewBudget);
 
@@ -77,7 +104,7 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
     if (c.status !== "new" || !allowed(c)) continue;
     if (started.has(c.itemId)) {
       // 'random' teaches one direction a day: the other one waits for a later day.
-      if (mode === "random" && touched.has(c.itemId)) continue;
+      if (mode === "random" && (touched.has(c.itemId) || dueItems.has(c.itemId))) continue;
       second.push(c);
       continue;
     }
@@ -103,6 +130,7 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
     newWords: words.length,
     secondCount: seconds.length,
     waitingWords: newByItem.size,
+    deferred,
     dueRemaining: due.length - reviews.length,
   };
 }

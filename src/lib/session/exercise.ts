@@ -1,4 +1,5 @@
 import type { CefrLevel } from "@/lib/supabase/database.types";
+import type { IsoDate } from "@/lib/srs/dates";
 import { gateStartIndex } from "@/lib/srs/ladder";
 import { isProductionDone, nextProductionMode } from "@/lib/srs/mastery";
 import { pickContext } from "@/lib/production/contexts";
@@ -25,6 +26,21 @@ export interface SessionCard {
   /** The other direction card of the item has passed the whole ladder. */
   siblingComplete: boolean;
   siblingId: string | null;
+  /**
+   * 'random' mode: the sibling was due today too and was left out (one
+   * direction per word a day). Answering this card moves it to tomorrow.
+   */
+  deferSibling?: boolean;
+}
+
+/** A change to the other direction's card that comes with an answer. */
+export interface SiblingPatch {
+  id: string;
+  dueDate: IsoDate;
+  /** Set when the whole word became mastered. */
+  status?: "mastered";
+  /** Only apply while the sibling is still due by this day (never undo a newer review). */
+  onlyIfDueBy?: IsoDate;
 }
 
 /** What the screen shows for one card. Every kind maps to one ReviewMethod for the log. */
