@@ -112,3 +112,53 @@ export async function fetchSpokenUses(sb: Client): Promise<SpokenUse[]> {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export type Correction = Pick<
+  Tables<"productions">,
+  "id" | "client_id" | "item_id" | "text" | "corrected_text" | "prompt" | "created_at"
+> & { items: Pick<Tables<"items">, "english" | "uzbek"> | null };
+
+/** Prefix of the `context` that marks a production as a repeat of a corrected sentence. */
+export const FIX_CONTEXT = "fix:";
+const CORRECTION_DAYS = 30;
+
+/**
+ * Spoken answers that failed and got an AI correction in the last 30 days,
+ * minus those already repeated correctly (a production with context
+ * "fix:<client_id>"). Newest first.
+ */
+export async function fetchCorrections(sb: Client, limit = 40): Promise<Correction[]> {
+  const since = new Date(Date.now() - CORRECTION_DAYS * 86_400_000).toISOString();
+  const [failed, fixes] = await Promise.all([
+    sb
+      .from("productions")
+      .select("id, client_id, item_id, text, corrected_text, prompt, created_at, items(english, uzbek)")
+      .eq("passed", false)
+      .eq("mode", "spoken")
+      .not("corrected_text", "is", null)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .returns<Correction[]>(),
+    sb
+      .from("productions")
+      .select("context")
+      .like("context", `${FIX_CONTEXT}%`)
+      .gte("created_at", since)
+      .limit(2000),
+  ]);
+  if (failed.error) throw new Error(failed.error.message);
+  if (fixes.error) throw new Error(fixes.error.message);
+  const fixed = new Set((fixes.data ?? []).map((f) => f.context?.slice(FIX_CONTEXT.length)));
+  const seen = new Set<string>();
+  return (failed.data ?? [])
+    .filter((c) => {
+      const sentence = c.corrected_text?.trim().toLowerCase();
+      if (!sentence || fixed.has(c.client_id) || seen.has(sentence)) return false;
+      // Skip "corrections" identical to what was said (nothing to repeat).
+      if (sentence === c.text.trim().toLowerCase()) return false;
+      seen.add(sentence);
+      return true;
+    })
+    .slice(0, limit);
+}

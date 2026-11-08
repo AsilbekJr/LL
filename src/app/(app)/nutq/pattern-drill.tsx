@@ -9,9 +9,11 @@ import { Notice } from "@/components/ui/form-controls";
 import { ACTIVE_DAYS } from "@/lib/production/active";
 import type { DrillItem, ProductionWrite } from "@/lib/production/api";
 import { checkPattern, fitsSlot, pickPattern, type SpeakingPattern } from "@/lib/production/patterns";
+import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { englishKey } from "@/lib/schemas/item";
 import { loadAll } from "@/lib/vocab/dictionary";
 import { uz } from "@/lib/i18n/uz";
+import { useVerdict, VerdictView } from "./judge-result";
 import { Check, LevelPicker, SpokenAnswerInput, useSpeakingLevel, useSpokenAnswer } from "./speaking-shared";
 
 /** Fill in missing parts of speech from the built-in dictionary, so slot matching works for hand-added words. */
@@ -31,11 +33,13 @@ export function PatternDrill({
   speech,
   progress,
   onSave,
+  aiEnabled,
 }: {
   items: DrillItem[];
   speech: SpeechPrefs;
   progress: Map<string, number>;
   onSave: (rows: ProductionWrite[]) => void;
+  aiEnabled: boolean;
 }) {
   const t = uz.speaking;
   const pool = useItemsWithPos(items);
@@ -52,9 +56,23 @@ export function PatternDrill({
   }
 
   const check = pick && answer.answer ? checkPattern(answer.answer, pick.pattern, pick.item.english) : null;
+  const restart = answer.answer ? findRestart(answer.answer) : null;
+  const verdict = useVerdict(
+    pick && answer.answer
+      ? {
+          kind: "pattern",
+          said: answer.answer,
+          level,
+          word: { english: pick.item.english, uzbek: pick.item.uzbek },
+          prompt: pick.pattern.en,
+        }
+      : null,
+    { localPassed: Boolean(check?.passed) && !restart, aiEnabled },
+  );
+  const checking = verdict?.status === "checking";
 
   function next() {
-    if (pick && answer.answer && check) {
+    if (pick && answer.answer && check && verdict && !checking) {
       onSave([
         {
           clientId: crypto.randomUUID(),
@@ -64,8 +82,9 @@ export function PatternDrill({
           context: pick.pattern.id,
           prompt: pick.pattern.en,
           text: answer.answer,
-          passed: check.passed,
+          passed: verdict.status === "pass",
           durationMs: answer.rec.durationMs || null,
+          aiFeedback: verdict.judge ? judgeToFeedback(verdict.judge) : null,
         },
       ]);
     }
@@ -93,33 +112,28 @@ export function PatternDrill({
 
           {!answer.answer ? <SpokenAnswerInput state={answer} /> : null}
 
-          {answer.answer && check ? (
+          {answer.answer && check && verdict ? (
             <div className="flex flex-col gap-3">
-              <div
-                role="status"
-                className={
-                  check.passed
-                    ? "rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-success"
-                    : "rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-warning"
+              <VerdictView
+                verdict={verdict}
+                said={answer.answer}
+                speech={speech}
+                localMessage={restart ? t.restart(restart) : !check.passed ? t.patternRetry : undefined}
+                localChecks={
+                  <>
+                    {pick.pattern.keys.map((k, i) => (
+                      <Check key={k} ok={check.keys[i]!} label={t.keyHeard(k.split("|")[0]!)} />
+                    ))}
+                    <Check ok={check.used} label={t.wordHeard(pick.item.english)} />
+                  </>
                 }
-              >
-                <p className="font-semibold">{check.passed ? t.patternPassed : t.patternRetry}</p>
-                <p className="mt-1 text-sm text-foreground" lang="en">
-                  <span className="text-muted-foreground">{uz.production.transcript}</span> {answer.answer}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {pick.pattern.keys.map((k, i) => (
-                    <Check key={k} ok={check.keys[i]!} label={t.keyHeard(k.split("|")[0]!)} />
-                  ))}
-                  <Check ok={check.used} label={t.wordHeard(pick.item.english)} />
-                </div>
-              </div>
+              />
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => answer.reset()}>
                   <RotateCcw aria-hidden />
                   {uz.production.redo}
                 </Button>
-                <Button autoFocus onClick={() => next()}>
+                <Button autoFocus onClick={() => next()} disabled={checking}>
                   <RefreshCw aria-hidden />
                   {t.nextPattern}
                 </Button>
@@ -167,12 +181,14 @@ function PatternCard({
   return (
     <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-lift)">
       <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">{t.pattern}</p>
+      {/* The frame with a gap, not pre-filled: dropping the word in mechanically
+          can make nonsense ("It's too sleepy for me"); the learner builds the sentence. */}
       <p className="mt-1 font-display text-2xl leading-snug font-semibold" lang="en">
         {before}
         {after !== undefined ? (
           <>
-            <span className="rounded-md bg-highlight-soft px-1.5 text-highlight-foreground">
-              {word.english}
+            <span className="inline-block min-w-16 rounded-md border-b-2 border-dashed border-highlight-foreground/50 bg-highlight-soft px-1.5 text-center text-highlight-foreground">
+              …
             </span>
             {after}
           </>
@@ -181,6 +197,7 @@ function PatternCard({
       <p className="mt-2 text-sm text-muted-foreground">
         <span className="font-semibold">{t.meaning}:</span> {pattern.uz}
       </p>
+      <p className="mt-2 text-sm">{t.patternHow}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sunken px-4 py-3">
         <div className="min-w-0">

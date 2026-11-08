@@ -17,10 +17,12 @@ const noop = () => () => {};
 export function BottomActionBar({
   children,
   label,
+  role = "region",
   className,
 }: {
   children: ReactNode;
   label: string;
+  role?: "region" | "toolbar";
   className?: string;
 }) {
   const mounted = useSyncExternalStore(
@@ -31,7 +33,7 @@ export function BottomActionBar({
   if (!mounted) return null;
   return createPortal(
     <div
-      role="region"
+      role={role}
       aria-label={label}
       className={cn(
         "animate-rise fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border bg-card p-3 shadow-(--shadow-lift) md:bottom-6 md:left-[calc(16rem+1.5rem)]",

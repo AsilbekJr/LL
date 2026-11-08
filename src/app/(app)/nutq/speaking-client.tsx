@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   AudioLines,
   Languages,
+  MessagesSquare,
+  Wrench,
   LayoutTemplate,
   CheckCircle2,
   Circle,
@@ -38,6 +40,8 @@ import { loadExamples } from "@/lib/vocab/sentences";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
+import { DialogPractice } from "./dialog-practice";
+import { FixPractice } from "./fix-practice";
 import { PatternDrill } from "./pattern-drill";
 import { TranslationDrill } from "./translation-drill";
 
@@ -47,17 +51,29 @@ function useSave() {
   return useMutation({ mutationFn: (rows: ProductionWrite[]) => saveProductions(sb(), rows) });
 }
 
-export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoice: string | null }) {
+export function SpeakingClient({
+  ttsRate,
+  ttsVoice,
+  aiEnabled,
+}: {
+  ttsRate: number;
+  ttsVoice: string | null;
+  aiEnabled: boolean;
+}) {
   const t = uz.speaking;
   const items = useQuery({ queryKey: ["practice-items"], queryFn: () => fetchPracticeItems(sb()) });
   const uses = useQuery({ queryKey: ["spoken-uses"], queryFn: () => fetchSpokenUses(sb()) });
   const progress = useMemo(() => spokenDays(uses.data ?? []), [uses.data]);
   const save = useSave();
+  const qc = useQueryClient();
   const speech = useMemo(() => ({ rate: ttsRate, voice: ttsVoice }), [ttsRate, ttsVoice]);
   const onSave = (rows: ProductionWrite[]) => {
     void save
       .mutateAsync(rows)
-      .then(() => uses.refetch())
+      .then(() => {
+        void uses.refetch();
+        void qc.invalidateQueries({ queryKey: ["speaking-corrections"] });
+      })
       .catch(() => undefined);
   };
 
@@ -92,8 +108,13 @@ export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoic
   return (
     <div className="flex flex-col gap-5">
       <ActiveVocabulary active={activeCount(progress)} total={items.data.length} />
-      <Tabs defaultValue="pattern">
-        <TabsList className="w-full sm:w-auto">
+      <Tabs defaultValue={aiEnabled ? "dialog" : "pattern"}>
+        {/* Six methods: one scrollable row on phones. */}
+        <TabsList className="-mx-5 flex w-[calc(100%+2.5rem)] [scrollbar-width:none] justify-start overflow-x-auto rounded-none px-5 sm:mx-0 sm:w-auto sm:rounded-xl sm:px-1 [&>button]:shrink-0">
+          <TabsTrigger value="dialog">
+            <MessagesSquare aria-hidden />
+            {t.dialogTab}
+          </TabsTrigger>
           <TabsTrigger value="pattern">
             <LayoutTemplate aria-hidden />
             {t.patternTab}
@@ -101,6 +122,10 @@ export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoic
           <TabsTrigger value="translate">
             <Languages aria-hidden />
             {t.translateTab}
+          </TabsTrigger>
+          <TabsTrigger value="fix">
+            <Wrench aria-hidden />
+            {t.fixTab}
           </TabsTrigger>
           <TabsTrigger value="drill">
             <Mic aria-hidden />
@@ -111,11 +136,35 @@ export function SpeakingClient({ ttsRate, ttsVoice }: { ttsRate: number; ttsVoic
             {t.shadowTab}
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="dialog">
+          <DialogPractice
+            items={items.data}
+            speech={speech}
+            progress={progress}
+            onSave={onSave}
+            aiEnabled={aiEnabled}
+          />
+        </TabsContent>
         <TabsContent value="pattern">
-          <PatternDrill items={items.data} speech={speech} progress={progress} onSave={onSave} />
+          <PatternDrill
+            items={items.data}
+            speech={speech}
+            progress={progress}
+            onSave={onSave}
+            aiEnabled={aiEnabled}
+          />
         </TabsContent>
         <TabsContent value="translate">
-          <TranslationDrill items={items.data} speech={speech} progress={progress} onSave={onSave} />
+          <TranslationDrill
+            items={items.data}
+            speech={speech}
+            progress={progress}
+            onSave={onSave}
+            aiEnabled={aiEnabled}
+          />
+        </TabsContent>
+        <TabsContent value="fix">
+          <FixPractice speech={speech} onSave={onSave} />
         </TabsContent>
         <TabsContent value="drill">
           <Drill items={items.data} />

@@ -30,6 +30,10 @@ describe("settings schema", () => {
 
   it("rejects a bad ladder, limits, time zone and reminders", () => {
     expect(settingsFormSchema.safeParse({ ...valid, ladder: "5, 3" }).success).toBe(false);
+    // A blank number field is an error, never a silent 0 (it once zeroed the daily new-word limit).
+    expect(settingsFormSchema.safeParse({ ...valid, daily_new_limit: "" }).success).toBe(false);
+    expect(settingsFormSchema.safeParse({ ...valid, daily_new_limit: "  " }).success).toBe(false);
+    expect(settingsFormSchema.safeParse({ ...valid, daily_new_limit: "0" }).success).toBe(true);
     expect(settingsFormSchema.safeParse({ ...valid, daily_new_limit: "-1" }).success).toBe(false);
     expect(settingsFormSchema.safeParse({ ...valid, timezone: "Mars/Base" }).success).toBe(false);
     expect(settingsFormSchema.safeParse({ ...valid, reminder_times: ["25:00"] }).success).toBe(false);

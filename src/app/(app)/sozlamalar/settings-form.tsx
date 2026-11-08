@@ -81,6 +81,14 @@ export function SettingsForm({
   // Explicit subscription: reading these from useForm's formState did not
   // re-render this form, so "Saqlash" stayed disabled after every edit.
   const { errors, isSubmitting, isDirty } = useFormState({ control });
+  // Server-rendered inputs need their value in the HTML: register() only fills
+  // them after hydration, and a blank field read (or saved) before that
+  // turned "Kuniga yangi so'zlar" into 0.
+  const defaults = toValues(initial);
+  const field = <K extends Exclude<keyof FormValues, "reminder_times" | "overdue_penalty">>(name: K) => ({
+    ...register(name),
+    defaultValue: defaults[name] as string,
+  });
   const reminders = useFieldArray({ control, name: "reminder_times" });
   const ttsRate = useWatch({ control, name: "tts_rate" });
   const ttsVoice = useWatch({ control, name: "tts_voice" });
@@ -132,14 +140,14 @@ export function SettingsForm({
             hint={t.newLimitHint}
             error={errors.daily_new_limit?.message}
           >
-            <Input type="number" inputMode="numeric" min={0} max={500} {...register("daily_new_limit")} />
+            <Input type="number" inputMode="numeric" min={0} max={500} {...field("daily_new_limit")} />
           </Field>
           <Field id="daily_review_limit" label={t.reviewLimit} error={errors.daily_review_limit?.message}>
-            <Input type="number" inputMode="numeric" min={1} max={2000} {...register("daily_review_limit")} />
+            <Input type="number" inputMode="numeric" min={1} max={2000} {...field("daily_review_limit")} />
           </Field>
         </div>
         <Field id="direction_mode" label={t.direction}>
-          <Select {...register("direction_mode")}>
+          <Select {...field("direction_mode")}>
             {(Object.keys(t.directions) as (keyof typeof t.directions)[]).map((k) => (
               <option key={k} value={k}>
                 {t.directions[k]}
@@ -151,13 +159,13 @@ export function SettingsForm({
 
       <Section title={t.algorithm}>
         <Field id="srs_mode" label={t.srsMode}>
-          <Select {...register("srs_mode")}>
+          <Select {...field("srs_mode")}>
             <option value="ladder">{t.srsModes.ladder}</option>
             <option value="fsrs">{t.srsModes.fsrs}</option>
           </Select>
         </Field>
         <Field id="ladder" label={t.ladder} hint={t.ladderHint} error={errors.ladder?.message}>
-          <Input inputMode="numeric" autoComplete="off" {...register("ladder")} />
+          <Input inputMode="numeric" autoComplete="off" {...field("ladder")} />
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
@@ -166,21 +174,16 @@ export function SettingsForm({
             hint={t.gateStepsHint}
             error={errors.production_gate_steps?.message}
           >
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={30}
-              {...register("production_gate_steps")}
-            />
+            <Input type="number" inputMode="numeric" min={0} max={30} {...field("production_gate_steps")} />
           </Field>
           <Field id="maintenance_days" label={t.maintenance} error={errors.maintenance_days?.message}>
-            <Input type="number" inputMode="numeric" min={30} max={3650} {...register("maintenance_days")} />
+            <Input type="number" inputMode="numeric" min={30} max={3650} {...field("maintenance_days")} />
           </Field>
         </div>
         <Checkbox
           label={t.overduePenalty}
           description={t.overduePenaltyHint}
+          defaultChecked={defaults.overdue_penalty}
           {...register("overdue_penalty")}
         />
       </Section>
@@ -188,7 +191,7 @@ export function SettingsForm({
       <Section title={t.voice}>
         <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">
           <Field id="tts_voice" label={t.ttsVoice} hint={voices.length ? undefined : t.noVoices}>
-            <Select {...register("tts_voice")}>
+            <Select {...field("tts_voice")}>
               <option value="">{t.ttsVoiceDefault}</option>
               {voices.map((v) => (
                 <option key={v.voiceURI} value={v.voiceURI}>
@@ -261,6 +264,7 @@ export function SettingsForm({
                   type="time"
                   aria-label={`${t.reminderTimes} ${i + 1}`}
                   className="h-11 w-32"
+                  defaultValue={f.value}
                   {...register(`reminder_times.${i}.value`)}
                 />
                 <Button
@@ -293,7 +297,7 @@ export function SettingsForm({
 
       <Section title={t.time}>
         <Field id="timezone" label={t.timezone} hint={t.timezoneHint} error={errors.timezone?.message}>
-          <Select {...register("timezone")}>
+          <Select {...field("timezone")}>
             {timeZones.map((tz) => (
               <option key={tz} value={tz}>
                 {tz}

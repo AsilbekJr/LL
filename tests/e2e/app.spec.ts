@@ -22,12 +22,18 @@ async function noHorizontalScroll(page: Page) {
 async function deleteAllWords(page: Page) {
   await page.goto("/kutubxona");
   const selectAll = page.getByRole("button", { name: "Hammasini tanlash" });
-  if (!(await selectAll.isVisible().catch(() => false))) return; // already empty
+  const empty = page.getByText("Kutubxona bo'sh");
+  // Wait until the library has loaded: checking at once mistook "still loading"
+  // for "empty", so words from earlier runs piled up.
+  await expect(selectAll.or(empty).first()).toBeVisible({ timeout: 15_000 });
+  if (await empty.isVisible()) return;
   // "Show more" until everything is loaded, then select all and delete.
   while (await page.getByRole("button", { name: "Yana ko'rsatish" }).isVisible()) {
     await page.getByRole("button", { name: "Yana ko'rsatish" }).click();
   }
   await selectAll.click();
+  // The bulk bar is pinned on screen, not at the end of a long list.
+  await expect(page.getByRole("toolbar")).toBeInViewport({ ratio: 1 });
   await page.getByRole("toolbar").getByRole("button", { name: "O'chirish" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "O'chirish" }).click();
   await expect(page.getByText("Kutubxona bo'sh")).toBeVisible({ timeout: 15_000 });
@@ -192,6 +198,44 @@ test("review session works offline and syncs afterwards", async ({ page, context
 
   for (let i = 0; i < 40 && (await answerOne(page)); i++);
   await expect(page.getByRole("heading", { name: "Sessiya tugadi!" })).toBeVisible();
+});
+
+test("speaking conversation: strict check, AI judge, next question", async ({ page }) => {
+  // No microphone in CI: hide speech recognition so the typed fallback is used.
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    delete w.SpeechRecognition;
+    delete w.webkitSpeechRecognition;
+  });
+  await page.goto("/nutq");
+  await page.getByRole("tab", { name: "Suhbat" }).click();
+  await page.getByRole("button", { name: "Suhbatni boshlash" }).click();
+  const answerBox = page.getByRole("textbox");
+  await expect(answerBox).toBeVisible({ timeout: 30_000 });
+
+  // A restarted sentence fails offline, before any AI call.
+  await answerBox.fill("I I think so");
+  await page.getByRole("button", { name: "Tekshirish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Gap qaytadan boshlandi" })).toBeVisible();
+
+  // A real answer gets the AI verdict, then the next question can be asked.
+  await page.getByRole("button", { name: "Qayta javob berish" }).click();
+  const target = (await page
+    .getByText(/^Javobda ishlating:/)
+    .first()
+    .textContent())!
+    .replace("Javobda ishlating:", "")
+    .split("—")[0]!
+    .trim();
+  await page.getByRole("textbox").fill(`Yesterday I talked about ${target} with my friend.`);
+  await page.getByRole("button", { name: "Tekshirish" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Gap to'g'ri, ma'noli|Hali emas|AI tekshiruvi hozir ishlamadi/ }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Keyingi savol" })).toBeEnabled();
+  await noHorizontalScroll(page);
 });
 
 test("calendar shows today's reviewed words", async ({ page }) => {

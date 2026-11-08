@@ -16,6 +16,7 @@ setup("log in", async ({ page }) => {
   await page.getByLabel("Email").fill(email!);
   await page.getByLabel("Parol").fill(password!);
   await page.getByRole("button", { name: "Kirish" }).click();
-  await expect(page).toHaveURL(/\/bugun/);
+  // The first render after a cold start can take several seconds.
+  await expect(page).toHaveURL(/\/bugun/, { timeout: 20_000 });
   await page.context().storageState({ path: AUTH_FILE });
 });

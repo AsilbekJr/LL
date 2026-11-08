@@ -9,10 +9,11 @@ import { Notice } from "@/components/ui/form-controls";
 import { ACTIVE_DAYS } from "@/lib/production/active";
 import type { DrillItem, ProductionWrite } from "@/lib/production/api";
 import { englishKey } from "@/lib/schemas/item";
+import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { wordSimilarity } from "@/lib/text/usage";
 import { loadTranslations, pickTranslation, type TranslationPrompt } from "@/lib/vocab/sentences";
 import { uz } from "@/lib/i18n/uz";
-import { cn } from "@/lib/utils";
+import { useVerdict, VerdictView } from "./judge-result";
 import { LevelPicker, SpokenAnswerInput, useSpeakingLevel, useSpokenAnswer } from "./speaking-shared";
 
 export const TRANSLATE_PASS = 0.75;
@@ -23,11 +24,13 @@ export function TranslationDrill({
   speech,
   progress,
   onSave,
+  aiEnabled,
 }: {
   items: DrillItem[];
   speech: SpeechPrefs;
   progress: Map<string, number>;
   onSave: (rows: ProductionWrite[]) => void;
+  aiEnabled: boolean;
 }) {
   const t = uz.speaking;
   const bank = useQuery({
@@ -48,6 +51,29 @@ export function TranslationDrill({
     if (next !== current) setCurrent(next);
   }
 
+  const item = current?.word ? (byKey.get(current.word) ?? null) : null;
+  const similarity = current && answer.answer ? wordSimilarity(answer.answer, current.prompt.english) : null;
+  const restart = answer.answer ? findRestart(answer.answer) : null;
+  // With AI the judge decides (any correct wording counts); without it, closeness to the reference.
+  const verdict = useVerdict(
+    current && answer.answer
+      ? {
+          kind: "translation",
+          said: answer.answer,
+          level,
+          word: item ? { english: item.english, uzbek: item.uzbek } : undefined,
+          prompt: current.prompt.uzbek,
+          reference: current.prompt.english,
+        }
+      : null,
+    {
+      localPassed: !restart && (aiEnabled || (similarity !== null && similarity >= TRANSLATE_PASS)),
+      aiEnabled,
+    },
+  );
+  const checking = verdict?.status === "checking";
+  const passed = verdict?.status === "pass";
+
   if (bank.isPending) return <div className="h-64 animate-pulse rounded-2xl bg-sunken" aria-busy="true" />;
   if (bank.isError) {
     return (
@@ -60,13 +86,10 @@ export function TranslationDrill({
     );
   }
 
-  const item = current?.word ? (byKey.get(current.word) ?? null) : null;
-  const similarity = current && answer.answer ? wordSimilarity(answer.answer, current.prompt.english) : null;
-  const passed = similarity !== null && similarity >= TRANSLATE_PASS;
   const showAnswer = revealed || similarity !== null;
 
   function next() {
-    if (current && item && answer.answer && similarity !== null) {
+    if (current && item && answer.answer && verdict && !checking) {
       onSave([
         {
           clientId: crypto.randomUUID(),
@@ -77,6 +100,7 @@ export function TranslationDrill({
           text: answer.answer,
           passed,
           durationMs: answer.rec.durationMs || null,
+          aiFeedback: verdict.judge ? judgeToFeedback(verdict.judge) : null,
         },
       ]);
     }
@@ -113,28 +137,19 @@ export function TranslationDrill({
 
           {!answer.answer ? <SpokenAnswerInput state={answer} /> : null}
 
-          {similarity !== null ? (
-            <div
-              role="status"
-              className={cn(
-                "rounded-xl border px-4 py-3",
-                passed
-                  ? "border-success/30 bg-success-soft text-success"
-                  : "border-warning/30 bg-warning-soft text-warning",
-              )}
-            >
-              <p className="font-semibold">
-                {passed
-                  ? t.translatePassed
-                  : similarity >= TRANSLATE_CLOSE
-                    ? t.translateClose
-                    : t.translateRetry}{" "}
-                · {uz.production.similarity(Math.round(similarity * 100))}
-              </p>
-              <p className="mt-1 text-sm text-foreground" lang="en">
-                <span className="text-muted-foreground">{uz.production.transcript}</span> {answer.answer}
-              </p>
-            </div>
+          {verdict && answer.answer && similarity !== null ? (
+            <VerdictView
+              verdict={verdict}
+              said={answer.answer}
+              speech={speech}
+              localMessage={
+                restart
+                  ? t.restart(restart)
+                  : verdict.judge || verdict.status === "checking"
+                    ? undefined
+                    : `${passed ? t.translatePassed : similarity >= TRANSLATE_CLOSE ? t.translateClose : t.translateRetry} · ${uz.production.similarity(Math.round(similarity * 100))}`
+              }
+            />
           ) : null}
 
           {showAnswer ? (
@@ -161,7 +176,7 @@ export function TranslationDrill({
                 {t.showAnswer}
               </Button>
             )}
-            <Button onClick={next} autoFocus={similarity !== null}>
+            <Button onClick={next} autoFocus={similarity !== null} disabled={checking}>
               <RefreshCw aria-hidden />
               {t.nextSentence}
             </Button>

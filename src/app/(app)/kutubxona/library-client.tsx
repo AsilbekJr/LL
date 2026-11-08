@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { EmptyState } from "@/components/common/empty-state";
 import { ItemForm } from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
@@ -342,11 +343,7 @@ export function LibraryClient() {
 
       {/* Bulk action bar */}
       {selected.size > 0 ? (
-        <div
-          role="toolbar"
-          aria-label={t.selected(selected.size)}
-          className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl items-center gap-1 rounded-2xl border bg-card p-2 shadow-(--shadow-lift) md:bottom-6 md:left-[calc(16rem+1.5rem)]"
-        >
+        <BottomActionBar role="toolbar" label={t.selected(selected.size)} className="gap-1 p-2">
           <button
             type="button"
             onClick={() => setSelected(new Set())}
@@ -371,7 +368,7 @@ export function LibraryClient() {
             onClick={() => setConfirmDelete(true)}
             busy={bulk.isPending}
           />
-        </div>
+        </BottomActionBar>
       ) : null}
 
       <EditDialog

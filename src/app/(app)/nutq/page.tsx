@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { aiFeedbackEnabled, aiProvider } from "@/lib/ai/config";
 import { PageHeader } from "@/components/common/page-header";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { uz } from "@/lib/i18n/uz";
@@ -13,7 +14,11 @@ export default async function SpeakingPage() {
   return (
     <>
       <PageHeader title={uz.nav.speaking} description={uz.speaking.description} />
-      <SpeakingClient ttsRate={Number(data?.tts_rate ?? 1)} ttsVoice={data?.tts_voice ?? null} />
+      <SpeakingClient
+        ttsRate={Number(data?.tts_rate ?? 1)}
+        ttsVoice={data?.tts_voice ?? null}
+        aiEnabled={aiFeedbackEnabled() && aiProvider() === "gemini"}
+      />
     </>
   );
 }

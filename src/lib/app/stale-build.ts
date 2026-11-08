@@ -18,6 +18,9 @@ export function isStaleBuildError(error: unknown): boolean {
 /** Reload once for a stale-build error. Returns true when a reload was started. */
 export function reloadForStaleBuild(error: unknown): boolean {
   if (typeof window === "undefined" || !isStaleBuildError(error)) return false;
+  // Offline, a chunk fails because there is no network, not because of a new
+  // deploy; reloading would throw away an offline review session.
+  if (!navigator.onLine) return false;
   try {
     const last = Number(window.sessionStorage.getItem(KEY) ?? 0);
     if (Date.now() - last < MIN_GAP_MS) return false;

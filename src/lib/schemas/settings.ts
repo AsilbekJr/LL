@@ -40,10 +40,19 @@ export function normalizeTime(t: string): string | null {
 
 export const MAX_REMINDERS = 4;
 
+/** A whole number typed in a form field; blank is an error, not 0. */
+const intField = () =>
+  z
+    .union([z.string(), z.number()])
+    .transform((v) => (typeof v === "number" ? String(v) : v.trim()))
+    .pipe(z.string().min(1, "Qiymat kiriting"))
+    .transform(Number)
+    .pipe(z.number().int("Butun son kiriting"));
+
 export const settingsFormSchema = z
   .object({
-    daily_new_limit: z.coerce.number().int().min(0, "0 dan kam bo'lmasin").max(500, "Ko'pi bilan 500"),
-    daily_review_limit: z.coerce.number().int().min(1, "Kamida 1").max(2000, "Ko'pi bilan 2000"),
+    daily_new_limit: intField().pipe(z.number().min(0, "0 dan kam bo'lmasin").max(500, "Ko'pi bilan 500")),
+    daily_review_limit: intField().pipe(z.number().min(1, "Kamida 1").max(2000, "Ko'pi bilan 2000")),
     ladder: z.string().transform((v, ctx) => {
       try {
         return parseLadder(v);
@@ -55,8 +64,8 @@ export const settingsFormSchema = z
     srs_mode: z.enum(["ladder", "fsrs"]),
     direction_mode: z.enum(["random", "en_uz", "uz_en", "both"]),
     overdue_penalty: z.boolean(),
-    production_gate_steps: z.coerce.number().int().min(0).max(30),
-    maintenance_days: z.coerce.number().int().min(30, "Kamida 30 kun").max(3650, "Ko'pi bilan 3650 kun"),
+    production_gate_steps: intField().pipe(z.number().min(0).max(30)),
+    maintenance_days: intField().pipe(z.number().min(30, "Kamida 30 kun").max(3650, "Ko'pi bilan 3650 kun")),
     tts_rate: z.coerce.number().min(0.5).max(2),
     tts_voice: z
       .string()
