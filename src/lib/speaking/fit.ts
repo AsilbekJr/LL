@@ -89,7 +89,11 @@ export const FIT_JSON_SCHEMA = {
             description:
               "true only if a careful native-speaking English teacher would use exactly this sentence as a good everyday example of this word.",
           },
-          sentence_uz: { type: "string", description: "The sentence in Uzbek (Latin script)." },
+          sentence_uz: {
+            type: "string",
+            description:
+              'A faithful, natural and grammatically correct Uzbek (Latin script) translation of the whole sentence, as an Uzbek speaker would say it ("I think" → "Menimcha").',
+          },
         },
       },
     },

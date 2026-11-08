@@ -246,7 +246,7 @@ function PatternCard({
         ) : null}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        <span className="font-semibold">{t.meaning}:</span> {pattern.uz}
+        <span className="font-semibold">{t.meaning}:</span> {pattern.uz.replace(/_{2,}/g, "…")}
       </p>
       <p className="mt-2 text-sm">{t.patternHow}</p>
 
@@ -273,7 +273,7 @@ function PatternCard({
       </div>
 
       <div className="mt-4 border-t pt-3">
-        <p className="text-xs font-semibold text-muted-foreground">{t.example}</p>
+        <p className="text-xs font-semibold text-muted-foreground">{t.patternExample}</p>
         <p className="mt-1 italic" lang="en">
           {pattern.example}
         </p>
@@ -300,10 +300,13 @@ function PatternCard({
               </div>
             </>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => setShown(model.sentence)}>
-              <Eye aria-hidden />
-              {t.showModel}
-            </Button>
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setShown(model.sentence)}>
+                <Eye aria-hidden />
+                {t.showModel(word.english)}
+              </Button>
+              <p className="mt-1 text-xs text-muted-foreground">{t.modelHint}</p>
+            </>
           )}
         </div>
       ) : null}

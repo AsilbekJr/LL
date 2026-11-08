@@ -39,7 +39,7 @@ export async function fetchDialogTurn(req: DialogRequest): Promise<DialogTurn> {
   return out.data;
 }
 
-const FIT_CACHE = "ll.speaking.fit.v1:";
+const FIT_CACHE = "ll.speaking.fit.v2:";
 
 /**
  * Frames that make sense with this word (AI), remembered on this device.

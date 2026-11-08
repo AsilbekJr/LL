@@ -328,7 +328,8 @@ export const uz = {
     pattern: "Qolip",
     meaning: "Ma'nosi",
     example: "Namuna",
-    yourWord: "Sizning so'zingiz",
+    patternExample: "Qolip namunasi — boshqa so'z bilan",
+    yourWord: "Bo'sh joyga (…) shu so'zni qo'ying",
     keyHeard: (k: string) => `“${k}”`,
     wordHeard: (w: string) => `“${w}”`,
     patternPassed: "Zo'r! Qolip va so'z to'g'ri ishlatildi.",
@@ -337,8 +338,9 @@ export const uz = {
     pickingPattern: "So'zingizga ma'noli mos qolip tanlanmoqda…",
     wordMissing: (w: string) =>
       `Qolip to'g'ri, lekin „${w}” so'zi eshitilmadi. Namunani emas, o'z so'zingiz bilan gap tuzing.`,
-    showModel: "Shu so'z bilan namuna",
-    modelWithWord: (w: string) => `„${w}” bilan namuna`,
+    showModel: (w: string) => `„${w}” bilan tayyor javobni ko'rish`,
+    modelWithWord: (w: string) => `„${w}” bilan tayyor javob`,
+    modelHint: "Avval o'zingiz gap tuzib ko'ring, keyin solishtiring.",
     otherWord: "Boshqa so'z",
     noFit:
       "Bu darajadagi qoliplar uchun mos so'z yo'q. Boshqa darajani tanlang yoki kutubxonaga so'z qo'shing.",

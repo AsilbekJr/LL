@@ -250,11 +250,15 @@ test("speaking patterns: a sensible frame for the word, or an honest 'no fit'", 
   await expect(card.or(noFit)).toBeVisible({ timeout: 45_000 });
   if (await card.isVisible()) {
     // The AI-checked model sentence uses the learner's own word.
-    const word = (await page.getByText(/^Sizning so'zingiz/).locator("..").locator("span[lang=en]").textContent())!;
-    const show = page.getByRole("button", { name: "Shu so'z bilan namuna" });
+    const word = (await page
+      .getByText(/^Sizning so'zingiz/)
+      .locator("..")
+      .locator("span[lang=en]")
+      .textContent())!;
+    const show = page.getByRole("button", { name: /bilan tayyor javobni ko'rish$/ });
     if (await show.isVisible()) {
       await show.click();
-      await expect(page.getByText(new RegExp(`bilan namuna$`))).toBeVisible();
+      await expect(page.getByText(/bilan tayyor javob$/)).toBeVisible();
       expect(word.trim().length).toBeGreaterThan(0);
     }
   }
