@@ -56,25 +56,56 @@ test("every main screen fits 360 px", async ({ page }) => {
   }
 });
 
-test("adds a word and rejects the duplicate", async ({ page }) => {
-  await page.goto("/qoshish");
+/** The pinned add button is on screen without scrolling (above the bottom nav). */
+async function expectInViewport(page: Page, name: string | RegExp) {
+  const button = page.getByRole("button", { name, exact: typeof name === "string" });
+  await expect(button).toBeInViewport({ ratio: 1 });
+}
+
+test("adds a word, goes home, and rejects the duplicate", async ({ page }) => {
   const add = async () => {
-    await page.getByLabel("Inglizcha", { exact: true }).fill(word);
+    await page.goto("/qoshish");
+    await page.getByRole("combobox", { name: "Inglizcha" }).fill(word);
     await page.getByLabel("O'zbekcha", { exact: true }).fill("sinov so'zi");
+    await expectInViewport(page, "Qo'shish");
     await page.getByRole("button", { name: "Qo'shish", exact: true }).click();
   };
   await add();
+  await expect(page).toHaveURL(/\/bugun$/);
   await expect(page.getByRole("status").filter({ hasText: "takrorlashga tushdi" })).toBeVisible();
   await add();
   await expect(page.getByRole("status").filter({ hasText: "allaqachon bor" })).toBeVisible();
+  await expect(page).toHaveURL(/\/qoshish$/);
 });
 
-test("adds a pasted list", async ({ page }) => {
+test("picking a dictionary word fills example, part of speech and note", async ({ page }) => {
+  await page.goto("/qoshish");
+  const english = page.getByRole("combobox", { name: "Inglizcha" });
+  await english.click();
+  await english.pressSequentially("umbrell", { delay: 30 });
+  await page
+    .getByRole("option", { name: /umbrella/ })
+    .first()
+    .click();
+  await expect(english).toHaveValue("umbrella"); // the pick must survive focus moving on
+  await expect(page.getByLabel("O'zbekcha", { exact: true })).not.toHaveValue("");
+  await expect(page.getByLabel(/Misol \(inglizcha\)/)).not.toHaveValue("", { timeout: 30_000 });
+  await expect(page.getByLabel(/Misol \(o'zbekcha\)/)).not.toHaveValue("", { timeout: 30_000 });
+  await expect(page.getByLabel(/So'z turkumi/)).not.toHaveValue("");
+  await expect(page.getByText(/avtomatik qo'shildi/)).toBeVisible({ timeout: 30_000 });
+  await expectInViewport(page, "Qo'shish");
+});
+
+test("adds a pasted list and goes home", async ({ page }) => {
   await page.goto("/qoshish");
   await page.getByRole("tab", { name: "Ro'yxat" }).click();
-  await page.getByRole("textbox", { name: "Ro'yxat" }).fill(listWords.map((w) => `${w} - ${w} uz`).join("\n"));
+  await page
+    .getByRole("textbox", { name: "Ro'yxat" })
+    .fill(listWords.map((w) => `${w} - ${w} uz`).join("\n"));
+  await expectInViewport(page, "2 ta so'zni qo'shish");
   await page.getByRole("button", { name: "2 ta so'zni qo'shish" }).click();
-  await expect(page.getByText("2 ta so'z qo'shildi")).toBeVisible();
+  await expect(page).toHaveURL(/\/bugun$/, { timeout: 45_000 });
+  await expect(page.getByText(/2 ta so'z misollari bilan qo'shildi/)).toBeVisible();
 });
 
 test("library search finds the new words", async ({ page }) => {
@@ -95,7 +126,12 @@ test("import rejects an invalid file and previews a sample pack", async ({ page 
     .first()
     .setInputFiles({ name: "bad.json", mimeType: "application/json", buffer: Buffer.from('{"items": [ {') });
   // Next's route announcer is also role="alert", so filter by text.
-  await expect(page.getByRole("alert").filter({ hasText: /JSON|qator|xato/i }).first()).toBeVisible();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: /JSON|qator|xato/i })
+      .first(),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: "Tayyor to'plamlar" }).click();
   await page.getByRole("button", { name: /^A1/ }).click(); // sample pack cards are buttons

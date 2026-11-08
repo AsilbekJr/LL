@@ -1,10 +1,10 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, Loader2, Plus, Search } from "lucide-react";
+import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { Button } from "@/components/ui/button";
 import { Badge, Checkbox, Notice } from "@/components/ui/form-controls";
 import { Input } from "@/components/ui/input";
@@ -300,29 +300,20 @@ function SubDictionaryView({
         })}
       </ul>
 
-      {selected.size > 0
-        ? // Portal: an animated (transformed) ancestor would otherwise pin this
-          // "fixed" bar to the end of the list instead of the screen.
-          createPortal(
-            <div
-              role="region"
-              aria-label={t.add(selected.size)}
-              className="animate-rise fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border bg-card p-3 shadow-(--shadow-lift) md:bottom-6 md:left-[calc(16rem+1.5rem)]"
-            >
-              <Checkbox
-                className="min-w-0 flex-1 text-sm"
-                label={uz.items.scheduleNow}
-                checked={schedule}
-                onChange={(e) => setSchedule(e.target.checked)}
-              />
-              <Button className="shrink-0" onClick={addSelected} disabled={add.isPending}>
-                {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
-                {t.add(selected.size)}
-              </Button>
-            </div>,
-            document.body,
-          )
-        : null}
+      {selected.size > 0 ? (
+        <BottomActionBar label={t.add(selected.size)}>
+          <Checkbox
+            className="min-w-0 flex-1 text-sm"
+            label={uz.items.scheduleNow}
+            checked={schedule}
+            onChange={(e) => setSchedule(e.target.checked)}
+          />
+          <Button className="shrink-0" onClick={addSelected} disabled={add.isPending}>
+            {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
+            {t.add(selected.size)}
+          </Button>
+        </BottomActionBar>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useFormState } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,10 @@ export function LoginForm({ next }: { next: string | null }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginValues>({ defaultValues: { email: "", password: "" } });
+  const { register, handleSubmit, control } = useForm<LoginValues>({
+    defaultValues: { email: "", password: "" },
+  });
+  const { errors, isSubmitting } = useFormState({ control });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);

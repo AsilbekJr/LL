@@ -1,25 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ListPlus, Loader2, PenLine } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2, ListPlus, Loader2, PenLine, Plus } from "lucide-react";
+import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { ItemForm } from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, Checkbox, Field, Notice, Select, Textarea } from "@/components/ui/form-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAddItems, useExistingKeys } from "@/hooks/use-items";
+import { setFlash } from "@/lib/app/flash";
 import { dedupeItems } from "@/lib/items/dedupe";
+import { enrichDrafts } from "@/lib/items/enrich";
 import { parsePasteList } from "@/lib/items/paste";
 import { CEFR_LEVELS, parseTags, type ItemDraft } from "@/lib/schemas/item";
 import { uz } from "@/lib/i18n/uz";
 
 type Result = { tone: "success" | "danger" | "warning"; text: string } | null;
 
-export function AddClient() {
+/** Where the learner lands after adding: today's plan, with a short confirmation. */
+const AFTER_ADD = "/bugun";
+
+export function AddClient({ aiEnabled }: { aiEnabled: boolean }) {
   const t = uz.add;
   return (
-    <Tabs defaultValue="single">
+    // Bottom padding: the pinned add button must never cover the last field.
+    <Tabs defaultValue="single" className="pb-24">
       <TabsList className="w-full sm:w-auto">
         <TabsTrigger value="single">
           <PenLine aria-hidden />
@@ -31,27 +38,30 @@ export function AddClient() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="single">
-        <SingleAdd />
+        <SingleAdd aiEnabled={aiEnabled} />
       </TabsContent>
       <TabsContent value="list">
-        <ListAdd />
+        <ListAdd aiEnabled={aiEnabled} />
       </TabsContent>
     </Tabs>
   );
 }
 
-function SingleAdd() {
+function SingleAdd({ aiEnabled }: { aiEnabled: boolean }) {
   const add = useAddItems();
+  const router = useRouter();
   const [result, setResult] = useState<Result>(null);
 
   async function onSubmit(draft: ItemDraft, schedule: boolean) {
     setResult(null);
     const r = await add.mutateAsync({ drafts: [draft], schedule });
-    setResult(
-      r.inserted
-        ? { tone: "success", text: uz.add.added(draft.english, r.scheduledCards > 0) }
-        : { tone: "warning", text: uz.add.duplicate(draft.english) },
-    );
+    if (!r.inserted) {
+      // Already in the library: stay here so the learner can fix the word.
+      setResult({ tone: "warning", text: uz.add.duplicate(draft.english) });
+      return;
+    }
+    setFlash({ tone: "success", text: uz.add.added(draft.english, r.scheduledCards > 0) });
+    router.push(AFTER_ADD);
   }
 
   return (
@@ -66,13 +76,21 @@ function SingleAdd() {
           {result.text}
         </Notice>
       ) : null}
-      <ItemForm submitLabel={uz.add.submit} withSchedule resetOnSuccess onSubmit={onSubmit} />
+      <ItemForm
+        submitLabel={uz.add.submit}
+        withSchedule
+        stickySubmit
+        autoDetails={{ ai: aiEnabled }}
+        onSubmit={onSubmit}
+      />
     </section>
   );
 }
 
-function ListAdd() {
+function ListAdd({ aiEnabled }: { aiEnabled: boolean }) {
   const t = uz.add;
+  const router = useRouter();
+  const [enriching, setEnriching] = useState(false);
   const [text, setText] = useState("");
   const [level, setLevel] = useState<"" | (typeof CEFR_LEVELS)[number]>("");
   const [tags, setTags] = useState("");
@@ -91,18 +109,26 @@ function ListAdd() {
   async function submit() {
     setResult(null);
     try {
-      const r = await add.mutateAsync({ drafts: split.fresh, schedule });
-      setResult(
-        r.inserted
-          ? { tone: "success", text: t.listDone(r.inserted, r.duplicates) }
-          : { tone: "warning", text: t.nothingToAdd },
-      );
-      if (r.inserted) setText("");
-      await keys.refetch();
+      // Example (EN + UZ), part of speech and note for every new word; best
+      // effort, so a slow or missing AI never blocks adding the list.
+      setEnriching(true);
+      const drafts = await enrichDrafts(split.fresh, { ai: aiEnabled }).catch(() => split.fresh);
+      setEnriching(false);
+      const r = await add.mutateAsync({ drafts, schedule });
+      if (!r.inserted) {
+        setResult({ tone: "warning", text: t.nothingToAdd });
+        await keys.refetch();
+        return;
+      }
+      setFlash({ tone: "success", text: t.listAdded(r.inserted, r.duplicates) });
+      router.push(AFTER_ADD);
     } catch (e) {
+      setEnriching(false);
       setResult({ tone: "danger", text: e instanceof Error ? e.message : uz.common.errorBody });
     }
   }
+
+  const busy = enriching || add.isPending;
 
   return (
     <div className="flex flex-col gap-5">
@@ -112,12 +138,7 @@ function ListAdd() {
           icon={result.tone === "success" ? CheckCircle2 : AlertTriangle}
           aria-live="polite"
         >
-          {result.text}{" "}
-          {result.tone === "success" ? (
-            <Link href="/kutubxona" className="underline underline-offset-2">
-              {t.toLibrary}
-            </Link>
-          ) : null}
+          {result.text}
         </Notice>
       ) : null}
 
@@ -218,19 +239,25 @@ function ListAdd() {
               );
             })}
           </ul>
-
-          <div className="border-t p-4">
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={!split.fresh.length || add.isPending || keys.isLoading}
-              onClick={submit}
-            >
-              {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              {t.submitList(split.fresh.length)}
-            </Button>
-          </div>
         </section>
+      ) : null}
+
+      {hasInput ? (
+        <BottomActionBar label={t.submitList(split.fresh.length)}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!split.fresh.length || busy || keys.isLoading}
+            onClick={submit}
+          >
+            {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
+            {enriching
+              ? t.enriching(split.fresh.length)
+              : add.isPending
+                ? t.adding
+                : t.submitList(split.fresh.length)}
+          </Button>
+        </BottomActionBar>
       ) : null}
     </div>
   );

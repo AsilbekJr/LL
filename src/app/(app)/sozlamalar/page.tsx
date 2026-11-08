@@ -19,7 +19,7 @@ export default async function SettingsPage() {
       {error || !data ? (
         <EmptyState icon={AlertTriangle} title={uz.common.errorTitle} description={uz.common.errorBody} />
       ) : (
-        <div className="flex flex-col gap-5 pb-24 md:pb-0">
+        <div className="flex flex-col gap-5 pb-24">
           <SettingsForm initial={data} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
           <ResetData />
         </div>

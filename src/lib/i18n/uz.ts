@@ -116,6 +116,12 @@ export const uz = {
       `${inserted} ta so'z qo'shildi${duplicates ? `, ${duplicates} ta dublikat o'tkazib yuborildi` : ""}.`,
     nothingToAdd: "Qo'shiladigan yangi so'z yo'q.",
     toLibrary: "Kutubxonaga o'tish",
+    filling: "Misol, so'z turkumi va izoh tayyorlanmoqda…",
+    filled: "Misol, so'z turkumi va izoh avtomatik qo'shildi — xohlasangiz tahrirlang.",
+    enriching: (n: number) => `${n} ta so'zga misol va izoh tayyorlanmoqda…`,
+    adding: "Qo'shilmoqda…",
+    listAdded: (inserted: number, duplicates: number) =>
+      `${inserted} ta so'z misollari bilan qo'shildi${duplicates ? ` (${duplicates} ta dublikat o'tkazib yuborildi)` : ""}.`,
   },
   library: {
     description: (n: number) => `${n} ta so'z va ibora`,

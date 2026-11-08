@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
+import { FlashNotice } from "@/components/common/flash-notice";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -87,7 +88,12 @@ export default async function TodayPage() {
     );
   }
 
-  const header = <PageHeader eyebrow={formatDayUz(t.today)} title={greetingUz(t.hour)} />;
+  const header = (
+    <>
+      <PageHeader eyebrow={formatDayUz(t.today)} title={greetingUz(t.hour)} />
+      <FlashNotice />
+    </>
+  );
   const isEmpty = t.due === 0 && t.fresh === 0 && t.done === 0;
 
   if (isEmpty) {

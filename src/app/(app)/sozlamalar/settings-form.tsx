@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { BottomActionBar } from "@/components/common/bottom-action-bar";
+import { useFieldArray, useForm, useFormState, useWatch } from "react-hook-form";
 import { AlertTriangle, CheckCircle2, Loader2, Plus, Volume2, X } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ export function SettingsForm({
   vapidPublicKey: string | null;
 }) {
   const t = uz.settings;
+  const formId = useId();
   const router = useRouter();
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -73,14 +75,12 @@ export function SettingsForm({
     return all.includes(initial.timezone) ? all : [initial.timezone, ...all];
   }, [initial.timezone]);
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    setError,
-    reset,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormValues>({ defaultValues: toValues(initial) });
+  const { register, control, handleSubmit, setError, reset } = useForm<FormValues>({
+    defaultValues: toValues(initial),
+  });
+  // Explicit subscription: reading these from useForm's formState did not
+  // re-render this form, so "Saqlash" stayed disabled after every edit.
+  const { errors, isSubmitting, isDirty } = useFormState({ control });
   const reminders = useFieldArray({ control, name: "reminder_times" });
   const ttsRate = useWatch({ control, name: "tts_rate" });
   const ttsVoice = useWatch({ control, name: "tts_voice" });
@@ -123,7 +123,7 @@ export function SettingsForm({
   const reminderError = (errors.reminder_times as { message?: string } | undefined)?.message;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+    <form id={formId} onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
       <Section title={t.plan}>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
@@ -203,6 +203,10 @@ export function SettingsForm({
               min={0.5}
               max={2}
               step={0.05}
+              // Without an explicit value the server-rendered slider sits at
+              // the middle of its range (1.25×), and the form adopted that:
+              // the speed silently changed and "Saqlash" never enabled.
+              defaultValue={String(initial.tts_rate)}
               className="h-12 w-full accent-primary"
               {...register("tts_rate")}
             />
@@ -311,13 +315,13 @@ export function SettingsForm({
         </Notice>
       ) : null}
 
-      {/* Sticky save bar on mobile, inline on desktop */}
-      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/90 p-3 backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0">
-        <Button type="submit" size="lg" className="w-full md:w-auto" disabled={isSubmitting || !isDirty}>
+      {/* Pinned to the bottom of the screen, so saving never needs scrolling. */}
+      <BottomActionBar label={t.save}>
+        <Button type="submit" form={formId} size="lg" className="w-full" disabled={isSubmitting || !isDirty}>
           {isSubmitting ? <Loader2 className="animate-spin" aria-hidden /> : null}
           {t.save}
         </Button>
-      </div>
+      </BottomActionBar>
     </form>
   );
 }

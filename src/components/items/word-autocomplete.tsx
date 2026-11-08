@@ -33,6 +33,10 @@ export function WordAutocomplete({
   const [entries, setEntries] = useState<VocabEntry[] | null>(null);
   const items = useMemo(() => (entries ? suggest(value, entries, 8) : []), [value, entries]);
 
+  // Loaded on focus AND on the first keystroke: an autoFocus input (or a
+  // tap before hydration) is focused before React listens, so the focus
+  // event alone can be missed and suggestions would never appear.
+  // Repeated calls are cheap: loadAll() shares one cached request per level.
   function ensureLoaded() {
     if (entries === null) void loadAll().then(setEntries, () => setEntries(null));
   }
@@ -45,11 +49,12 @@ export function WordAutocomplete({
     selectedItem: null,
     itemToString: (e) => e?.english ?? "",
     onInputValueChange: ({ inputValue, type }) => {
-      // Selecting an item also changes the input value; onSelectedItemChange handles that.
-      if (
-        type !== useCombobox.stateChangeTypes.ItemClick &&
-        type !== useCombobox.stateChangeTypes.InputKeyDownEnter
-      ) {
+      // Only typing changes the text. Selecting an item is handled by
+      // onSelectedItemChange; and since selectedItem stays null (controlled),
+      // Downshift would otherwise "reset" the input to "" on blur — which
+      // wiped the picked word as soon as focus moved to the Uzbek field.
+      if (type === useCombobox.stateChangeTypes.InputChange) {
+        ensureLoaded();
         onChange(inputValue ?? "");
       }
     },
