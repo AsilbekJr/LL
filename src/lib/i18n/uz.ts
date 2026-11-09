@@ -43,19 +43,26 @@ export const uz = {
   today: {
     textsDue: (n: number) => `Matnlar: bugun ${n} ta takrorlash`,
     dueTitle: "Bugungi takrorlash",
-    planBody: (reviewWords: number, newWords: number, cards: number) =>
+    planBody: (reviewWords: number, newWords: number) =>
       [reviewWords ? `${reviewWords} ta so'zni takrorlash` : "", newWords ? `${newWords} ta yangi so'z` : ""]
         .filter(Boolean)
-        .join(" va ") +
-      " sizni kutmoqda" +
-      (cards > reviewWords + newWords ? ` (${cards} ta karta — ikkala yo'nalish)` : ""),
+        .join(" va ") + " sizni kutmoqda",
     newLimitReached: (n: number) =>
       `Bugungi yangi so'z limiti tugadi — yana ${n} ta so'z keyingi kunlarga navbatda turibdi.`,
     reviewLimitReached: (n: number) =>
       `Bugungi takrorlash limiti tugadi — yana ${n} ta karta ertaga ko'rsatiladi.`,
     words: "ta so'z",
     allDone: "Bugungi reja bajarildi",
-    allDoneBody: "Ertaga yangi takrorlashlar bo'ladi. Xohlasangiz yangi so'z qo'shing.",
+    restDay: "Bugun takrorlash yo'q",
+    next: (words: number, newWords: number, nextDay: string | null) => {
+      const parts = [
+        words ? `${words} ta so'zni takrorlash` : "",
+        newWords ? `${newWords} ta yangi so'z` : "",
+      ].filter(Boolean);
+      if (parts.length) return `Ertaga: ${parts.join(" va ")}.`;
+      if (nextDay) return `Keyingi takrorlash: ${nextDay}. Xohlasangiz yangi so'z qo'shing.`;
+      return "Rejada takrorlash yo'q. Yangi so'z qo'shing.";
+    },
     start: "Boshlash",
     progressLabel: "Bugungi progress",
     remaining: "qoldi",
@@ -216,6 +223,8 @@ export const uz = {
     productionPending:
       "Bu so'zni haqiqatan bilishingizni ko'rsatish vaqti: uni o'z gapingizda ishlating. Yozma va og'zaki mashqdan o'tmaguncha so'z oxirgi bosqichlarga chiqmaydi.",
     gotIt: "Tushundim",
+    secondDirection:
+      "Bu so'zni tanib olishni o'rgandingiz. Endi keyingi bosqich: o'zbekchasini ko'rib, inglizchasini o'zingiz eslaysiz.",
     listen: "Tinglash",
     listenSlow: "Sekinroq",
     ttsCloudBusy: "Server ovozi bir daqiqaga band (limit). Birozdan keyin qayta bosing.",
@@ -521,13 +530,6 @@ export const uz = {
     newLimit: "Kuniga yangi so'zlar",
     newLimitHint: "Har kuni nechta yangi so'z o'rganiladi",
     reviewLimit: "Kuniga takrorlashlar (maks.)",
-    direction: "Yo'nalish",
-    directions: {
-      random: "Tasodifiy (har safar bittasi)",
-      both: "Ikkalasi ham",
-      en_uz: "Faqat inglizcha → o'zbekcha",
-      uz_en: "Faqat o'zbekcha → inglizcha",
-    },
     algorithm: "Takrorlash algoritmi",
     srsMode: "Algoritm",
     srsModes: { ladder: "Interval zinapoyasi (oddiy, oldindan ma'lum)", fsrs: "FSRS (moslashuvchan)" },

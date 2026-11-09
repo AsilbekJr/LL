@@ -62,7 +62,6 @@ export const settingsFormSchema = z
       }
     }),
     srs_mode: z.enum(["ladder", "fsrs"]),
-    direction_mode: z.enum(["random", "en_uz", "uz_en", "both"]),
     overdue_penalty: z.boolean(),
     production_gate_steps: intField().pipe(z.number().min(0).max(30)),
     maintenance_days: intField().pipe(z.number().min(30, "Kamida 30 kun").max(3650, "Ko'pi bilan 3650 kun")),

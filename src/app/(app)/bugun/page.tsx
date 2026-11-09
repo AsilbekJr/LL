@@ -36,21 +36,22 @@ async function getToday() {
   const supabase = await getSupabaseServerClient();
   const { data: settings } = await supabase
     .from("settings")
-    .select("timezone, daily_new_limit, daily_review_limit, direction_mode")
+    .select("timezone, daily_new_limit, daily_review_limit")
     .maybeSingle();
   const tz = settings?.timezone ?? DEFAULT_TZ;
-  const mode = settings?.direction_mode ?? "random";
   const now = new Date();
   const today = todayInTz(tz, now);
   const yesterday = addDays(today, -1);
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
-  const [dueRes, stateRes, history, studiedYesterday, textsDue] = await Promise.all([
+  const tomorrow = addDays(today, 1);
+  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes] = await Promise.all([
+    // Due today, plus tomorrow's cards for the "what comes next" line.
     supabase
       .from("cards")
       .select("id, item_id, direction, due_date, status, last_reviewed_at")
       .in("status", [...STUDIED])
-      .lte("due_date", today)
+      .lte("due_date", tomorrow)
       .limit(10000),
     // The very same loader the review session uses, so the numbers match it.
     loadTodayState(supabase, dayStart).then(
@@ -71,12 +72,21 @@ async function getToday() {
       .lt("reviewed_at", dayStart)
       .not("result", "is", null),
     supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
+    supabase.from("items").select("id", { count: "exact", head: true }),
+    // The next day with a review after tomorrow.
+    supabase
+      .from("cards")
+      .select("due_date")
+      .in("status", [...STUDIED])
+      .gt("due_date", tomorrow)
+      .order("due_date")
+      .limit(1),
   ]);
 
-  const error = dueRes.error ?? stateRes.error ?? history.error;
+  const error = dueRes.error ?? stateRes.error ?? history.error ?? itemsRes.error;
   const state = stateRes.data;
-  const allowed = (direction: string) => mode === "random" || mode === "both" || direction === mode;
-  const dueRows = (dueRes.data ?? []).filter((c) => allowed(c.direction));
+  const scheduled = dueRes.data ?? [];
+  const dueRows = scheduled.filter((c) => c.due_date <= today);
 
   // Build today's queue exactly as the session does (random = first direction; only counts matter).
   const plan = buildDailyQueue({
@@ -104,18 +114,33 @@ async function getToday() {
     reviewsDoneToday: state?.reviewsDoneToday ?? 0,
     startedItems: state?.startedItems,
     touchedToday: state?.touchedToday,
-    directionMode: mode,
-    random: () => 0,
+    readyItems: state?.readyItems,
   });
 
   // Count WORDS, as the library does: in 'both' mode a word brings two cards.
   const started = state?.startedItems ?? new Set<string>();
   const reviewCards = plan.queue.filter((c) => c.status !== "new" || started.has(c.itemId));
   const reviewWords = new Set(reviewCards.map((c) => c.itemId));
-  const done = state?.cardsDoneToday ?? 0;
+  // Done = cards practised today that are not waiting in the queue any more
+  // (a card answered "Again" and left unfinished is still to do, not done).
+  const queued = new Set(plan.queue.map((c) => c.id));
+  const practised = state?.practisedToday ?? new Set<string>();
+  const done = [...practised].filter((id) => !queued.has(id)).length;
+
+  // Tomorrow: words due tomorrow, words whose other direction was left for
+  // tomorrow, and second directions that are waiting for their day.
+  const todayWords = new Set(plan.queue.map((c) => c.itemId));
+  const tomorrowWords = new Set([
+    ...scheduled.filter((c) => c.due_date === tomorrow).map((c) => c.item_id),
+    ...plan.deferred.map((c) => c.itemId),
+    ...(state?.newCards ?? [])
+      .filter((c) => started.has(c.item_id) && state?.readyItems.has(c.item_id) && !queued.has(c.id))
+      .map((c) => c.item_id),
+  ]);
+  const laterWords = plan.waitingWords - plan.newWords;
   const studiedDays = (history.data ?? []).map((r) => r.day);
   if ((studiedYesterday.count ?? 0) > 0) studiedDays.push(yesterday);
-  if (done > 0) studiedDays.push(today);
+  if (practised.size > 0) studiedDays.push(today);
 
   return {
     error,
@@ -130,9 +155,15 @@ async function getToday() {
     dueLater: plan.dueRemaining,
     newWords: plan.newWords,
     waitingWords: plan.waitingWords,
-    laterWords: plan.waitingWords - plan.newWords,
+    laterWords,
     remaining: plan.queue.length,
     done,
+    items: itemsRes.count ?? 0,
+    todayWords: todayWords.size,
+    tomorrowWords: tomorrowWords.size,
+    /** New words tomorrow's limit will let in. */
+    tomorrowNew: Math.min(laterWords, settings?.daily_new_limit ?? 15),
+    nextDay: tomorrowWords.size ? null : (nextRes.data?.[0]?.due_date ?? null),
     streak: studyStreak(studiedDays, today),
     // Optional extra: never fail the page if texts are unavailable.
     textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
@@ -157,7 +188,8 @@ export default async function TodayPage() {
       <FlashNotice />
     </>
   );
-  const isEmpty = t.remaining === 0 && t.waitingWords === 0 && t.done === 0 && t.dueLater === 0;
+  // Empty only when the library is: a day with nothing due is a rest day, not an empty notebook.
+  const isEmpty = t.items === 0;
 
   if (isEmpty) {
     return (
@@ -233,16 +265,18 @@ export default async function TodayPage() {
 
           <div className="min-w-0 flex-1">
             <h2 id="today-title" className="font-display text-2xl leading-tight font-semibold">
-              {allDone ? uz.today.allDone : uz.today.dueTitle}
+              {allDone ? (t.done > 0 ? uz.today.allDone : uz.today.restDay) : uz.today.dueTitle}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {allDone
-                ? t.laterWords > 0
-                  ? uz.today.newLimitReached(t.laterWords)
-                  : t.dueLater > 0
-                    ? uz.today.reviewLimitReached(t.dueLater)
-                    : uz.today.allDoneBody
-                : uz.today.planBody(t.reviews, t.newWords, t.remaining)}
+                ? [
+                    t.laterWords > 0 ? uz.today.newLimitReached(t.laterWords) : "",
+                    t.dueLater > 0 ? uz.today.reviewLimitReached(t.dueLater) : "",
+                    uz.today.next(t.tomorrowWords, t.tomorrowNew, t.nextDay ? formatDayUz(t.nextDay) : null),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                : uz.today.planBody(t.reviews, t.newWords)}
             </p>
             {t.done > 0 && !allDone ? (
               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">

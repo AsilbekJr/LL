@@ -3,6 +3,7 @@ import { addDays, DEFAULT_TZ, diffDays, startOfDayInTz, todayInTz, type IsoDate 
 import type { CardStatus, Database, Direction, ReviewResult, Tables } from "@/lib/supabase/database.types";
 import { studyStreak } from "@/lib/i18n/format";
 import { countByDay } from "./calendar";
+import { reviewedPerDay } from "@/lib/srs/today";
 
 type Client = SupabaseClient<Database>;
 
@@ -68,18 +69,22 @@ export async function fetchCalendar(sb: Client, now = new Date()): Promise<Calen
     readAll((from, to) =>
       sb
         .from("cards")
-        .select("due_date")
+        .select("item_id, direction, due_date")
         .in("status", [...STUDIED])
         .gt("due_date", today)
         .lte("due_date", addDays(today, FORECAST_DAYS))
         .order("due_date")
         .range(from, to),
     ),
-    sb
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .in("status", [...STUDIED])
-      .lte("due_date", today),
+    readAll((from, to) =>
+      sb
+        .from("cards")
+        .select("item_id, direction, due_date, last_reviewed_at")
+        .in("status", [...STUDIED])
+        .lte("due_date", today)
+        .order("id")
+        .range(from, to),
+    ),
     readAll((from, to) =>
       sb
         .from("review_logs")
@@ -105,8 +110,9 @@ export async function fetchCalendar(sb: Client, now = new Date()): Promise<Calen
     today,
     timezone,
     history,
-    forecast: countByDay(futureDue.map((c) => c.due_date)),
-    todayDue: count(due),
+    // Counted as they will be reviewed (direction setting; 'random' = one direction per word a day).
+    forecast: countByDay(reviewedPerDay(futureDue, today).map((c) => c.due_date)),
+    todayDue: reviewedPerDay(due, today).length,
     todayDone,
     todayReviews: graded.length,
     streak: studyStreak(studied, today),
@@ -215,7 +221,7 @@ export interface DayItems {
 
 const DAY_ITEMS_LIMIT = 100;
 
-type PlannedRow = Pick<Tables<"cards">, "id" | "direction" | "due_date"> & {
+type PlannedRow = Pick<Tables<"cards">, "id" | "item_id" | "direction" | "due_date" | "last_reviewed_at"> & {
   items: Pick<Tables<"items">, "english" | "uzbek"> | null;
 };
 type ReviewedRow = Pick<Tables<"review_logs">, "card_id" | "result" | "reviewed_at"> & {
@@ -237,7 +243,7 @@ export async function fetchDayItems(
   if (day >= today) {
     let q = sb
       .from("cards")
-      .select("id, direction, due_date, items(english, uzbek)")
+      .select("id, item_id, direction, due_date, last_reviewed_at, items(english, uzbek)")
       .in("status", [...STUDIED]);
     q = day === today ? q.lte("due_date", today) : q.eq("due_date", day);
     const { data, error } = await q
@@ -245,7 +251,10 @@ export async function fetchDayItems(
       .limit(DAY_ITEMS_LIMIT + 1)
       .returns<PlannedRow[]>();
     if (error) throw new Error(error.message);
-    const rows = (data ?? []).filter((r) => r.items);
+    const rows = reviewedPerDay(
+      (data ?? []).filter((r) => r.items),
+      today,
+    );
     // Today with nothing left to do: show what was reviewed instead.
     if (rows.length === 0 && day === today) return fetchReviewed(sb, day, timezone);
     return {

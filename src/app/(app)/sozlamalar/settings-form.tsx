@@ -21,7 +21,6 @@ interface FormValues {
   daily_review_limit: string;
   ladder: string;
   srs_mode: "ladder" | "fsrs";
-  direction_mode: "random" | "en_uz" | "uz_en" | "both";
   overdue_penalty: boolean;
   production_gate_steps: string;
   maintenance_days: string;
@@ -37,7 +36,6 @@ function toValues(s: Tables<"settings">): FormValues {
     daily_review_limit: String(s.daily_review_limit),
     ladder: s.ladder.join(", "),
     srs_mode: s.srs_mode,
-    direction_mode: s.direction_mode,
     overdue_penalty: s.overdue_penalty,
     production_gate_steps: String(s.production_gate_steps),
     maintenance_days: String(s.maintenance_days),
@@ -146,15 +144,6 @@ export function SettingsForm({
             <Input type="number" inputMode="numeric" min={1} max={2000} {...field("daily_review_limit")} />
           </Field>
         </div>
-        <Field id="direction_mode" label={t.direction}>
-          <Select {...field("direction_mode")}>
-            {(Object.keys(t.directions) as (keyof typeof t.directions)[]).map((k) => (
-              <option key={k} value={k}>
-                {t.directions[k]}
-              </option>
-            ))}
-          </Select>
-        </Field>
       </Section>
 
       <Section title={t.algorithm}>

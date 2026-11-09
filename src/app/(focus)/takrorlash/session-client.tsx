@@ -333,7 +333,7 @@ function Session({
                 onDone={onProduction}
               />
             ) : exercise.kind === "encounter" ? (
-              <EncounterView item={sc.item} speech={speech} onAnswer={onAnswer} />
+              <EncounterView item={sc.item} speech={speech} onAnswer={onAnswer} second={sc.secondDirection} />
             ) : exercise.kind === "choice" ? (
               <ChoiceView ex={exercise} speech={speech} onAnswer={onAnswer} />
             ) : exercise.kind === "recall" ? (

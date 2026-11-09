@@ -46,7 +46,6 @@ function session(cards: SrsCard[]): LoadedSession {
     config: {
       settings: { ...DEFAULT_SETTINGS, timezone: TZ },
       today: TODAY,
-      directionMode: "random",
       ttsRate: 1,
       ttsVoice: null,
     },

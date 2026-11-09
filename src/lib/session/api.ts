@@ -2,7 +2,7 @@ import { DbWriteError } from "@/lib/supabase/write-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { chunk } from "@/lib/items/dedupe";
 import { addDays, DEFAULT_TZ, startOfDayInTz, todayInTz, type IsoDate } from "@/lib/srs/dates";
-import { buildDailyQueue, type DirectionMode } from "@/lib/srs/queue";
+import { buildDailyQueue } from "@/lib/srs/queue";
 import type { ReviewOutcome } from "@/lib/srs/scheduler";
 import {
   DEFAULT_SETTINGS,
@@ -43,7 +43,6 @@ type CardWithItem = Pick<
 export interface SessionConfig {
   settings: SrsSettings;
   today: IsoDate;
-  directionMode: DirectionMode;
   ttsRate: number;
   ttsVoice: string | null;
 }
@@ -135,8 +134,8 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
     newItemsDoneToday: state.newItemsDoneToday,
     reviewsDoneToday: state.reviewsDoneToday,
     startedItems: state.startedItems,
+    readyItems: state.readyItems,
     touchedToday: state.touchedToday,
-    directionMode: settingsRow?.direction_mode ?? "random",
   });
 
   // Full rows for the new cards the plan picked.
@@ -179,6 +178,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       siblingComplete: (sib?.ladder_step ?? 0) >= ladderLength,
       siblingId: sib?.id ?? null,
       deferSibling: deferredItems.has(row.item_id),
+      secondDirection: row.status === "new" && state.startedItems.has(row.item_id),
     };
   });
 
@@ -204,7 +204,6 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
     config: {
       settings,
       today,
-      directionMode: settingsRow?.direction_mode ?? "random",
       ttsRate: Number(settingsRow?.tts_rate ?? 1),
       ttsVoice: settingsRow?.tts_voice ?? null,
     },

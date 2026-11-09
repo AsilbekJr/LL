@@ -18,11 +18,13 @@ export interface TodayState {
   /** All new cards, oldest first (pairs kept together). */
   newCards: NewCardRow[];
   startedItems: Set<string>;
+  /** Started words whose first direction is in review (or mastered): the second one may open. */
+  readyItems: Set<string>;
   touchedToday: Set<string>;
   newItemsDoneToday: number;
   reviewsDoneToday: number;
-  /** Distinct cards practised today (any kind of answer). */
-  cardsDoneToday: number;
+  /** Cards practised today (any kind of answer). */
+  practisedToday: Set<string>;
 }
 
 function check<T>(r: { data: T | null; error: { message: string } | null }): T {
@@ -73,12 +75,23 @@ export async function loadTodayState(sb: Client, dayStart: string): Promise<Toda
     newItemsDoneToday = wordsStartedToday(encountered, rows);
   }
 
+  // Which started words know their first direction well enough for the second.
+  const startedItems = startedItemsOf(newCards);
+  const readyItems = new Set<string>();
+  for (const ids of chunk([...startedItems], 150)) {
+    const rows = check(
+      await sb.from("cards").select("item_id").in("item_id", ids).in("status", ["review", "mastered"]),
+    );
+    for (const r of rows) readyItems.add(r.item_id);
+  }
+
   return {
     newCards,
-    startedItems: startedItemsOf(newCards),
+    startedItems,
+    readyItems,
     touchedToday,
     newItemsDoneToday,
     reviewsDoneToday: reviewed.size,
-    cardsDoneToday: practised.size,
+    practisedToday: practised,
   };
 }

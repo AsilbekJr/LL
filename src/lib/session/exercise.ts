@@ -31,6 +31,8 @@ export interface SessionCard {
    * direction per word a day). Answering this card moves it to tomorrow.
    */
   deferSibling?: boolean;
+  /** A known word met in its second direction (UZ→EN) for the first time. */
+  secondDirection?: boolean;
 }
 
 /** A change to the other direction's card that comes with an answer. */

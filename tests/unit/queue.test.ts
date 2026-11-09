@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  balanceInterval,
-  buildDailyQueue,
-  interleave,
-  separateSameItem,
-  type QueueCard,
-} from "@/lib/srs/queue";
+import { balanceInterval, buildDailyQueue, interleave, type QueueCard } from "@/lib/srs/queue";
 
 const TODAY = "2026-11-06";
 
@@ -33,36 +27,17 @@ describe("buildDailyQueue", () => {
     ).toBe(1);
   });
 
-  it("limits new ITEMS and adds both directions in 'both' mode", () => {
+  it("limits new WORDS and starts each with EN→UZ only", () => {
     const cards = [
-      card("1e", "1", { status: "new" }),
       card("1u", "1", { status: "new", direction: "uz_en" }),
+      card("1e", "1", { status: "new" }),
       card("2e", "2", { status: "new" }),
       card("2u", "2", { status: "new", direction: "uz_en" }),
       card("3e", "3", { status: "new" }),
     ];
-    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 2, reviewLimit: 100, directionMode: "both" });
-    expect(q.newCount).toBe(4);
-    expect(new Set(q.queue.map((c) => c.itemId))).toEqual(new Set(["1", "2"]));
-  });
-
-  it("'random' picks one direction per new item", () => {
-    const cards = [
-      card("1e", "1", { status: "new" }),
-      card("1u", "1", { status: "new", direction: "uz_en" }),
-    ];
-    expect(
-      buildDailyQueue({ cards, today: TODAY, newLimit: 5, reviewLimit: 5, random: () => 0 }).queue,
-    ).toEqual([cards[0]]);
-    expect(
-      buildDailyQueue({ cards, today: TODAY, newLimit: 5, reviewLimit: 5, random: () => 0.99 }).queue,
-    ).toEqual([cards[1]]);
-  });
-
-  it("a fixed direction mode filters both new and due cards", () => {
-    const cards = [card("a", "1"), card("b", "2", { direction: "uz_en" })];
-    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 0, reviewLimit: 9, directionMode: "uz_en" });
-    expect(q.queue.map((c) => c.id)).toEqual(["b"]);
+    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 2, reviewLimit: 100 });
+    expect(q.queue.map((c) => c.id)).toEqual(["1e", "2e"]);
+    expect(q).toMatchObject({ newWords: 2, newCount: 2, waitingWords: 3 });
   });
 
   it("ignores suspended and future cards", () => {
@@ -70,21 +45,16 @@ describe("buildDailyQueue", () => {
     expect(buildDailyQueue({ cards, today: TODAY, newLimit: 5, reviewLimit: 5 }).queue).toEqual([]);
   });
 
-  it("never puts the two directions of one item back to back", () => {
+  it("never has two cards of one word", () => {
     const cards = [
       card("1e", "1"),
       card("1u", "1", { direction: "uz_en" }),
       card("2e", "2"),
       card("2u", "2", { direction: "uz_en" }),
     ];
-    const q = buildDailyQueue({
-      cards,
-      today: TODAY,
-      newLimit: 0,
-      reviewLimit: 9,
-      directionMode: "both",
-    }).queue;
-    for (let i = 1; i < q.length; i++) expect(q[i]!.itemId).not.toBe(q[i - 1]!.itemId);
+    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 0, reviewLimit: 9 });
+    expect(q.queue.map((c) => c.itemId).sort()).toEqual(["1", "2"]);
+    expect(q.deferred).toHaveLength(2);
   });
 });
 
@@ -101,17 +71,6 @@ describe("interleave", () => {
     expect(out).toHaveLength(12);
     expect(out.filter((x) => typeof x === "number")).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(out.filter((x) => typeof x === "string")).toEqual(["a", "b", "c"]);
-  });
-});
-
-describe("separateSameItem", () => {
-  it("is best effort when only one item is left", () => {
-    expect(separateSameItem([{ itemId: "1" }, { itemId: "1" }]).map((c) => c.itemId)).toEqual(["1", "1"]);
-  });
-
-  it("moves the nearest different card forward", () => {
-    const out = separateSameItem([{ itemId: "1" }, { itemId: "1" }, { itemId: "2" }, { itemId: "3" }]);
-    expect(out.map((c) => c.itemId)).toEqual(["1", "2", "1", "3"]);
   });
 });
 

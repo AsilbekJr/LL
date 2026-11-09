@@ -38,3 +38,28 @@ export function trimCutItem<T extends { item_id: string }>(rows: T[], limit: num
   const last = rows[rows.length - 1]!.item_id;
   return rows.filter((r) => r.item_id !== last);
 }
+
+/**
+ * Scheduled cards as they will really be reviewed: one direction per word a
+ * day. Of two cards of one word falling on the same day the earlier-due one
+ * stays (then the one reviewed longer ago) — the same choice buildDailyQueue
+ * makes. `today` folds everything overdue into today.
+ */
+export function reviewedPerDay<
+  T extends { item_id: string; due_date: string; last_reviewed_at?: string | null },
+>(cards: T[], today: string): T[] {
+  const best = new Map<string, T>();
+  for (const c of cards) {
+    const key = `${c.due_date <= today ? today : c.due_date}:${c.item_id}`;
+    const b = best.get(key);
+    if (
+      !b ||
+      c.due_date < b.due_date ||
+      (c.due_date === b.due_date && (c.last_reviewed_at ?? "") < (b.last_reviewed_at ?? ""))
+    ) {
+      best.set(key, c);
+    }
+  }
+  const keep = new Set(best.values());
+  return cards.filter((c) => keep.has(c));
+}

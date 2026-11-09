@@ -25,10 +25,16 @@ export function EncounterView({
   item,
   speech,
   onAnswer,
-}: ExerciseProps & { item: SessionItem; speech: SpeechPrefs }) {
+  second,
+}: ExerciseProps & { item: SessionItem; speech: SpeechPrefs; second?: boolean }) {
   useEnter(() => onAnswer(null));
   return (
     <div className="flex flex-col gap-6">
+      {second ? (
+        <p className="rounded-xl bg-primary-soft px-4 py-3 text-sm font-medium text-primary-soft-foreground">
+          {uz.review.secondDirection}
+        </p>
+      ) : null}
       <div className="bg-ruled rounded-2xl border bg-card px-5 py-8 text-center shadow-(--shadow-lift)">
         <Prompt lang="en">{item.english}</Prompt>
         {item.part_of_speech ? (
