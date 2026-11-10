@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox, Field, Select, Textarea } from "@/components/ui/form-controls";
 import {
   aiDetails,
+  aiLookup,
   findEntry,
   localDetails,
   mergeDetails,
@@ -151,6 +152,58 @@ export function ItemForm({
     }
   }
 
+  /**
+   * The learner typed a word and moved on without picking a suggestion: fill
+   * the rest anyway. A dictionary word is treated like a pick; a word the
+   * dictionary does not have ("puddle") is translated by AI. Never overwrites
+   * a translation the learner typed.
+   */
+  const lastLookup = useRef("");
+  const autoUzbek = useRef("");
+  const [translating, setTranslating] = useState<"idle" | "busy" | "ai" | "none">("idle");
+  const uzbekFree = () => !getValues("uzbek").trim() || getValues("uzbek") === autoUzbek.current;
+
+  async function lookupTyped(): Promise<void> {
+    const word = getValues("english").trim();
+    if (!autoDetails || word.length < 2 || word.length > 120 || !uzbekFree()) return;
+    if (word.toLowerCase() === lastLookup.current) return;
+    lastLookup.current = word.toLowerCase();
+    const same = () => getValues("english").trim() === word && uzbekFree();
+
+    const entry = findEntry(word, await loadAll().catch(() => []));
+    if (!same()) return;
+    if (entry) {
+      setTranslating("idle");
+      autoUzbek.current = "";
+      setValue("uzbek", "", { shouldDirty: true });
+      onPick(entry);
+      return;
+    }
+    if (!autoDetails.ai) return;
+    setTranslating("busy");
+    const run = ++fillRun.current;
+    const found = await aiLookup(word).catch(() => null);
+    if (run !== fillRun.current || !same()) {
+      if (run === fillRun.current) setTranslating("idle");
+      return;
+    }
+    if (!found) {
+      setTranslating("none");
+      return;
+    }
+    const uzbek = found.uzbek.trim();
+    autoUzbek.current = uzbek;
+    setValue("uzbek", uzbek, { shouldDirty: true, shouldValidate: true });
+    const level = CEFR_LEVELS.find((l) => l === found.level.trim().toUpperCase());
+    if (level && !getValues("cefr_level")) setValue("cefr_level", level, { shouldDirty: true });
+    if (wantsDetails({ english: word })) {
+      setShowMore(true);
+      apply({}, found);
+      setFilling("done");
+    }
+    setTranslating("ai");
+  }
+
   // A word that came in from outside (share sheet): treat a dictionary match
   // exactly like a pick from the suggestions; otherwise go on to the translation.
   const lookedUp = useRef(false);
@@ -163,7 +216,10 @@ export function ItemForm({
       .then((entries) => {
         const entry = getValues("english").trim() === word ? findEntry(word, entries) : null;
         if (entry) onPick(entry);
-        else setFocus("uzbek");
+        else {
+          setFocus("uzbek");
+          void lookupTyped();
+        }
       });
     // Runs once for the word the form was opened with.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -224,14 +280,33 @@ export function ItemForm({
                 placeholder="break the ice"
                 value={field.value}
                 onChange={field.onChange}
-                onBlur={field.onBlur}
+                onBlur={() => {
+                  field.onBlur();
+                  // After a tap on a suggestion the pick has already filled the form.
+                  window.setTimeout(() => {
+                    if (uzbekFree()) pendingFill.current = lookupTyped();
+                  }, 300);
+                }}
                 inputRef={field.ref}
                 onPick={onPick}
               />
             )}
           />
         </Field>
-        <Field id="uzbek" label={t.uzbek} error={errors.uzbek?.message}>
+        <Field
+          id="uzbek"
+          label={t.uzbek}
+          error={errors.uzbek?.message}
+          hint={
+            translating === "busy"
+              ? uz.add.translating
+              : translating === "ai"
+                ? uz.add.translatedByAi
+                : translating === "none"
+                  ? uz.add.translateNone
+                  : undefined
+          }
+        >
           <Input
             autoComplete="off"
             lang="uz"

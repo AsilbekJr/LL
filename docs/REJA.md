@@ -63,11 +63,17 @@ bo'lmaydi" qoidasi har o'zgarishda avtomatik tekshiriladi.
 - Qiyin so'zlar: o'rganilayotgan va 3+ marta unutilgan so'z "Qiyin" belgisi oladi.
   Kutubxonada "Faqat qiyin so'zlar" filtri va maslahat; Bugun sahifasida ular bo'lsa havola.
 
+## 6. Lug'atda yo'q so'zlar ✅
+
+- Ichki lug'at 8 645 ta so'zdan iborat; unda yo'q so'z (masalan "puddle") yozilsa yoki
+  ulashilsa, tarjima, daraja, misol va izohni AI to'ldiradi va buni maydon ostida aytadi.
+- Lug'atda bor so'z taklifdan tanlanmasdan yozilsa ham o'zi to'ladi.
+- Foydalanuvchi yozgan tarjima hech qachon almashtirilmaydi.
+
 ## Keyingi g'oyalar (rejalashtirilmagan)
 
 - Zaxiraga matnlar va nutq tarixini qo'shish.
 - Qiyin so'z uchun AI yordamida yangi misol yoki eslab qolish usuli taklif qilish.
-- Lug'atda yo'q ulashilgan so'z uchun tarjimani AI bilan taklif qilish.
 
 ## Qilinmaydigan ishlar (hozircha)
 

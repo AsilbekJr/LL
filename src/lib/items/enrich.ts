@@ -3,7 +3,7 @@ import type { CefrLevel } from "@/lib/supabase/database.types";
 import { makeCloze } from "@/lib/text/answer";
 import { loadAll, type VocabEntry } from "@/lib/vocab/dictionary";
 import { loadExamples, loadTranslations, type TranslationPrompt } from "@/lib/vocab/sentences";
-import { WORD_DETAILS_MAX, type WordDetail } from "./word-details";
+import { WORD_DETAILS_MAX, wordDetailsResponseSchema, type WordDetail } from "./word-details";
 
 /**
  * Auto-filled card details for a new word: part of speech, level, an example
@@ -100,8 +100,8 @@ export async function aiDetails(
         }),
       });
       if (!res.ok) break; // disabled, rate limited or down: keep the offline details
-      const data = (await res.json()) as { items?: WordDetail[] };
-      (data.items ?? []).forEach((item, j) => {
+      const data = wordDetailsResponseSchema.safeParse(await res.json());
+      (data.success ? data.data.items : []).forEach((item, j) => {
         // Match by text; fall back to position (the model is told to keep the order).
         const src = chunk.find((w) => key(w.src.english) === key(item.english))?.src ?? chunk[j]?.src;
         if (src) out.set(key(src.english), item);
@@ -113,13 +113,29 @@ export async function aiDetails(
   return out;
 }
 
+/**
+ * A word the built-in dictionary does not have: translation, level and details
+ * from Gemini. null when AI is off, down, or does not know the word.
+ */
+export async function aiLookup(english: string, signal?: AbortSignal): Promise<WordDetail | null> {
+  const src = { english, uzbek: "" };
+  const found = (await aiDetails([{ src, local: {} }], signal ?? AbortSignal.timeout(20_000))).get(
+    key(english),
+  );
+  return found?.uzbek.trim() ? found : null;
+}
+
 const blank = (v: string | null | undefined) => !v || !v.trim();
 
 /**
  * Merge found details into a draft, filling empty fields only. The example
  * is a pair: a new English example always comes with its own translation.
  */
-export function mergeDetails<T extends Details>(draft: T, local: Details, ai?: WordDetail | null): T {
+export function mergeDetails<T extends Details>(
+  draft: T,
+  local: Details,
+  ai?: Pick<WordDetail, "part_of_speech" | "example_en" | "example_uz" | "notes"> | null,
+): T {
   const next = { ...draft };
   const pos = (ai?.part_of_speech || local.part_of_speech || "").trim();
   if (blank(next.part_of_speech) && pos) next.part_of_speech = pos;

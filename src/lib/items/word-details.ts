@@ -26,6 +26,9 @@ export type WordDetailsRequest = z.infer<typeof wordDetailsRequestSchema>;
 
 export const wordDetailSchema = z.object({
   english: z.string(),
+  /** Uzbek translation and CEFR level: only used when the learner gave no meaning. */
+  uzbek: z.string().max(200).default(""),
+  level: z.string().max(4).default(""),
   part_of_speech: z.string().max(60),
   example_en: z.string().max(300),
   example_uz: z.string().max(400),
@@ -44,9 +47,15 @@ export const WORD_DETAILS_JSON_SCHEMA = {
       description: "One item per input word, same order.",
       items: {
         type: "object",
-        required: ["english", "part_of_speech", "example_en", "example_uz", "notes"],
+        required: ["english", "uzbek", "level", "part_of_speech", "example_en", "example_uz", "notes"],
         properties: {
           english: { type: "string", description: "The input word or phrase, exactly as given." },
+          uzbek: {
+            type: "string",
+            description:
+              "The given Uzbek meaning unchanged; if none was given, the most common Uzbek translation (Latin script): 1–3 words, at most two meanings separated by a comma.",
+          },
+          level: { type: "string", description: "CEFR level of the word: A1, A2, B1, B2, C1 or C2." },
           part_of_speech: {
             type: "string",
             description:
@@ -66,6 +75,10 @@ export const WORD_DETAILS_JSON_SCHEMA = {
 
 export const WORD_DETAILS_SYSTEM = `You prepare vocabulary cards for an Uzbek-speaking learner of English.
 For every input word or phrase return:
+- uzbek: if uzbek_meaning is given, repeat it unchanged. If it is null, give the most common everyday Uzbek
+  translation in Latin script: short (1–3 words), dictionary form (verbs end in -moq), at most two meanings
+  separated by a comma. If the input is not a real English word or phrase (a typo, random letters), return "".
+- level: the CEFR level of the word in that meaning (A1…C2).
 - part_of_speech: keep the given one if present, otherwise the part of speech for the given Uzbek meaning.
 - example_en: if an example is given AND it uses the word in the given Uzbek meaning, return it unchanged.
   Otherwise write ONE new, natural, everyday sentence (max 12 words) that uses the word in exactly that

@@ -118,6 +118,29 @@ test("a word shared from another app arrives filled in", async ({ page }) => {
   await noHorizontalScroll(page);
 });
 
+test("a typed word is completed without picking a suggestion", async ({ page }) => {
+  await page.goto("/qoshish");
+  const english = page.getByRole("combobox", { name: "Inglizcha" });
+  const uzbek = page.getByLabel("O'zbekcha", { exact: true });
+
+  // In the dictionary: typing it and moving on is enough.
+  await english.fill("water");
+  await uzbek.focus();
+  await expect(uzbek).not.toHaveValue("", { timeout: 15_000 });
+
+  // Not in the dictionary ("puddle"): AI translates it, and says so.
+  await english.fill("puddle");
+  await uzbek.fill("");
+  await uzbek.focus();
+  const byAi = page.getByText("AI tarjimasi. Tekshirib, kerak bo'lsa o'zgartiring.");
+  // The live AI is sometimes down: then the form says so and the learner types.
+  const none = page.getByText("Tarjima topilmadi. O'zingiz yozing.");
+  await expect(byAi.or(none)).toBeVisible({ timeout: 40_000 });
+  if (await byAi.isVisible()) await expect(uzbek).not.toHaveValue("");
+  console.log(`puddle -> "${await uzbek.inputValue()}"`);
+  await noHorizontalScroll(page);
+});
+
 test("adds a pasted list and goes home", async ({ page }) => {
   await page.goto("/qoshish");
   await page.getByRole("tab", { name: "Ro'yxat" }).click();
