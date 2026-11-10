@@ -20,6 +20,12 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
+    // Phone: select text anywhere → Share → LL opens "Qo'shish" with the word filled in.
+    share_target: {
+      action: "/qoshish",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
     shortcuts: [
       { name: "Takrorlashni boshlash", url: "/bugun" },
       { name: "So'z qo'shish", url: "/qoshish" },

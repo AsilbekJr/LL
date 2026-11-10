@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, ListPlus, Loader2, PenLine, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ListPlus, Loader2, PenLine, Plus, Share2 } from "lucide-react";
 import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { ItemForm } from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ type Result = { tone: "success" | "danger" | "warning"; text: string } | null;
 /** Where the learner lands after adding: today's plan, with a short confirmation. */
 const AFTER_ADD = "/bugun";
 
-export function AddClient({ aiEnabled }: { aiEnabled: boolean }) {
+export function AddClient({ aiEnabled, shared }: { aiEnabled: boolean; shared?: string }) {
   const t = uz.add;
   return (
     // Bottom padding: the pinned add button must never cover the last field.
@@ -38,7 +38,7 @@ export function AddClient({ aiEnabled }: { aiEnabled: boolean }) {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="single">
-        <SingleAdd aiEnabled={aiEnabled} />
+        <SingleAdd aiEnabled={aiEnabled} shared={shared} />
       </TabsContent>
       <TabsContent value="list">
         <ListAdd aiEnabled={aiEnabled} />
@@ -47,7 +47,7 @@ export function AddClient({ aiEnabled }: { aiEnabled: boolean }) {
   );
 }
 
-function SingleAdd({ aiEnabled }: { aiEnabled: boolean }) {
+function SingleAdd({ aiEnabled, shared }: { aiEnabled: boolean; shared?: string }) {
   const add = useAddItems();
   const router = useRouter();
   const [result, setResult] = useState<Result>(null);
@@ -76,7 +76,16 @@ function SingleAdd({ aiEnabled }: { aiEnabled: boolean }) {
           {result.text}
         </Notice>
       ) : null}
+      {shared ? (
+        <Notice tone="neutral" icon={Share2} className="mb-5">
+          {uz.add.shared}
+        </Notice>
+      ) : null}
       <ItemForm
+        // A shared word arrives filled in; the dictionary then completes the rest.
+        key={shared ?? ""}
+        initial={shared ? { english: shared } : undefined}
+        lookupInitial={Boolean(shared)}
         submitLabel={uz.add.submit}
         withSchedule
         stickySubmit

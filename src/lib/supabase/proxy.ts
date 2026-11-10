@@ -63,7 +63,8 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;
+    // Keep the query: a word shared into the app must survive the login.
+    url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`;
     return copyCookies(response, NextResponse.redirect(url));
   }
 

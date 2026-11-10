@@ -1,17 +1,24 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Controller, useForm, useWatch, useFormState } from "react-hook-form";
 import { ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox, Field, Select, Textarea } from "@/components/ui/form-controls";
-import { aiDetails, localDetails, mergeDetails, wantsDetails, type Details } from "@/lib/items/enrich";
+import {
+  aiDetails,
+  findEntry,
+  localDetails,
+  mergeDetails,
+  wantsDetails,
+  type Details,
+} from "@/lib/items/enrich";
 import { CEFR_LEVELS, inferItemType, itemInputSchema, type ItemDraft } from "@/lib/schemas/item";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
-import type { VocabEntry } from "@/lib/vocab/dictionary";
+import { loadAll, type VocabEntry } from "@/lib/vocab/dictionary";
 import { WordAutocomplete } from "./word-autocomplete";
 
 interface FormValues {
@@ -44,6 +51,8 @@ function toValues(d?: Partial<ItemDraft>): FormValues {
 
 interface ItemFormProps {
   initial?: Partial<ItemDraft>;
+  /** Look `initial.english` up in the dictionary on open and fill the rest (shared words). */
+  lookupInitial?: boolean;
   submitLabel: string;
   /** Show "add to review now" (Add page only). */
   withSchedule?: boolean;
@@ -70,6 +79,7 @@ export function ItemForm({
   onSubmit,
   autoDetails,
   stickySubmit,
+  lookupInitial,
 }: ItemFormProps) {
   const t = uz.items;
   const formId = useId();
@@ -140,6 +150,24 @@ export function ItemForm({
       if (run === fillRun.current) setFilling("done");
     }
   }
+
+  // A word that came in from outside (share sheet): treat a dictionary match
+  // exactly like a pick from the suggestions; otherwise go on to the translation.
+  const lookedUp = useRef(false);
+  useEffect(() => {
+    const word = initial?.english?.trim();
+    if (!lookupInitial || !word || lookedUp.current) return;
+    lookedUp.current = true;
+    void loadAll()
+      .catch(() => [])
+      .then((entries) => {
+        const entry = getValues("english").trim() === word ? findEntry(word, entries) : null;
+        if (entry) onPick(entry);
+        else setFocus("uzbek");
+      });
+    // Runs once for the word the form was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onValid(snapshot: FormValues) {
     // Pressed while details are still being prepared: wait for them (bounded

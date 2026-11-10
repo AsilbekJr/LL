@@ -46,10 +46,15 @@ bo'lmaydi" qoidasi har o'zgarishda avtomatik tekshiriladi.
 - Push eslatma so'zlar bilan sanaydi (migratsiya qo'llangan:
   `20261110000100_reminder_words.sql`).
 
-## 4. So'zni hayotdan tez ushlash
+## 4. So'zni hayotdan tez ushlash ✅
 
 - Telefonda matnni belgilab "Ulashish → LL": Qo'shish sahifasi so'z bilan ochiladi
-  (PWA share target).
+  (PWA share target). Qo'shtirnoq, tinish belgisi va sahifa manzili olib tashlanadi.
+- Lug'atda bor so'zning tarjimasi, misoli va turkumi o'zi to'ladi; yo'q bo'lsa
+  tarjimani foydalanuvchi yozadi.
+- Kirish talab qilinsa ham ulashilgan so'z yo'qolmaydi.
+- Ishlashi uchun ilova telefonga o'rnatilgan (Bosh ekranga qo'shilgan) bo'lishi kerak;
+  o'rnatilgan bo'lsa, manifest yangilanishi uchun qayta o'rnatish kerak bo'lishi mumkin.
 
 ## 5. Ishonchlilik
 

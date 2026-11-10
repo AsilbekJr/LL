@@ -116,6 +116,7 @@ export const uz = {
     single: "Bitta so'z",
     list: "Ro'yxat",
     submit: "Qo'shish",
+    shared: "Ulashilgan matn qo'shildi. Tarjimani tekshirib, saqlang.",
     added: (english: string, scheduled: boolean) =>
       scheduled ? `“${english}” qo'shildi va takrorlashga tushdi.` : `“${english}” kutubxonaga qo'shildi.`,
     duplicate: (english: string) => `“${english}” kutubxonada allaqachon bor.`,

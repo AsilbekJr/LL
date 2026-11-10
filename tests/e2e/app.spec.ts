@@ -108,6 +108,16 @@ test("picking a dictionary word fills example, part of speech and note", async (
   await expectInViewport(page, "Qo'shish");
 });
 
+test("a word shared from another app arrives filled in", async ({ page }) => {
+  // What the phone's share sheet opens: the selection, quoted, with the page address.
+  await page.goto("/qoshish?text=" + encodeURIComponent('"water." https://example.com/a') + "&title=Article");
+  await expect(page.getByRole("combobox", { name: "Inglizcha" })).toHaveValue("water");
+  // A dictionary word gets its translation without typing.
+  await expect(page.getByLabel("O'zbekcha", { exact: true })).not.toHaveValue("", { timeout: 15_000 });
+  await expectInViewport(page, "Qo'shish");
+  await noHorizontalScroll(page);
+});
+
 test("adds a pasted list and goes home", async ({ page }) => {
   await page.goto("/qoshish");
   await page.getByRole("tab", { name: "Ro'yxat" }).click();
