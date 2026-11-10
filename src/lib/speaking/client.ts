@@ -61,7 +61,7 @@ export async function fetchPatternFits(req: FitRequest): Promise<PatternFit[] | 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
     const out = fitSchema.safeParse(await res.json());

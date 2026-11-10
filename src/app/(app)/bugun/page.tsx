@@ -24,6 +24,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { addDays, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/srs/dates";
 import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
+import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
+import { fetchCorrections, fetchSpokenUses } from "@/lib/production/api";
 import { formatDayUz, greetingUz, studyStreak } from "@/lib/i18n/format";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -81,6 +83,12 @@ async function getToday() {
       .gt("due_date", tomorrow)
       .order("due_date")
       .limit(1),
+  ]);
+
+  // Extras: speaking progress. Never fail the page because of them.
+  const [uses, corrections] = await Promise.all([
+    fetchSpokenUses(supabase).catch(() => []),
+    fetchCorrections(supabase).catch(() => []),
   ]);
 
   const error = dueRes.error ?? stateRes.error ?? history.error ?? itemsRes.error;
@@ -159,6 +167,8 @@ async function getToday() {
     remaining: plan.queue.length,
     done,
     items: itemsRes.count ?? 0,
+    activeWords: activeCount(spokenDays(uses, tz)),
+    fixes: corrections.length,
     todayWords: todayWords.size,
     tomorrowWords: tomorrowWords.size,
     /** New words tomorrow's limit will let in. */
@@ -316,6 +326,47 @@ export default async function TodayPage() {
           tone={t.streak > 0 ? "streak" : undefined}
         />
       </dl>
+
+      {/* The goal of it all: words you can actually use when speaking. */}
+      <Link
+        href="/nutq"
+        className="mt-3 block rounded-xl border bg-card p-4 shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Mic className="size-3.5" aria-hidden />
+            {uz.today.activeTitle}
+          </p>
+          <p className="font-display text-xl font-semibold tabular-nums">
+            {t.activeWords} / {t.items}
+          </p>
+        </div>
+        <div
+          className="mt-2 h-2 overflow-hidden rounded-full bg-sunken"
+          role="progressbar"
+          aria-label={uz.today.activeTitle}
+          aria-valuemin={0}
+          aria-valuemax={t.items}
+          aria-valuenow={t.activeWords}
+        >
+          <div
+            className="h-full rounded-full bg-success"
+            style={{ width: `${t.items ? Math.round((t.activeWords / t.items) * 100) : 0}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{uz.today.activeBody(ACTIVE_DAYS)}</p>
+      </Link>
+
+      {t.fixes > 0 ? (
+        <Link
+          href="/nutq?tab=fix"
+          className="mt-3 flex items-center gap-3 rounded-xl border border-highlight/60 bg-highlight-soft px-4 py-3 text-sm font-semibold shadow-(--shadow-soft) outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <Mic className="size-4 shrink-0" aria-hidden />
+          <span className="flex-1">{uz.today.fixesWaiting(t.fixes)}</span>
+          <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
 
       {/* Quick actions */}
       <section aria-labelledby="quick-title" className="mt-8">

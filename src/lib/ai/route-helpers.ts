@@ -38,13 +38,16 @@ export async function geminiRoute<T>(opts: {
   timeoutMs?: number;
   maxOutputTokens?: number;
 }): Promise<NextResponse> {
+  const timeoutMs = opts.timeoutMs ?? 15_000;
   try {
     const raw = await geminiJsonFallback(aiModels("gemini"), {
       system: opts.system,
       user: opts.user,
       schema: opts.schema,
       maxOutputTokens: opts.maxOutputTokens ?? 2048,
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 15_000),
+      signal: AbortSignal.timeout(timeoutMs),
+      // A hanging model leaves time for one fallback model.
+      attemptTimeoutMs: Math.ceil(timeoutMs * 0.55),
     });
     const out = opts.parse(JSON.parse(raw));
     if (!out.success) return NextResponse.json({ error: "bad_output" }, { status: 502 });

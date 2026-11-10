@@ -81,6 +81,9 @@ test("adds a word, goes home, and rejects the duplicate", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "takrorlashga tushdi" })).toBeVisible();
   // The new word is in today's plan at once, counted as one word (not two cards).
   await expect(page.getByText("1 ta yangi so'z sizni kutmoqda")).toBeVisible();
+  // The goal metric is on the home page: words usable in speech, out of all words.
+  await expect(page.getByRole("progressbar", { name: "Faol so'zlar" })).toBeVisible();
+  await expect(page.getByText("0 / 1", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Boshlash" })).toBeVisible();
   await add();
   await expect(page.getByRole("status").filter({ hasText: "allaqachon bor" })).toBeVisible();
@@ -201,6 +204,10 @@ test("review session works offline and syncs afterwards", async ({ page, context
 
   for (let i = 0; i < 40 && (await answerOne(page)); i++);
   await expect(page.getByRole("heading", { name: "Sessiya tugadi!" })).toBeVisible();
+  // Back home the plan is done and says what comes next.
+  await page.getByRole("link", { name: "Bosh sahifaga" }).click();
+  await expect(page.getByRole("heading", { name: "Bugungi reja bajarildi" })).toBeVisible();
+  await expect(page.getByText(/^Ertaga: \d+ ta so'zni takrorlash/)).toBeVisible();
 });
 
 test("speaking conversation: strict check, AI judge, next question", async ({ page }) => {
@@ -214,6 +221,10 @@ test("speaking conversation: strict check, AI judge, next question", async ({ pa
   await page.getByRole("tab", { name: "Suhbat" }).click();
   await page.getByRole("button", { name: "Suhbatni boshlash" }).click();
   const answerBox = page.getByRole("textbox");
+  // The live AI is sometimes slow: the app then offers a retry, which a learner would tap.
+  const retry = page.getByRole("button", { name: "Qayta urinish" });
+  await expect(answerBox.or(retry)).toBeVisible({ timeout: 30_000 });
+  if (await retry.isVisible()) await retry.click();
   await expect(answerBox).toBeVisible({ timeout: 30_000 });
 
   // A restarted sentence fails offline, before any AI call.
@@ -245,21 +256,18 @@ test("speaking patterns: a sensible frame for the word, or an honest 'no fit'", 
   await page.goto("/nutq");
   await page.getByRole("tab", { name: "Qoliplar" }).click();
   await page.getByRole("radio", { name: "A1" }).click();
-  const card = page.getByText("Sizning so'zingiz");
+  const card = page.getByText("Bo'sh joyga (…) shu so'zni qo'ying");
   const noFit = page.getByText(/Bu darajadagi qoliplar uchun mos so'z yo'q/);
+  // AI checks are time-boxed (12 s + one request), then part of speech decides.
   await expect(card.or(noFit)).toBeVisible({ timeout: 45_000 });
   if (await card.isVisible()) {
-    // The AI-checked model sentence uses the learner's own word.
-    const word = (await page
-      .getByText(/^Sizning so'zingiz/)
-      .locator("..")
-      .locator("span[lang=en]")
-      .textContent())!;
+    const word = (await card.locator("..").locator("span[lang=en]").textContent())!;
+    expect(word.trim().length).toBeGreaterThan(0);
+    // With AI: a ready model sentence for the learner's own word, hidden until asked for.
     const show = page.getByRole("button", { name: /bilan tayyor javobni ko'rish$/ });
     if (await show.isVisible()) {
       await show.click();
       await expect(page.getByText(/bilan tayyor javob$/)).toBeVisible();
-      expect(word.trim().length).toBeGreaterThan(0);
     }
   }
   await noHorizontalScroll(page);

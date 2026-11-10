@@ -55,10 +55,12 @@ export function SpeakingClient({
   ttsRate,
   ttsVoice,
   aiEnabled,
+  initialTab,
 }: {
   ttsRate: number;
   ttsVoice: string | null;
   aiEnabled: boolean;
+  initialTab?: "dialog" | "pattern" | "fix" | "more";
 }) {
   const t = uz.speaking;
   const items = useQuery({ queryKey: ["practice-items"], queryFn: () => fetchPracticeItems(sb()) });
@@ -109,7 +111,7 @@ export function SpeakingClient({
   return (
     <div className="flex flex-col gap-5">
       <ActiveVocabulary active={activeCount(progress)} total={items.data.length} />
-      <Tabs defaultValue={aiEnabled ? "dialog" : "pattern"}>
+      <Tabs defaultValue={initialTab ?? (aiEnabled ? "dialog" : "pattern")}>
         {/* Three core methods; the rest live under "Boshqa". */}
         <TabsList className="grid w-full grid-cols-4 [&>button]:gap-1.5 [&>button]:px-1 [&>button>svg]:hidden sm:[&>button>svg]:block">
           <TabsTrigger value="dialog">

@@ -105,6 +105,34 @@ describe("AI model fallback", () => {
     expect(calls).toHaveLength(3);
   });
 
+  it("moves on when a model hangs, instead of failing the whole request", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "k");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: { signal: AbortSignal }) => {
+        if (url.includes("/slow:")) {
+          // Never answers: only the abort ends it.
+          return new Promise((_, reject) =>
+            init.signal.addEventListener("abort", () => reject(init.signal.reason)),
+          );
+        }
+        return Promise.resolve(
+          Response.json({
+            candidates: [{ finishReason: "STOP", content: { parts: [{ text: '{"ok":true}' }] } }],
+          }),
+        );
+      }),
+    );
+    const out = await geminiJsonFallback(["slow", "good"], {
+      system: "s",
+      user: "u",
+      schema: {},
+      signal: AbortSignal.timeout(5_000),
+      attemptTimeoutMs: 50,
+    });
+    expect(out).toBe('{"ok":true}');
+  });
+
   it("does not retry other models when the key is missing", async () => {
     vi.stubEnv("GEMINI_API_KEY", "");
     const fetchMock = vi.fn();

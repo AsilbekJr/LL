@@ -53,6 +53,25 @@ describe("pickSensiblePattern", () => {
     expect(p?.model).toBeNull();
   });
 
+  it("stops asking a slow AI and falls back when the time budget is used up", async () => {
+    let t = 0;
+    const fits = vi.fn(async () => {
+      t += 10_000; // every answer takes 10 s
+      return [];
+    });
+    const p = await pickSensiblePattern({
+      level: "A1",
+      items: [guy, water, { ...water, id: "t", english: "tea", uzbek: "choy" }],
+      random: first,
+      fits,
+      now: () => t,
+      budgetMs: 12_000,
+    });
+    expect(fits).toHaveBeenCalledTimes(2);
+    expect(p?.model).toBeNull();
+    expect(p?.item).toBeDefined();
+  });
+
   it("'other word' keeps the frame and skips the current word", async () => {
     const fits = vi.fn(async (req: FitRequest) =>
       req.patterns.map((p) => ({ id: p.id, sentence: `${req.word.english}!`, sentence_uz: "" })),

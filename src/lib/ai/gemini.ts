@@ -43,15 +43,27 @@ interface GeminiResponse {
  */
 export async function geminiJsonFallback(
   models: readonly string[],
-  opts: Omit<Parameters<typeof geminiJson>[0], "model">,
+  opts: Omit<Parameters<typeof geminiJson>[0], "model"> & {
+    /**
+     * Time one model may take before the next one is tried. Without it a model
+     * that hangs uses up the whole request and the fallback never runs.
+     */
+    attemptTimeoutMs?: number;
+  },
 ): Promise<string> {
+  const { attemptTimeoutMs, ...call } = opts;
   let last: unknown = new GeminiError("misconfigured", "no Gemini model configured");
   for (const model of models) {
     if (opts.signal?.aborted) break;
+    const attempt = attemptTimeoutMs ? AbortSignal.timeout(attemptTimeoutMs) : null;
+    const signal =
+      attempt && opts.signal ? AbortSignal.any([opts.signal, attempt]) : (attempt ?? opts.signal);
     try {
-      return await geminiJson({ ...opts, model });
+      return await geminiJson({ ...call, model, signal });
     } catch (error) {
       last = error;
+      // This model was too slow, the request as a whole still has time: try the next one.
+      if (attempt?.aborted && !opts.signal?.aborted) continue;
       if (error instanceof GeminiError && (error.kind === "refused" || error.kind === "truncated"))
         throw error;
       if (!(error instanceof GeminiError)) throw error;

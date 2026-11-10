@@ -78,6 +78,9 @@ export const uz = {
     addWord: "So'z qo'shish",
     importPack: "To'plam import qilish",
     quickTitle: "Tezkor amallar",
+    activeTitle: "Faol so'zlar",
+    activeBody: (days: number) => `Nutqda ${days} xil kunda to'g'ri ishlatilgan so'zlar`,
+    fixesWaiting: (n: number) => `${n} ta xato gap to'g'rilashni kutmoqda`,
   },
   items: {
     english: "Inglizcha",
@@ -224,6 +227,9 @@ export const uz = {
     productionPending:
       "Bu so'zni haqiqatan bilishingizni ko'rsatish vaqti: uni o'z gapingizda ishlating. Yozma va og'zaki mashqdan o'tmaguncha so'z oxirgi bosqichlarga chiqmaydi.",
     gotIt: "Tushundim",
+    fixStage: (n: number) => `Xato gaplarni to'g'rilash (${n})`,
+    fixStageBody: (n: number) =>
+      `Oxirgi bosqich: nutq mashqlarida xato aytilgan ${n} ta gapni to'g'ri variantida ovoz chiqarib ayting.`,
     secondDirection:
       "Bu so'zni tanib olishni o'rgandingiz. Endi keyingi bosqich: o'zbekchasini ko'rib, inglizchasini o'zingiz eslaysiz.",
     listen: "Tinglash",

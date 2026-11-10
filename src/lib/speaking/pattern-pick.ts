@@ -19,6 +19,8 @@ export interface PatternPick<T extends Item> {
 
 /** How many words are tried before giving up on a sensible pair. */
 export const MAX_WORD_TRIES = 6;
+/** Total time for the AI checks; after it the pick falls back to part-of-speech matching. */
+export const PICK_BUDGET_MS = 12_000;
 
 function shuffle<T>(arr: T[], random: () => number): T[] {
   const out = [...arr];
@@ -47,6 +49,9 @@ export async function pickSensiblePattern<T extends Item>(opts: {
   pattern?: string;
   /** Don't use this word. */
   excludeItem?: string;
+  /** Clock and time budget, injectable for tests. */
+  now?: () => number;
+  budgetMs?: number;
 }): Promise<PatternPick<T> | null> {
   const { level, random } = opts;
   const patterns = PATTERNS.filter(
@@ -60,7 +65,21 @@ export async function pickSensiblePattern<T extends Item>(opts: {
     random,
   );
 
+  const now = opts.now ?? Date.now;
+  const deadline = now() + (opts.budgetMs ?? PICK_BUDGET_MS);
+  const byPartOfSpeech = (): PatternPick<T> | null => {
+    const p = pickPattern(level, items, random, opts.avoid);
+    if (!opts.pattern) return p && { ...p, model: null };
+    const pattern = patterns[0];
+    const fit = pattern ? items.filter((i) => fitsSlot(pattern.slot, i)) : [];
+    return pattern && fit.length
+      ? { pattern, item: fit[Math.floor(random() * fit.length)]!, model: null }
+      : null;
+  };
+
   for (const c of candidates.slice(0, MAX_WORD_TRIES)) {
+    // A slow AI must not leave the learner staring at a spinner.
+    if (now() >= deadline) return byPartOfSpeech();
     const frames = shuffle(c.frames, random).slice(0, MAX_FIT_PATTERNS);
     const fits = await opts.fits({
       level,
@@ -71,16 +90,8 @@ export async function pickSensiblePattern<T extends Item>(opts: {
       },
       patterns: frames.map((p) => ({ id: p.id, en: p.en })),
     });
-    if (fits === null) {
-      // AI unavailable: part-of-speech matching only.
-      const p = pickPattern(level, items, random, opts.avoid);
-      if (!opts.pattern) return p && { ...p, model: null };
-      const pattern = patterns[0];
-      const fit = pattern ? items.filter((i) => fitsSlot(pattern.slot, i)) : [];
-      return pattern && fit.length
-        ? { pattern, item: fit[Math.floor(random() * fit.length)]!, model: null }
-        : null;
-    }
+    // AI unavailable: part-of-speech matching only.
+    if (fits === null) return byPartOfSpeech();
     const usable = fits.filter((f) => frames.some((p) => p.id === f.id));
     if (usable.length) {
       const model = usable[Math.floor(random() * usable.length)]!;

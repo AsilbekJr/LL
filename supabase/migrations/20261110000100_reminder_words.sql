@@ -1,8 +1,7 @@
 -- =====================================================================
 -- Push reminders count WORDS the way the "Bugun" page does, instead of
--- cards: only the direction(s) the user studies, and one direction per
--- word in 'random' mode. Before this a word with both directions due was
--- announced as two reviews ("26 ta takrorlash" for 13 words).
+-- cards: a word shows one direction a day, so a word with both directions
+-- due is one review, not two ("26 ta takrorlash" for 13 words before).
 -- Same signature and columns, so the Edge Function needs no change.
 -- =====================================================================
 create or replace function public.claim_due_reminders(
@@ -17,13 +16,13 @@ as $$
 begin
   return query
   with slots as (
-    select s.user_id, s.direction_mode, (p_now at time zone s.timezone) as local_ts, t.slot
+    select s.user_id, (p_now at time zone s.timezone) as local_ts, t.slot
     from public.settings s
     cross join unnest(s.reminder_times) as t (slot)
     where exists (select 1 from public.push_subscriptions ps where ps.user_id = s.user_id)
   ),
   matching as (
-    select sl.user_id, sl.direction_mode, sl.local_ts::date as day, sl.slot
+    select sl.user_id, sl.local_ts::date as day, sl.slot
     from slots sl
     where sl.local_ts::time >= sl.slot
       and sl.local_ts::time < sl.slot + make_interval(mins => p_window_minutes)
@@ -36,7 +35,6 @@ begin
     left join public.cards c
       on c.user_id = m.user_id
      and c.status in ('learning', 'review', 'mastered')
-     and (m.direction_mode in ('random', 'both') or c.direction = m.direction_mode)
     group by m.user_id, m.day, m.slot
   ),
   claimed as (

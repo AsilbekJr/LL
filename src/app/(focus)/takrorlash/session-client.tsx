@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CloudOff, Info, Loader2, Plus, RotateCcw, Sparkles, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, CloudOff, Info, Loader2, Mic, Plus, RotateCcw, Sparkles, X } from "lucide-react";
 import { EmptyState } from "@/components/common/empty-state";
 import {
   ChoiceView,
@@ -34,7 +34,8 @@ import {
   type SessionState,
 } from "@/lib/session/engine";
 import { planExercise } from "@/lib/session/exercise";
-import type { ProductionWrite } from "@/lib/production/api";
+import { fetchCorrections, saveProductions, type ProductionWrite } from "@/lib/production/api";
+import { FixPractice } from "@/app/(app)/nutq/fix-practice";
 import { productionPrompt } from "@/lib/production/contexts";
 import { canSpeak, prefetchSpeech } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
@@ -181,6 +182,17 @@ function Session({
   const [state, setState] = useState<SessionState>(() => createSession(data.cards, data.load));
   const [startedAt] = useState(() => Date.now());
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
+  // Last stage of the daily session: say yesterday's corrected sentences aloud.
+  const [fixing, setFixing] = useState(false);
+  const qc = useQueryClient();
+  const saveFixes = useCallback(
+    (rows: ProductionWrite[]) => {
+      void saveProductions(getSupabaseBrowserClient(), rows)
+        .then(() => qc.invalidateQueries({ queryKey: ["speaking-corrections"] }))
+        .catch(() => undefined);
+    },
+    [qc],
+  );
   const shownAt = useRef(0);
   const writer = useAnswerWriter();
 
@@ -297,8 +309,16 @@ function Session({
       </header>
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 pt-4 pb-10">
-        {isFinished(state) || !sc || !exercise ? (
+        {fixing ? (
+          <div className="animate-rise flex flex-1 flex-col gap-5">
+            <FixPractice speech={speech} onSave={saveFixes} />
+            <Button asChild variant="outline" size="lg">
+              <Link href="/bugun">{uz.review.backToday}</Link>
+            </Button>
+          </div>
+        ) : isFinished(state) || !sc || !exercise ? (
           <Summary
+            onFix={() => setFixing(true)}
             state={state}
             minutes={Math.max(1, Math.round(((finishedAt ?? startedAt) - startedAt) / 60_000))}
             dueRemaining={data.dueRemaining}
@@ -384,12 +404,14 @@ function SaveStatus({ pending, failed, onRetry }: { pending: number; failed: boo
 }
 
 function Summary({
+  onFix,
   state,
   minutes,
   dueRemaining,
   onRestart,
   saving,
 }: {
+  onFix: () => void;
   state: SessionState;
   minutes: number;
   dueRemaining: number;
@@ -399,6 +421,13 @@ function Summary({
 }) {
   const acc = accuracy(state.stats);
   const t = uz.review;
+  // Optional last stage; offline or on an error the session simply ends here.
+  const fixes = useQuery({
+    queryKey: ["speaking-corrections"],
+    queryFn: () => fetchCorrections(getSupabaseBrowserClient()),
+    retry: false,
+  });
+  const fixCount = fixes.data?.length ?? 0;
   return (
     <section className="animate-rise flex flex-1 flex-col items-center justify-center gap-6 py-6 text-center">
       <ProgressRing value={acc ?? 1} label={t.accuracy} size={144} stroke={12}>
@@ -425,7 +454,16 @@ function Summary({
       </dl>
       {dueRemaining > 0 ? <p className="text-sm text-muted-foreground">{t.moreDue(dueRemaining)}</p> : null}
       <div className="flex w-full max-w-sm flex-col gap-2">
-        <Button asChild size="lg">
+        {fixCount > 0 ? (
+          <>
+            <p className="text-sm text-muted-foreground">{t.fixStageBody(fixCount)}</p>
+            <Button size="lg" onClick={onFix}>
+              <Mic aria-hidden />
+              {t.fixStage(fixCount)}
+            </Button>
+          </>
+        ) : null}
+        <Button asChild size="lg" variant={fixCount > 0 ? "outline" : "default"}>
           <Link href="/bugun">{t.backToday}</Link>
         </Button>
         <Button variant="outline" onClick={onRestart} disabled={saving}>

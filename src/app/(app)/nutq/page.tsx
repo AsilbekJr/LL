@@ -7,7 +7,11 @@ import { SpeakingClient } from "./speaking-client";
 
 export const metadata: Metadata = { title: uz.nav.speaking };
 
-export default async function SpeakingPage() {
+const TABS = ["dialog", "pattern", "fix", "more"] as const;
+
+export default async function SpeakingPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  const initialTab = TABS.find((t) => t === tab);
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase.from("settings").select("tts_rate, tts_voice").maybeSingle();
 
@@ -18,6 +22,7 @@ export default async function SpeakingPage() {
         ttsRate={Number(data?.tts_rate ?? 1)}
         ttsVoice={data?.tts_voice ?? null}
         aiEnabled={aiFeedbackEnabled() && aiProvider() === "gemini"}
+        initialTab={initialTab}
       />
     </>
   );

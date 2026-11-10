@@ -35,14 +35,16 @@ bo'lmaydi" qoidasi har o'zgarishda avtomatik tekshiriladi.
 - Nutq: 4 ta tab — Suhbat, Qoliplar, Xatolar, Boshqa (Tarjima, Erkin nutq, Shadowing).
 - "Yodlanganlar" menyudan olindi; Kutubxonada "Yodlangan" filtri tanlanganda unga havola chiqadi.
 
-## 3. Bitta kunlik sessiya
+## 3. Bitta kunlik sessiya ✅
 
-- "Boshlash": takrorlash → yangi so'zlar → oxirida kechagi xato gaplarni to'g'rilab aytish
-  (hozirgi "Xatolar" tabi) bitta oqimda.
-- Bugun sahifasida asosiy ko'rsatkich: **faol so'zlar** (nutqda 3 xil kunda to'g'ri
-  ishlatilgan), ketma-ketlik yonida.
-- Push eslatma so'zlar bilan sanaydi (migratsiya tayyor:
-  `20261110000100_reminder_words.sql`, qo'llash uchun ruxsat kerak).
+- Sessiya oxirida oxirgi bosqich: nutq mashqlarida xato aytilgan gaplar bo'lsa,
+  "Xato gaplarni to'g'rilash (N)" tugmasi shu yerning o'zida mashqni ochadi.
+- Bugun sahifasida **faol so'zlar** ko'rsatkichi (nutqda 3 xil kunda to'g'ri ishlatilgan
+  so'zlar / hamma so'zlar) va to'g'rilanmagan xato gaplar uchun havola.
+- AI ishonchliligi: model osilib qolsa, zaxira modelga o'tiladi; qolip tanlash 12 soniyadan
+  keyin so'z turkumi bo'yicha tanlashga qaytadi.
+- Push eslatma so'zlar bilan sanaydi (migratsiya qo'llangan:
+  `20261110000100_reminder_words.sql`).
 
 ## 4. So'zni hayotdan tez ushlash
 
