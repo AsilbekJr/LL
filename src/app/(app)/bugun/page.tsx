@@ -26,6 +26,7 @@ import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
 import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
 import { fetchCorrections, fetchSpokenUses } from "@/lib/production/api";
+import { HARD_LAPSES } from "@/lib/items/library";
 import { formatDayUz, greetingUz, studyStreak } from "@/lib/i18n/format";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
@@ -86,9 +87,11 @@ async function getToday() {
   ]);
 
   // Extras: speaking progress. Never fail the page because of them.
-  const [uses, corrections] = await Promise.all([
+  const [uses, corrections, hardCards] = await Promise.all([
     fetchSpokenUses(supabase).catch(() => []),
     fetchCorrections(supabase).catch(() => []),
+    // Words that keep being forgotten: they need a better example, not more repeats.
+    supabase.from("cards").select("item_id").in("status", ["learning", "review"]).gte("lapses", HARD_LAPSES),
   ]);
 
   const error = dueRes.error ?? stateRes.error ?? history.error ?? itemsRes.error;
@@ -169,6 +172,7 @@ async function getToday() {
     items: itemsRes.count ?? 0,
     activeWords: activeCount(spokenDays(uses, tz)),
     fixes: corrections.length,
+    hardWords: new Set((hardCards.data ?? []).map((c) => c.item_id)).size,
     todayWords: todayWords.size,
     tomorrowWords: tomorrowWords.size,
     /** New words tomorrow's limit will let in. */
@@ -364,6 +368,17 @@ export default async function TodayPage() {
         >
           <Mic className="size-4 shrink-0" aria-hidden />
           <span className="flex-1">{uz.today.fixesWaiting(t.fixes)}</span>
+          <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
+
+      {t.hardWords > 0 ? (
+        <Link
+          href="/kutubxona?qiyin=1"
+          className="mt-3 flex items-center gap-3 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm font-semibold shadow-(--shadow-soft) outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden />
+          <span className="flex-1">{uz.today.hardWaiting(t.hardWords)}</span>
           <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
         </Link>
       ) : null}

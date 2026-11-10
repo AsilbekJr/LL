@@ -80,6 +80,7 @@ export const uz = {
     quickTitle: "Tezkor amallar",
     activeTitle: "Faol so'zlar",
     activeBody: (days: number) => `Nutqda ${days} xil kunda to'g'ri ishlatilgan so'zlar`,
+    hardWaiting: (n: number) => `${n} ta qiyin so'z: misol yoki izoh qo'shing`,
     fixesWaiting: (n: number) => `${n} ta xato gap to'g'rilashni kutmoqda`,
   },
   items: {
@@ -110,6 +111,7 @@ export const uz = {
       suspended: "To'xtatilgan",
     },
     overdue: "Kechikkan",
+    hard: "Qiyin",
   },
   add: {
     description: "So'zni bittalab yoki butun ro'yxat qilib qo'shing.",
@@ -151,6 +153,10 @@ export const uz = {
     filters: "Filtrlar",
     sort: { newest: "Yangilari", oldest: "Eskilari", az: "A–Z" },
     overdueOnly: "Faqat kechikkanlar",
+    hardOnly: "Faqat qiyin so'zlar",
+    hardTip: (n: number) =>
+      `Bu so'zlar ${n} va undan ko'p marta unutilgan. Shunchaki takrorlash yordam bermayapti: so'zni ochib, o'zingizga tanish misol gap yoki eslab qolish uchun izoh qo'shing.`,
+    showAll: "Hammasini ko'rsatish",
     resetFilters: "Filtrlarni tozalash",
     results: (n: number) => `${n} ta natija`,
     selected: (n: number) => `${n} ta tanlandi`,

@@ -23,7 +23,7 @@ type Client = SupabaseClient<Database>;
 
 const PAGE = 1000; // PostgREST default max rows per request
 const WRITE_CHUNK = 500;
-const LIBRARY_COLUMNS = "*, cards(id, direction, status, due_date, reps, ladder_step)";
+const LIBRARY_COLUMNS = "*, cards(id, direction, status, due_date, reps, ladder_step, lapses)";
 
 export class ItemsApiError extends Error {
   constructor(

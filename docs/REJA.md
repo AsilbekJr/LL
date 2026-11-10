@@ -56,10 +56,18 @@ bo'lmaydi" qoidasi har o'zgarishda avtomatik tekshiriladi.
 - Ishlashi uchun ilova telefonga o'rnatilgan (Bosh ekranga qo'shilgan) bo'lishi kerak;
   o'rnatilgan bo'lsa, manifest yangilanishi uchun qayta o'rnatish kerak bo'lishi mumkin.
 
-## 5. Ishonchlilik
+## 5. Ishonchlilik ✅
 
-- Ma'lumot eksporti (JSON/CSV) — avval mavjudligi tekshiriladi.
-- Qiyin so'zlar: qayta-qayta "Qayta" bosilayotgan so'zni aniqlash va boshqa usul taklif qilish.
+- Ma'lumot eksporti allaqachon bor ekan: Import → Zaxira (so'zlar, kartalar, takrorlash
+  tarixi, sozlamalar; matnlar kirmaydi). Yangi ish kerak bo'lmadi.
+- Qiyin so'zlar: o'rganilayotgan va 3+ marta unutilgan so'z "Qiyin" belgisi oladi.
+  Kutubxonada "Faqat qiyin so'zlar" filtri va maslahat; Bugun sahifasida ular bo'lsa havola.
+
+## Keyingi g'oyalar (rejalashtirilmagan)
+
+- Zaxiraga matnlar va nutq tarixini qo'shish.
+- Qiyin so'z uchun AI yordamida yangi misol yoki eslab qolish usuli taklif qilish.
+- Lug'atda yo'q ulashilgan so'z uchun tarjimani AI bilan taklif qilish.
 
 ## Qilinmaydigan ishlar (hozircha)
 

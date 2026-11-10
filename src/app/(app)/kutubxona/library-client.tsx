@@ -29,6 +29,8 @@ import { useBulkAction, useLibrary, useToday, useUpdateItem } from "@/hooks/use-
 import {
   collectTags,
   filterLibrary,
+  HARD_LAPSES,
+  isHardItem,
   isItemOverdue,
   itemStatus,
   type ItemStatus,
@@ -53,7 +55,7 @@ const STATUS_TONE = {
 
 type Bulk = "schedule" | "suspend" | "resume" | "delete";
 
-export function LibraryClient() {
+export function LibraryClient({ hardOnly }: { hardOnly?: boolean }) {
   const t = uz.library;
   const library = useLibrary();
   const todayQ = useToday();
@@ -62,7 +64,7 @@ export function LibraryClient() {
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const [filter, setFilter] = useState<Omit<LibraryFilter, "query">>({});
+  const [filter, setFilter] = useState<Omit<LibraryFilter, "query">>(hardOnly ? { hardOnly: true } : {});
   const [sort, setSort] = useState<LibrarySort>("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(PAGE);
@@ -216,6 +218,15 @@ export function LibraryClient() {
         })}
       </div>
 
+      {filter.hardOnly ? (
+        <Notice tone="warning" icon={AlertTriangle}>
+          {t.hardTip(HARD_LAPSES)}{" "}
+          <button type="button" className="font-semibold underline" onClick={() => setF("hardOnly", false)}>
+            {t.showAll}
+          </button>
+        </Notice>
+      ) : null}
+
       {filter.status === "mastered" ? (
         <Link
           href="/yodlanganlar"
@@ -288,6 +299,15 @@ export function LibraryClient() {
             onChange={(e) => setF("overdueOnly", e.target.checked)}
           />
           {t.overdueOnly}
+        </label>
+        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-3">
+          <input
+            type="checkbox"
+            className="size-5 accent-primary"
+            checked={filter.hardOnly ?? false}
+            onChange={(e) => setF("hardOnly", e.target.checked)}
+          />
+          {t.hardOnly}
         </label>
         {activeFilters ? (
           <Button
@@ -450,6 +470,7 @@ function LibraryRow({
         <span className="flex shrink-0 flex-col items-end gap-1">
           <span className="flex gap-1">
             {overdue ? <Badge tone="danger">{uz.items.overdue}</Badge> : null}
+            {isHardItem(item.cards) ? <Badge tone="warning">{uz.items.hard}</Badge> : null}
             <Badge tone={STATUS_TONE[status]}>{uz.items.status[status]}</Badge>
           </span>
           {item.cefr_level || item.tags.length ? (

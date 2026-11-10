@@ -140,6 +140,16 @@ test("library search finds the new words", async ({ page }) => {
   await expect(page.getByText("3 ta natija")).toBeVisible();
 });
 
+test("hard words filter explains itself and can be cleared", async ({ page }) => {
+  await page.goto("/kutubxona?qiyin=1");
+  // Fresh words were never forgotten: the list is empty, the tip says what the filter is.
+  await expect(page.getByText(/marta unutilgan/)).toBeVisible();
+  await page.getByRole("button", { name: "Hammasini ko'rsatish" }).click();
+  await expect(page.getByText(/marta unutilgan/)).toBeHidden();
+  await expect(page.getByRole("checkbox").first()).toBeVisible();
+  await noHorizontalScroll(page);
+});
+
 test("import rejects an invalid file and previews a sample pack", async ({ page }) => {
   await page.goto("/import");
   await page.getByRole("tab", { name: "Fayl" }).click();

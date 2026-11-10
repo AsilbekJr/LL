@@ -8,7 +8,8 @@ import { LibraryClient } from "./library-client";
 
 export const metadata: Metadata = { title: uz.nav.library };
 
-export default function LibraryPage() {
+export default async function LibraryPage({ searchParams }: { searchParams: Promise<{ qiyin?: string }> }) {
+  const { qiyin } = await searchParams;
   return (
     <>
       <PageHeader
@@ -22,7 +23,7 @@ export default function LibraryPage() {
           </Button>
         }
       />
-      <LibraryClient />
+      <LibraryClient hardOnly={qiyin === "1"} />
     </>
   );
 }

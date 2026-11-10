@@ -3,8 +3,19 @@ import type { CardStatus, CefrLevel, ItemType, Tables } from "@/lib/supabase/dat
 
 /** An item with the scheduling fields of its cards (library row). */
 export type LibraryItem = Tables<"items"> & {
-  cards: Pick<Tables<"cards">, "id" | "direction" | "status" | "due_date" | "reps" | "ladder_step">[];
+  cards: Pick<
+    Tables<"cards">,
+    "id" | "direction" | "status" | "due_date" | "reps" | "ladder_step" | "lapses"
+  >[];
 };
+
+/** Forgotten this many times, a word is "hard": repeating it the same way is not working. */
+export const HARD_LAPSES = 3;
+
+/** A word still being learned that keeps being forgotten (mastered and paused words are not). */
+export function isHardItem(cards: Pick<LibraryItem["cards"][number], "status" | "lapses">[]): boolean {
+  return cards.some((c) => (c.status === "learning" || c.status === "review") && c.lapses >= HARD_LAPSES);
+}
 
 /**
  * Item-level status shown in the library:
@@ -41,6 +52,7 @@ export interface LibraryFilter {
   cefr?: CefrLevel | "all";
   tag?: string | "all";
   overdueOnly?: boolean;
+  hardOnly?: boolean;
 }
 
 export type LibrarySort = "newest" | "oldest" | "az";
@@ -68,6 +80,7 @@ export function filterLibrary<T extends LibraryItem>(
     if (filter.tag && filter.tag !== "all" && !i.tags.includes(filter.tag)) return false;
     if (filter.status && filter.status !== "all" && itemStatus(i.cards) !== filter.status) return false;
     if (filter.overdueOnly && !isItemOverdue(i.cards, today)) return false;
+    if (filter.hardOnly && !isHardItem(i.cards)) return false;
     return true;
   });
   return out.sort((a, b) => {

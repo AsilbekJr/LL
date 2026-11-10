@@ -3,6 +3,7 @@ import { chunk, dedupeItems } from "@/lib/items/dedupe";
 import {
   collectTags,
   filterLibrary,
+  isHardItem,
   isItemOverdue,
   itemStatus,
   resumePlan,
@@ -100,13 +101,14 @@ describe("dedupeItems", () => {
 
 describe("library", () => {
   const TODAY = "2026-11-06";
-  const card = (status: LibraryItem["cards"][number]["status"], due = TODAY, reps = 0) => ({
+  const card = (status: LibraryItem["cards"][number]["status"], due = TODAY, reps = 0, lapses = 0) => ({
     id: `${status}-${due}-${reps}`,
     direction: "en_uz" as const,
     status,
     due_date: due,
     reps,
     ladder_step: 0,
+    lapses,
   });
   const item = (over: Partial<LibraryItem>): LibraryItem => ({
     id: Math.random().toString(36),
@@ -134,6 +136,20 @@ describe("library", () => {
     expect(itemStatus([card("new"), card("learning")])).toBe("learning");
     expect(itemStatus([card("mastered"), card("suspended")])).toBe("mastered");
     expect(itemStatus([card("suspended"), card("suspended")])).toBe("suspended");
+  });
+
+  it("a hard word is one still being learned that was forgotten 3+ times", () => {
+    expect(isHardItem([card("learning", TODAY, 5, 3)])).toBe(true);
+    expect(isHardItem([card("review", TODAY, 5, 2), card("review", TODAY, 5, 4)])).toBe(true);
+    expect(isHardItem([card("review", TODAY, 5, 2)])).toBe(false);
+    // Mastered or paused: no longer a problem to solve.
+    expect(isHardItem([card("mastered", TODAY, 9, 5)])).toBe(false);
+    expect(isHardItem([card("suspended", TODAY, 9, 5)])).toBe(false);
+    const items = [
+      item({ english: "easy", cards: [card("review", TODAY, 3, 0)] }),
+      item({ english: "stubborn", cards: [card("learning", TODAY, 6, 4)] }),
+    ];
+    expect(filterLibrary(items, { hardOnly: true }, TODAY).map((i) => i.english)).toEqual(["stubborn"]);
   });
 
   it("detects overdue items", () => {
