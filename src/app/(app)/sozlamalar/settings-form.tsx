@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { useFieldArray, useForm, useFormState, useWatch } from "react-hook-form";
-import { AlertTriangle, CheckCircle2, Loader2, Plus, Volume2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Plus, Volume2, X } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Notice, Select } from "@/components/ui/form-controls";
@@ -88,6 +88,8 @@ export function SettingsForm({
     defaultValue: defaults[name] as string,
   });
   const reminders = useFieldArray({ control, name: "reminder_times" });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedError = Boolean(errors.ladder ?? errors.production_gate_steps ?? errors.maintenance_days);
   const ttsRate = useWatch({ control, name: "tts_rate" });
   const ttsVoice = useWatch({ control, name: "tts_voice" });
 
@@ -146,36 +148,53 @@ export function SettingsForm({
         </div>
       </Section>
 
-      <Section title={t.algorithm}>
-        <Field id="srs_mode" label={t.srsMode}>
-          <Select {...field("srs_mode")}>
-            <option value="ladder">{t.srsModes.ladder}</option>
-            <option value="fsrs">{t.srsModes.fsrs}</option>
-          </Select>
-        </Field>
-        <Field id="ladder" label={t.ladder} hint={t.ladderHint} error={errors.ladder?.message}>
-          <Input inputMode="numeric" autoComplete="off" {...field("ladder")} />
-        </Field>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field
-            id="production_gate_steps"
-            label={t.gateSteps}
-            hint={t.gateStepsHint}
-            error={errors.production_gate_steps?.message}
-          >
-            <Input type="number" inputMode="numeric" min={0} max={30} {...field("production_gate_steps")} />
+      {/* Sensible defaults: most learners never need these. Opens by itself on an error. */}
+      <details
+        className="group rounded-2xl border bg-card shadow-(--shadow-soft)"
+        open={advancedOpen || advancedError}
+        onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:p-6 [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="block font-display text-xl font-semibold">{t.advanced}</span>
+            <span className="mt-0.5 block text-sm text-muted-foreground">{t.advancedHint}</span>
+          </span>
+          <ChevronDown
+            className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
+        <div className="flex flex-col gap-5 px-5 pb-5 sm:px-6 sm:pb-6">
+          <Field id="srs_mode" label={t.srsMode}>
+            <Select {...field("srs_mode")}>
+              <option value="ladder">{t.srsModes.ladder}</option>
+              <option value="fsrs">{t.srsModes.fsrs}</option>
+            </Select>
           </Field>
-          <Field id="maintenance_days" label={t.maintenance} error={errors.maintenance_days?.message}>
-            <Input type="number" inputMode="numeric" min={30} max={3650} {...field("maintenance_days")} />
+          <Field id="ladder" label={t.ladder} hint={t.ladderHint} error={errors.ladder?.message}>
+            <Input inputMode="numeric" autoComplete="off" {...field("ladder")} />
           </Field>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field
+              id="production_gate_steps"
+              label={t.gateSteps}
+              hint={t.gateStepsHint}
+              error={errors.production_gate_steps?.message}
+            >
+              <Input type="number" inputMode="numeric" min={0} max={30} {...field("production_gate_steps")} />
+            </Field>
+            <Field id="maintenance_days" label={t.maintenance} error={errors.maintenance_days?.message}>
+              <Input type="number" inputMode="numeric" min={30} max={3650} {...field("maintenance_days")} />
+            </Field>
+          </div>
+          <Checkbox
+            label={t.overduePenalty}
+            description={t.overduePenaltyHint}
+            defaultChecked={defaults.overdue_penalty}
+            {...register("overdue_penalty")}
+          />
         </div>
-        <Checkbox
-          label={t.overduePenalty}
-          description={t.overduePenaltyHint}
-          defaultChecked={defaults.overdue_penalty}
-          {...register("overdue_penalty")}
-        />
-      </Section>
+      </details>
 
       <Section title={t.voice}>
         <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">

@@ -4,6 +4,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowRight,
   BookOpen,
   CalendarPlus,
   CheckCircle2,
@@ -214,6 +215,16 @@ export function LibraryClient() {
           );
         })}
       </div>
+
+      {filter.status === "mastered" ? (
+        <Link
+          href="/yodlanganlar"
+          className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-sm font-semibold shadow-(--shadow-soft) outline-none hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          {t.masteredLink}
+          <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
 
       <div
         id="library-filters"

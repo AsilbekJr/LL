@@ -11,7 +11,7 @@ import { NAV_ITEMS, isActive } from "./nav-items";
 
 // Desktop menu grouped by intent: daily study first, then tracking, then tools.
 const GROUPS: { label: string; hrefs: string[] }[] = [
-  { label: "O'qish", hrefs: ["/bugun", "/qoshish", "/kutubxona", "/yodlanganlar", "/nutq"] },
+  { label: "O'qish", hrefs: ["/bugun", "/qoshish", "/kutubxona", "/nutq"] },
   { label: "Kuzatish", hrefs: ["/kalendar", "/statistika"] },
   { label: "Boshqa", hrefs: ["/import", "/sozlamalar"] },
 ];

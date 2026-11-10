@@ -26,17 +26,14 @@ qoladi, lekin ishlatilmaydi (migratsiya kerak emas, ma'lumot o'zgarmaydi).
 **Himoya.** `tests/unit/today-plan.test.ts` — "navbatda bir so'zdan bittadan ortiq karta
 bo'lmaydi" qoidasi har o'zgarishda avtomatik tekshiriladi.
 
-## 2. Sozlamalar va Nutqni soddalashtirish
+## 2. Sozlamalar va Nutqni soddalashtirish ✅
 
-- Sozlamalar: zinapoya qiymatlari, ladder/FSRS, gate qadamlari, maintenance kunlari va
-  kechikish jarimasi "Qo'shimcha" bo'limi ostiga yashiriladi (standart qiymatlar qoladi).
-- Kunlik yangi so'z: yangi akkauntlar uchun standart 15 → 7; maydon ostida yuk haqida izoh.
-  Mavjud sozlamangiz o'zgartirilmaydi.
-- Nutq: 6 ta tab → 3 ta (Suhbat, Xatolar, Qoliplar). Tarjima, Erkin nutq va Shadowing
-  "Boshqa mashqlar" ostiga o'tadi (o'chirilmaydi).
-- "Yodlanganlar" sahifasi → Kutubxonadagi filtr.
-
-Migratsiya: faqat standart qiymat uchun (ruxsat bilan).
+- Sozlamalar: algoritm sozlamalari (zinapoya, ladder/FSRS, gate qadamlari, maintenance,
+  kechikish jarimasi) yopiq "Qo'shimcha sozlamalar" bo'limida; xato bo'lsa o'zi ochiladi.
+- Kunlik yangi so'z maydoni ostida yuk haqida izoh (5–7 yengil, 15+ og'ir).
+  Mavjud qiymat o'zgartirilmadi; standartni o'zgartirish foydalanuvchi qarori.
+- Nutq: 4 ta tab — Suhbat, Qoliplar, Xatolar, Boshqa (Tarjima, Erkin nutq, Shadowing).
+- "Yodlanganlar" menyudan olindi; Kutubxonada "Yodlangan" filtri tanlanganda unga havola chiqadi.
 
 ## 3. Bitta kunlik sessiya
 

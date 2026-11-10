@@ -143,6 +143,7 @@ export const uz = {
     description: (n: number) => `${n} ta so'z va ibora`,
     search: "Qidirish: inglizcha, o'zbekcha yoki teg",
     all: "Hammasi",
+    masteredLink: "Yodlangan so'zlar va o'z gaplaringiz",
     filters: "Filtrlar",
     sort: { newest: "Yangilari", oldest: "Eskilari", az: "A–Z" },
     overdueOnly: "Faqat kechikkanlar",
@@ -307,6 +308,7 @@ export const uz = {
   speaking: {
     description: "So'zlarni erkin nutqda ishlating va talaffuzni mashq qiling.",
     drillTab: "Erkin nutq",
+    moreTab: "Boshqa",
     shadowTab: "Shadowing",
     drillIntro:
       "Mavzu va 3–5 ta so'z beriladi. 30–90 soniya gapiring va iloji boricha ko'proq so'zni ishlating.",
@@ -528,9 +530,11 @@ export const uz = {
     saved: "Sozlamalar saqlandi.",
     plan: "Kunlik reja",
     newLimit: "Kuniga yangi so'zlar",
-    newLimitHint: "Har kuni nechta yangi so'z o'rganiladi",
+    newLimitHint:
+      "Har kuni nechta yangi so'z boshlanadi. Har bir yangi so'z keyingi kunlarga takrorlash qo'shadi: 5–7 ta yengil, 15 tadan ko'pi og'ir.",
+    advanced: "Qo'shimcha sozlamalar",
+    advancedHint: "Takrorlash algoritmi. Odatda o'zgartirish shart emas.",
     reviewLimit: "Kuniga takrorlashlar (maks.)",
-    algorithm: "Takrorlash algoritmi",
     srsMode: "Algoritm",
     srsModes: { ladder: "Interval zinapoyasi (oddiy, oldindan ma'lum)", fsrs: "FSRS (moslashuvchan)" },
     ladder: "Interval zinapoyasi (kunlar)",

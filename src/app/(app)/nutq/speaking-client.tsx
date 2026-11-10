@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   AudioLines,
-  Languages,
+  Ellipsis,
   MessagesSquare,
   Wrench,
   LayoutTemplate,
@@ -67,6 +67,7 @@ export function SpeakingClient({
   const save = useSave();
   const qc = useQueryClient();
   const speech = useMemo(() => ({ rate: ttsRate, voice: ttsVoice }), [ttsRate, ttsVoice]);
+  const [extra, setExtra] = useState<"translate" | "drill" | "shadow">("translate");
   const onSave = (rows: ProductionWrite[]) => {
     void save
       .mutateAsync(rows)
@@ -109,8 +110,8 @@ export function SpeakingClient({
     <div className="flex flex-col gap-5">
       <ActiveVocabulary active={activeCount(progress)} total={items.data.length} />
       <Tabs defaultValue={aiEnabled ? "dialog" : "pattern"}>
-        {/* Six methods: one scrollable row on phones. */}
-        <TabsList className="-mx-5 flex w-[calc(100%+2.5rem)] [scrollbar-width:none] justify-start overflow-x-auto rounded-none px-5 sm:mx-0 sm:w-auto sm:rounded-xl sm:px-1 [&>button]:shrink-0">
+        {/* Three core methods; the rest live under "Boshqa". */}
+        <TabsList className="grid w-full grid-cols-4 [&>button]:gap-1.5 [&>button]:px-1 [&>button>svg]:hidden sm:[&>button>svg]:block">
           <TabsTrigger value="dialog">
             <MessagesSquare aria-hidden />
             {t.dialogTab}
@@ -119,21 +120,13 @@ export function SpeakingClient({
             <LayoutTemplate aria-hidden />
             {t.patternTab}
           </TabsTrigger>
-          <TabsTrigger value="translate">
-            <Languages aria-hidden />
-            {t.translateTab}
-          </TabsTrigger>
           <TabsTrigger value="fix">
             <Wrench aria-hidden />
             {t.fixTab}
           </TabsTrigger>
-          <TabsTrigger value="drill">
-            <Mic aria-hidden />
-            {t.drillTab}
-          </TabsTrigger>
-          <TabsTrigger value="shadow">
-            <AudioLines aria-hidden />
-            {t.shadowTab}
+          <TabsTrigger value="more">
+            <Ellipsis aria-hidden />
+            {t.moreTab}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="dialog">
@@ -154,23 +147,48 @@ export function SpeakingClient({
             aiEnabled={aiEnabled}
           />
         </TabsContent>
-        <TabsContent value="translate">
-          <TranslationDrill
-            items={items.data}
-            speech={speech}
-            progress={progress}
-            onSave={onSave}
-            aiEnabled={aiEnabled}
-          />
-        </TabsContent>
         <TabsContent value="fix">
           <FixPractice speech={speech} onSave={onSave} />
         </TabsContent>
-        <TabsContent value="drill">
-          <Drill items={items.data} />
-        </TabsContent>
-        <TabsContent value="shadow">
-          <Shadowing items={items.data} speech={speech} />
+        <TabsContent value="more">
+          <div role="radiogroup" aria-label={t.moreTab} className="mb-5 grid grid-cols-3 gap-1.5">
+            {(
+              [
+                ["translate", t.translateTab],
+                ["drill", t.drillTab],
+                ["shadow", t.shadowTab],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={extra === key}
+                onClick={() => setExtra(key)}
+                className={cn(
+                  "h-10 rounded-lg border px-2 text-sm font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  extra === key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card hover:border-primary/40",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {extra === "translate" ? (
+            <TranslationDrill
+              items={items.data}
+              speech={speech}
+              progress={progress}
+              onSave={onSave}
+              aiEnabled={aiEnabled}
+            />
+          ) : extra === "drill" ? (
+            <Drill items={items.data} />
+          ) : (
+            <Shadowing items={items.data} speech={speech} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
