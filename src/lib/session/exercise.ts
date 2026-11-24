@@ -1,5 +1,6 @@
 import type { CefrLevel } from "@/lib/supabase/database.types";
 import type { IsoDate } from "@/lib/srs/dates";
+import type { CohortChip } from "@/lib/srs/cohorts";
 import { gateStartIndex } from "@/lib/srs/ladder";
 import { isProductionDone, nextProductionMode } from "@/lib/srs/mastery";
 import { pickContext } from "@/lib/production/contexts";
@@ -33,6 +34,8 @@ export interface SessionCard {
   deferSibling?: boolean;
   /** A known word met in its second direction (UZ→EN) for the first time. */
   secondDirection?: boolean;
+  /** Takrorlash xaritasi: the word's first-study day, review number and place (optional extra). */
+  cohort?: CohortChip;
 }
 
 /** A change to the other direction's card that comes with an answer. */

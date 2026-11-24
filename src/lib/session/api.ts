@@ -15,6 +15,8 @@ import {
 import type { Database, Json, Tables } from "@/lib/supabase/database.types";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import { loadTodayState } from "./today-state";
+import { loadWordHistory } from "./cohorts";
+import { cohortChips } from "@/lib/srs/cohorts";
 import type { SessionCard, SessionItem, SiblingPatch } from "./exercise";
 import { fillExamples } from "./examples";
 
@@ -164,6 +166,17 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
     productions.push(...check(p));
   }
 
+  // Takrorlash xaritasi chips. An extra: a failure only hides them.
+  const words = queue.queue.map((r) => ({
+    itemId: r.item_id,
+    dueDate: r.due_date,
+    status: r.status,
+    lapses: r.lapses,
+  }));
+  const chips = await loadWordHistory(sb, itemIds, dayStart, settings.timezone)
+    .then((history) => cohortChips(words, history, today, state.touchedToday))
+    .catch(() => new Map<string, never>());
+
   const ladderLength = settings.ladder.length;
   const cards: SessionCard[] = queue.queue.map((row) => {
     const sib = siblings.find((s) => s.item_id === row.item_id && s.direction !== row.direction) ?? null;
@@ -179,6 +192,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       siblingId: sib?.id ?? null,
       deferSibling: deferredItems.has(row.item_id),
       secondDirection: row.status === "new" && state.startedItems.has(row.item_id),
+      cohort: chips.get(row.item_id),
     };
   });
 

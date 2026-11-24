@@ -697,6 +697,22 @@ export const uz = {
     attribution:
       "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
   },
+  cohorts: {
+    mapTitle: "Takrorlash xaritasi",
+    mapSummary: (words: number, groups: number) => `${words} ta so'z · ${groups} ta kun`,
+    mapHint: "So'zlar o'rganila boshlangan kun bo'yicha. Takrorlash soni har so'z uchun alohida sanaladi.",
+    today: "Bugun yangi",
+    yesterday: "Kecha",
+    unknown: "Sana noma'lum",
+    ofTotal: (today: number, total: number) => `bugun ${today} / ${total} ta so'z`,
+    first: "Tanishuv",
+    repetition: (n: number) => `${n}-takrorlash`,
+    range: (min: number, max: number) => `${min}–${max}-takrorlash`,
+    overdue: (n: number) => `${n} tasi kechikkan`,
+    relearning: (n: number) => `${n} tasi qaytadan`,
+    chipLabel: "So'z guruhi",
+    chipPlace: (index: number, size: number) => `${index}/${size}`,
+  },
   common: {
     comingInPhase: (n: number) => `Bu bo'lim ${n}-fazada tayyor bo'ladi`,
     retry: "Qayta urinish",

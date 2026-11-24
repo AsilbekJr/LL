@@ -19,6 +19,7 @@ import { SpeakingTask, WritingTask, type ProductionResult } from "@/components/p
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { CohortChipView } from "@/components/cohorts/cohort-map";
 import type { AnswerWrite, LoadedSession } from "@/lib/session/api";
 import { loadSessionOfflineFirst, NoOfflineSessionError } from "@/lib/offline/session-cache";
 import { enqueue, flushOutbox, onOutboxChange } from "@/lib/offline/outbox";
@@ -327,9 +328,12 @@ function Session({
           />
         ) : (
           <div key={state.position} className="animate-rise flex flex-1 flex-col gap-5">
-            <p className="text-center text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-              {uz.review.methods[exercise.method]}
-            </p>
+            <div className="flex flex-col items-center gap-2">
+              {sc.cohort ? <CohortChipView chip={sc.cohort} today={config.today} /> : null}
+              <p className="text-center text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                {uz.review.methods[exercise.method]}
+              </p>
+            </div>
 
             {exercise.kind === "write" || exercise.kind === "speak" ? (
               <p className="flex items-start gap-2 rounded-xl bg-highlight-soft px-4 py-3 text-sm text-highlight-foreground">

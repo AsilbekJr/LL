@@ -24,6 +24,9 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { addDays, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/srs/dates";
 import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
+import { loadCohortTotals, loadWordHistory } from "@/lib/session/cohorts";
+import { groupTodayByCohort, wordCohort, type PlanWord } from "@/lib/srs/cohorts";
+import { CohortMap } from "@/components/cohorts/cohort-map";
 import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
 import { fetchCorrections, fetchSpokenUses } from "@/lib/production/api";
 import { HARD_LAPSES } from "@/lib/items/library";
@@ -52,7 +55,7 @@ async function getToday() {
     // Due today, plus tomorrow's cards for the "what comes next" line.
     supabase
       .from("cards")
-      .select("id, item_id, direction, due_date, status, last_reviewed_at")
+      .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
       .in("status", [...STUDIED])
       .lte("due_date", tomorrow)
       .limit(10000),
@@ -149,6 +152,36 @@ async function getToday() {
       .map((c) => c.item_id),
   ]);
   const laterWords = plan.waitingWords - plan.newWords;
+
+  // Takrorlash xaritasi: today's words by the day they were first studied.
+  // An extra: never fail the page because of it.
+  const lapsesOf = new Map(dueRows.map((r) => [r.id, r.lapses]));
+  const planWords: PlanWord[] = plan.queue.map((c) => ({
+    itemId: c.itemId,
+    dueDate: c.dueDate,
+    status: c.status,
+    lapses: lapsesOf.get(c.id) ?? 0,
+  }));
+  const cohorts = await (async () => {
+    if (planWords.length === 0) return [];
+    const [history, totals] = await Promise.all([
+      loadWordHistory(
+        supabase,
+        planWords.map((w) => w.itemId),
+        dayStart,
+        tz,
+      ),
+      loadCohortTotals(supabase, dayStart, tz),
+    ]);
+    const touched = state?.touchedToday ?? new Set<string>();
+    // Today's cohort: words started today (already met or still to meet).
+    const startedToday = new Set([...touched].filter((id) => !history.has(id)));
+    for (const w of planWords) {
+      if (wordCohort(w, history, startedToday, today).repetition === 0) startedToday.add(w.itemId);
+    }
+    totals.set(today, startedToday.size);
+    return groupTodayByCohort(planWords, history, totals, today, startedToday);
+  })().catch(() => []);
   const studiedDays = (history.data ?? []).map((r) => r.day);
   if ((studiedYesterday.count ?? 0) > 0) studiedDays.push(yesterday);
   if (practised.size > 0) studiedDays.push(today);
@@ -179,6 +212,7 @@ async function getToday() {
     tomorrowNew: Math.min(laterWords, settings?.daily_new_limit ?? 15),
     nextDay: tomorrowWords.size ? null : (nextRes.data?.[0]?.due_date ?? null),
     streak: studyStreak(studiedDays, today),
+    cohorts,
     // Optional extra: never fail the page if texts are unavailable.
     textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
   };
@@ -330,6 +364,8 @@ export default async function TodayPage() {
           tone={t.streak > 0 ? "streak" : undefined}
         />
       </dl>
+
+      {!allDone ? <CohortMap cohorts={t.cohorts} today={t.today} /> : null}
 
       {/* The goal of it all: words you can actually use when speaking. */}
       <Link

@@ -23,6 +23,12 @@ export function formatDayUz(day: IsoDate): string {
   return `${WEEKDAYS[weekday]}, ${d}-${MONTHS[m - 1]}`;
 }
 
+/** "17-noyabr" — short Uzbek date for a calendar day. */
+export function formatShortDayUz(day: IsoDate): string {
+  const [, m, d] = day.split("-").map(Number) as [number, number, number];
+  return `${d}-${MONTHS[m - 1]}`;
+}
+
 /** Greeting for the local hour. */
 export function greetingUz(hour: number): "Xayrli tong" | "Xayrli kun" | "Xayrli kech" {
   if (hour >= 4 && hour < 12) return "Xayrli tong";
