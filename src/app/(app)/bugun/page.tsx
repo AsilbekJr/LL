@@ -11,6 +11,7 @@ import {
   Mic,
   Play,
   Plus,
+  RotateCcw,
   Sparkles,
   Upload,
   type LucideIcon,
@@ -25,6 +26,8 @@ import { addDays, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/
 import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
 import { loadCohortTotals, loadWordHistory } from "@/lib/session/cohorts";
+import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "@/lib/session/backlog-state";
+import { intervalOf } from "@/lib/srs/backlog";
 import { groupTodayByCohort, wordCohort, type PlanWord } from "@/lib/srs/cohorts";
 import { CohortMap } from "@/components/cohorts/cohort-map";
 import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
@@ -51,43 +54,46 @@ async function getToday() {
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
   const tomorrow = addDays(today, 1);
-  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes] = await Promise.all([
-    // Due today, plus tomorrow's cards for the "what comes next" line.
-    supabase
-      .from("cards")
-      .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
-      .in("status", [...STUDIED])
-      .lte("due_date", tomorrow)
-      .limit(10000),
-    // The very same loader the review session uses, so the numbers match it.
-    loadTodayState(supabase, dayStart).then(
-      (s) => ({ data: s, error: null }),
-      (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
-    ),
-    supabase
-      .from("daily_snapshots")
-      .select("day")
-      .gt("done_count", 0)
-      .order("day", { ascending: false })
-      .limit(366),
-    // Yesterday's snapshot is written just after midnight; until then read the logs.
-    supabase
-      .from("review_logs")
-      .select("id", { count: "exact", head: true })
-      .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
-      .lt("reviewed_at", dayStart)
-      .not("result", "is", null),
-    supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
-    supabase.from("items").select("id", { count: "exact", head: true }),
-    // The next day with a review after tomorrow.
-    supabase
-      .from("cards")
-      .select("due_date")
-      .in("status", [...STUDIED])
-      .gt("due_date", tomorrow)
-      .order("due_date")
-      .limit(1),
-  ]);
+  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes, backlogStats] =
+    await Promise.all([
+      // Due today, plus tomorrow's cards for the "what comes next" line.
+      supabase
+        .from("cards")
+        .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
+        .in("status", [...STUDIED])
+        .lte("due_date", tomorrow)
+        .limit(10000),
+      // The very same loader the review session uses, so the numbers match it.
+      loadTodayState(supabase, dayStart).then(
+        (s) => ({ data: s, error: null }),
+        (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+      ),
+      supabase
+        .from("daily_snapshots")
+        .select("day")
+        .gt("done_count", 0)
+        .order("day", { ascending: false })
+        .limit(366),
+      // Yesterday's snapshot is written just after midnight; until then read the logs.
+      supabase
+        .from("review_logs")
+        .select("id", { count: "exact", head: true })
+        .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
+        .lt("reviewed_at", dayStart)
+        .not("result", "is", null),
+      supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
+      supabase.from("items").select("id", { count: "exact", head: true }),
+      // The next day with a review after tomorrow.
+      supabase
+        .from("cards")
+        .select("due_date")
+        .in("status", [...STUDIED])
+        .gt("due_date", tomorrow)
+        .order("due_date")
+        .limit(1),
+      // Qaytish rejimi: last study day and the usual daily load (null on error = off).
+      loadBacklogStats(supabase, today, tz),
+    ]);
 
   // Extras: speaking progress. Never fail the page because of them.
   const [uses, corrections, hardCards] = await Promise.all([
@@ -101,6 +107,11 @@ async function getToday() {
   const state = stateRes.data;
   const scheduled = dueRes.data ?? [];
   const dueRows = scheduled.filter((c) => c.due_date <= today);
+  const backlog = todayBacklog(backlogStats, {
+    today,
+    dueRows,
+    reviewsDoneToday: state?.reviewsDoneToday ?? 0,
+  });
 
   // Build today's queue exactly as the session does (random = first direction; only counts matter).
   const plan = buildDailyQueue({
@@ -112,6 +123,7 @@ async function getToday() {
         dueDate: r.due_date,
         status: r.status,
         lastReviewedAt: r.last_reviewed_at,
+        intervalDays: intervalOf(r.due_date, r.last_reviewed_at, tz),
       })),
       ...(state?.newCards ?? []).map((r) => ({
         id: r.id,
@@ -122,8 +134,8 @@ async function getToday() {
       })),
     ],
     today,
-    newLimit: settings?.daily_new_limit ?? 15,
     reviewLimit: settings?.daily_review_limit ?? 150,
+    ...backlogQueueOptions(backlog, settings?.daily_new_limit ?? 15),
     newItemsDoneToday: state?.newItemsDoneToday ?? 0,
     reviewsDoneToday: state?.reviewsDoneToday ?? 0,
     startedItems: state?.startedItems,
@@ -213,6 +225,7 @@ async function getToday() {
     nextDay: tomorrowWords.size ? null : (nextRes.data?.[0]?.due_date ?? null),
     streak: studyStreak(studiedDays, today),
     cohorts,
+    backlog,
     // Optional extra: never fail the page if texts are unavailable.
     textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
   };
@@ -277,7 +290,15 @@ export default async function TodayPage() {
     <>
       {header}
 
-      {t.overdue > 0 ? (
+      {t.backlog.active ? (
+        <BacklogBanner
+          gapDays={t.backlog.gapDays}
+          cap={t.backlog.todayCap}
+          remaining={t.dueLater}
+          days={Math.ceil(t.dueLater / Math.max(1, t.backlog.normal))}
+          done={allDone}
+        />
+      ) : t.overdue > 0 ? (
         <div
           role="status"
           className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/25 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
@@ -313,18 +334,30 @@ export default async function TodayPage() {
 
           <div className="min-w-0 flex-1">
             <h2 id="today-title" className="font-display text-2xl leading-tight font-semibold">
-              {allDone ? (t.done > 0 ? uz.today.allDone : uz.today.restDay) : uz.today.dueTitle}
+              {allDone
+                ? t.backlog.active
+                  ? uz.backlog.doneTitle
+                  : t.done > 0
+                    ? uz.today.allDone
+                    : uz.today.restDay
+                : uz.today.dueTitle}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {allDone
-                ? [
-                    t.laterWords > 0 ? uz.today.newLimitReached(t.laterWords) : "",
-                    t.dueLater > 0 ? uz.today.reviewLimitReached(t.dueLater) : "",
-                    uz.today.next(t.tomorrowWords, t.tomorrowNew, t.nextDay ? formatDayUz(t.nextDay) : null),
-                  ]
-                    .filter(Boolean)
-                    .join(" ")
-                : uz.today.planBody(t.reviews, t.newWords)}
+              {allDone && t.backlog.active
+                ? uz.backlog.doneBody(t.dueLater, Math.ceil(t.dueLater / Math.max(1, t.backlog.normal)))
+                : allDone
+                  ? [
+                      t.laterWords > 0 ? uz.today.newLimitReached(t.laterWords) : "",
+                      t.dueLater > 0 ? uz.today.reviewLimitReached(t.dueLater) : "",
+                      uz.today.next(
+                        t.tomorrowWords,
+                        t.tomorrowNew,
+                        t.nextDay ? formatDayUz(t.nextDay) : null,
+                      ),
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  : uz.today.planBody(t.reviews, t.newWords)}
             </p>
             {t.done > 0 && !allDone ? (
               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">
@@ -440,6 +473,37 @@ export default async function TodayPage() {
         </ul>
       </section>
     </>
+  );
+}
+
+/** Qaytish rejimi: today takes the usual load, the rest waits, new words pause. */
+function BacklogBanner({
+  gapDays,
+  cap,
+  remaining,
+  days,
+  done,
+}: {
+  gapDays: number;
+  cap: number;
+  remaining: number;
+  days: number;
+  done: boolean;
+}) {
+  return (
+    <div
+      role="status"
+      className="mb-4 flex items-start gap-3 rounded-xl border border-highlight/60 bg-highlight-soft px-4 py-3 text-sm text-highlight-foreground"
+    >
+      <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <div className="space-y-1">
+        <p className="font-semibold">{gapDays >= 2 ? uz.backlog.titleAway(gapDays) : uz.backlog.titleBusy}</p>
+        {!done && remaining > 0 ? <p>{uz.backlog.body(cap, remaining, days)}</p> : null}
+        <p>
+          {uz.backlog.order} {uz.backlog.paused}
+        </p>
+      </div>
+    </div>
   );
 }
 

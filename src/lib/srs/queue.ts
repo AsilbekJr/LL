@@ -1,10 +1,13 @@
 import { addDays, overdueDays, type IsoDate } from "./dates";
+import { forgettingRisk } from "./backlog";
 import { isDue } from "./overdue";
 import type { SrsCard } from "./types";
 
 export type QueueCard = Pick<SrsCard, "id" | "itemId" | "direction" | "dueDate" | "status"> & {
   /** When the card was last graded (null = never); breaks ties so both directions take turns. */
   lastReviewedAt?: string | null;
+  /** The card's current interval in days (see backlog.intervalOf); used by `riskFirst`. */
+  intervalDays?: number | null;
 };
 
 /** The direction a new word starts with: understanding (EN→UZ) before producing (UZ→EN). */
@@ -34,6 +37,13 @@ export interface DailyQueueInput<C extends QueueCard> {
   readyItems?: ReadonlySet<string>;
   /** Words that had a card seen for the first time today. */
   touchedToday?: ReadonlySet<string>;
+  /** Qaytish rejimi: at most this many reviews today (together with `reviewLimit`). */
+  reviewCap?: number;
+  /**
+   * Qaytish rejimi: order due cards by forgetting risk (learning cards, then
+   * days late relative to the interval) instead of by days late.
+   */
+  riskFirst?: boolean;
 }
 
 export interface DailyQueue<C extends QueueCard> {
@@ -61,6 +71,8 @@ export interface DailyQueue<C extends QueueCard> {
  * Today's study queue. The unit is the WORD: a word has two cards (EN→UZ and
  * UZ→EN), but shows at most one of them a day.
  * 1. Due cards (overdue roll over to today), most overdue first, up to the review limit.
+ *    Qaytish rejimi (`riskFirst`, `reviewCap`): most at risk of being forgotten first,
+ *    up to the user's usual daily load; the rest waits (due dates are not changed).
  *    If both directions of a word are due, the more overdue one (on a tie the one
  *    reviewed longer ago) comes today and the other is deferred.
  * 2. New words up to the new limit, starting with EN→UZ.
@@ -71,10 +83,12 @@ export interface DailyQueue<C extends QueueCard> {
 export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>): DailyQueue<C> {
   const { today } = input;
 
+  const risk = (c: C) => (input.riskFirst ? forgettingRisk(c, overdueDays(c.dueDate, today)) : 0);
   const allDue = input.cards
     .filter((c) => isDue(c, today))
     .sort(
       (a, b) =>
+        risk(b) - risk(a) ||
         overdueDays(b.dueDate, today) - overdueDays(a.dueDate, today) ||
         (a.lastReviewedAt ?? "").localeCompare(b.lastReviewedAt ?? "") ||
         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
@@ -89,7 +103,8 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
     dueItems.add(c.itemId);
     return true;
   });
-  const reviewBudget = Math.max(0, input.reviewLimit - (input.reviewsDoneToday ?? 0));
+  const limit = Math.min(input.reviewLimit, input.reviewCap ?? Infinity);
+  const reviewBudget = Math.max(0, limit - (input.reviewsDoneToday ?? 0));
   const reviews = due.slice(0, reviewBudget);
 
   // Group new cards by item, keeping first-seen item order.

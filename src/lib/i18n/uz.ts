@@ -697,6 +697,18 @@ export const uz = {
     attribution:
       "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
   },
+  backlog: {
+    titleAway: (days: number) => `${days} kunlik tanaffusdan keyin xush kelibsiz!`,
+    titleBusy: "Bugun yuk odatdagidan ko'p",
+    body: (cap: number, remaining: number, days: number) =>
+      `Bugun odatdagi hajm — ${cap} ta so'z. Qolgan ${remaining} tasi keyingi ${days} kunda yopiladi.`,
+    order: "Unutilish xavfi yuqori so'zlar birinchi chiqadi.",
+    paused: "Qarz yopilguncha yangi so'zlar to'xtatildi.",
+    doneTitle: "Bugungi ulush bajarildi",
+    doneBody: (remaining: number, days: number) =>
+      `Qarz: ${remaining} ta so'z, ${days} kunda yopiladi. Ertaga shu tartibda davom etamiz.`,
+    sessionMore: (n: number) => `Qarz: yana ${n} ta so'z keyingi kunlarga qoldi — bu reja bo'yicha.`,
+  },
   cohorts: {
     mapTitle: "Takrorlash xaritasi",
     mapSummary: (words: number, groups: number) => `${words} ta so'z · ${groups} ta kun`,

@@ -16,6 +16,8 @@ import type { Database, Json, Tables } from "@/lib/supabase/database.types";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import { loadTodayState } from "./today-state";
 import { loadWordHistory } from "./cohorts";
+import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "./backlog-state";
+import { intervalOf, type Backlog } from "@/lib/srs/backlog";
 import { cohortChips } from "@/lib/srs/cohorts";
 import type { SessionCard, SessionItem, SiblingPatch } from "./exercise";
 import { fillExamples } from "./examples";
@@ -55,6 +57,8 @@ export interface LoadedSession {
   pool: SessionItem[];
   load: Map<IsoDate, number>;
   dueRemaining: number;
+  /** Qaytish rejimi state (missing in snapshots cached before it existed). */
+  backlog?: Backlog;
 }
 
 function check<T>(r: { data: T | null; error: { message: string } | null }): T {
@@ -95,7 +99,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
   const dayStart = startOfDayInTz(today, settings.timezone).toISOString();
   const newLimit = settingsRow?.daily_new_limit ?? 15;
 
-  const [due, state, upcoming] = await Promise.all([
+  const [due, state, upcoming, backlogStats] = await Promise.all([
     sb
       .from("cards")
       .select(CARD_COLUMNS)
@@ -109,9 +113,11 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       .in("status", [...STUDIED])
       .gt("due_date", today)
       .lte("due_date", addDays(today, LOAD_HORIZON_DAYS)),
+    loadBacklogStats(sb, today, settings.timezone),
   ]);
 
   const dueRows = check(due).filter((r) => r.items);
+  const backlog = todayBacklog(backlogStats, { today, dueRows, reviewsDoneToday: state.reviewsDoneToday });
   const plan = buildDailyQueue({
     cards: [
       ...dueRows.map((r) => ({
@@ -121,6 +127,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
         dueDate: r.due_date,
         status: r.status,
         lastReviewedAt: r.last_reviewed_at,
+        intervalDays: intervalOf(r.due_date, r.last_reviewed_at, settings.timezone),
       })),
       ...state.newCards.map((r) => ({
         id: r.id,
@@ -131,8 +138,8 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
       })),
     ],
     today,
-    newLimit,
     reviewLimit: settingsRow?.daily_review_limit ?? 150,
+    ...backlogQueueOptions(backlog, newLimit),
     newItemsDoneToday: state.newItemsDoneToday,
     reviewsDoneToday: state.reviewsDoneToday,
     startedItems: state.startedItems,
@@ -225,6 +232,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
     pool: [...pool.values()],
     load,
     dueRemaining: queue.dueRemaining,
+    backlog,
   };
 }
 

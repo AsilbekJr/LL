@@ -323,6 +323,7 @@ function Session({
             state={state}
             minutes={Math.max(1, Math.round(((finishedAt ?? startedAt) - startedAt) / 60_000))}
             dueRemaining={data.dueRemaining}
+            backlog={data.backlog?.active ?? false}
             onRestart={onRestart}
             saving={writer.pending > 0}
           />
@@ -412,6 +413,7 @@ function Summary({
   state,
   minutes,
   dueRemaining,
+  backlog,
   onRestart,
   saving,
 }: {
@@ -419,6 +421,8 @@ function Summary({
   state: SessionState;
   minutes: number;
   dueRemaining: number;
+  /** Qaytish rejimi: the remaining due words are planned for the next days. */
+  backlog: boolean;
   onRestart: () => void;
   /** Answers still being written: reloading now would read stale cards. */
   saving: boolean;
@@ -456,7 +460,11 @@ function Summary({
           </div>
         ))}
       </dl>
-      {dueRemaining > 0 ? <p className="text-sm text-muted-foreground">{t.moreDue(dueRemaining)}</p> : null}
+      {dueRemaining > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {backlog ? uz.backlog.sessionMore(dueRemaining) : t.moreDue(dueRemaining)}
+        </p>
+      ) : null}
       <div className="flex w-full max-w-sm flex-col gap-2">
         {fixCount > 0 ? (
           <>
