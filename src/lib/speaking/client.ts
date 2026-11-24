@@ -1,6 +1,7 @@
 import { judgeSchema, type Judge, type JudgeRequest } from "./judge";
 import { dialogTurnSchema, type DialogRequest, type DialogTurn } from "./dialog";
 import { fitSchema, type FitRequest, type PatternFit } from "./fit";
+import { recapSchema, type Recap, type RecapRequest } from "./recap";
 
 /** Strict AI check of one spoken answer. null = AI off or unreachable (fall back to the offline check). */
 export async function fetchJudge(req: JudgeRequest, signal?: AbortSignal): Promise<Judge | null> {
@@ -72,6 +73,23 @@ export async function fetchPatternFits(req: FitRequest): Promise<PatternFit[] | 
       // full or blocked storage: fine
     }
     return out.data.fits;
+  } catch {
+    return null;
+  }
+}
+
+/** "Kun yakuni" AI check. null = AI off or unreachable (the offline word match is used). */
+export async function fetchRecap(req: RecapRequest): Promise<Recap | null> {
+  try {
+    const res = await fetch("/api/day-recap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!res.ok) return null;
+    const out = recapSchema.safeParse(await res.json());
+    return out.success ? out.data : null;
   } catch {
     return null;
   }

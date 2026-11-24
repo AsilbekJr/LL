@@ -476,6 +476,12 @@ function Summary({
           </>
         ) : null}
         <Button asChild size="lg" variant={fixCount > 0 ? "outline" : "default"}>
+          <Link href="/kun-yakuni">
+            <Mic aria-hidden />
+            {uz.recap.sessionLink}
+          </Link>
+        </Button>
+        <Button asChild size="lg" variant="outline">
           <Link href="/bugun">{t.backToday}</Link>
         </Button>
         <Button variant="outline" onClick={onRestart} disabled={saving}>

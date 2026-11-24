@@ -95,17 +95,19 @@ Faol so'z 21 kun erkin ishlatilmasa 🟡 ga tushadi (so'nish).
 
 ### Qurish tartibi
 
-1. **Takrorlash xaritasi** — Bugun sahifasida bugungi so'zlar qo'shilgan kuni bo'yicha
+1. ✅ **Takrorlash xaritasi** — Bugun sahifasida bugungi so'zlar qo'shilgan kuni bo'yicha
    guruhlarda: guruhdagi so'zlar soni, bugun takrorlanadiganlari, nechanchi takrorlash
    (har so'z uchun alohida — takrorlangan kunlar soni), izoh. Sessiyada har karta
    tepasida guruh chipi. Migratsiyasiz.
-2. **Qaytish rejimi** — 2+ kun kirilmasa yoki yuk odatdagidan 1,5× ko'p bo'lsa: yangi
+2. ✅ **Qaytish rejimi** — 2+ kun kirilmasa yoki yuk odatdagidan 1,5× ko'p bo'lsa: yangi
    so'zlar to'xtaydi, kunlik yuk odatdagi hajm bilan cheklanadi, qolgani 3–5 kunga
    taqsimlanadi (`due_date` o'zgarmaydi), navbat "eng ko'p kechikkan" emas "eng ko'p xavf
    ostidagi" (yosh kartalar, `overdue_days / interval`) bo'yicha. "5 daqiqalik sessiya".
-3. **Kun yakuni** — 1–2 daqiqa ovozli erkin gapirish (yozish — zaxira); 3–5 ta taklif
+3. ✅ **Kun yakuni** (`/kun-yakuni`) — 1–2 daqiqa ovozli erkin gapirish (yozish — zaxira); 3–5 ta taklif
    so'z; AI: ishlatilgan faol so'zlar, bitta asosiy xato, aytolmagan narsa uchun birikma.
-   Erkin faollik shu yerda (va Suhbatda) sanaladi.
+   Erkin faollik shu yerda (va Suhbatda) sanaladi. Migratsiyasiz: natija `productions` ga
+   `context = 'day_recap'` bilan yoziladi (faol so'z hisobiga ham kiradi). Telefon pauzada
+   tanishni to'xtatsa, o'zi qayta ulanadi. "5 daqiqalik sessiya" hali qilinmagan.
 4. **So'z yo'li** — 5 pog'ona ko'rinishi va Bugundagi 3 ta raqam.
 5. **Birikma zanjiri** — 3-pog'onadan keyin takrorlash: eski birikmani eslash (SRS bahosi
    shundan) + eski eslansa yangi, takrorlanmaydigan birikma yangi kontekstda. So'zga ≤ 6
