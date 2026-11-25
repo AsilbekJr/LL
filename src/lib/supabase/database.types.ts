@@ -30,6 +30,13 @@ export type ReviewMethod =
   | "shadowing"
   | "drill"
   | "sentence";
+export type StoryLevelId =
+  | "beginner"
+  | "elementary"
+  | "pre_intermediate"
+  | "intermediate"
+  | "upper_intermediate"
+  | "ielts";
 export type DirectionMode = "random" | "en_uz" | "uz_en" | "both";
 export type SrsMode = "ladder" | "fsrs";
 
@@ -114,6 +121,38 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["items"]["Insert"]>;
+        Relationships: Rel[];
+      };
+      weekly_stories: {
+        Row: {
+          id: string;
+          user_id: string;
+          week_start: string;
+          level: StoryLevelId;
+          title: string;
+          story: Json;
+          words: Json;
+          memorized_parts: number;
+          best_retell: number | null;
+          retold_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          week_start: string;
+          level: StoryLevelId;
+          title: string;
+          story: Json;
+          words?: Json;
+          memorized_parts?: number;
+          best_retell?: number | null;
+          retold_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["weekly_stories"]["Insert"]>;
         Relationships: Rel[];
       };
       cards: {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  BookHeart,
   BookOpen,
   BookOpenText,
   CalendarClock,
@@ -25,6 +26,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { addDays, dayInTz, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/srs/dates";
 import { fetchRecapRows } from "@/lib/speaking/recap-api";
 import { recapProgress } from "@/lib/speaking/recap";
+import { storyWeek } from "@/lib/story/story";
 import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
 import { loadCohortTotals, loadWordHistory } from "@/lib/session/cohorts";
@@ -98,14 +100,24 @@ async function getToday() {
     ]);
 
   // Extras: speaking progress. Never fail the page because of them.
-  const [uses, corrections, hardCards, recapRows] = await Promise.all([
+  // Haftalik hikoya: shown on the weekend, while this week's story is not retold yet.
+  const week = storyWeek(today);
+  const [uses, corrections, hardCards, recapRows, storyRows] = await Promise.all([
     fetchSpokenUses(supabase).catch(() => []),
     fetchCorrections(supabase).catch(() => []),
     // Words that keep being forgotten: they need a better example, not more repeats.
     supabase.from("cards").select("item_id").in("status", ["learning", "review"]).gte("lapses", HARD_LAPSES),
     // Kun yakuni: speaking days of the last two months.
     fetchRecapRows(supabase, startOfDayInTz(addDays(today, -60), tz).toISOString()).catch(() => []),
+    week.current
+      ? supabase
+          .from("weekly_stories")
+          .select("best_retell, retold_at")
+          .eq("week_start", week.weekStart)
+          .then((r) => (r.error ? [] : (r.data ?? [])))
+      : Promise.resolve([]),
   ]);
+  const retold = storyRows.filter((r) => r.retold_at);
   const recap = recapProgress(recapRows, (iso) => dayInTz(new Date(iso), tz));
 
   const error = dueRes.error ?? stateRes.error ?? history.error ?? itemsRes.error;
@@ -234,6 +246,9 @@ async function getToday() {
     recapDone: recap.days.has(today),
     recapWords: recap.usedOn(today),
     recapStreak: studyStreak(recap.days, today),
+    story: week.current
+      ? { done: retold.length > 0, best: Math.max(0, ...retold.map((r) => r.best_retell ?? 0)) }
+      : null,
     // Optional extra: never fail the page if texts are unavailable.
     textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
   };
@@ -387,6 +402,7 @@ export default async function TodayPage() {
       </section>
 
       <RecapCard done={t.recapDone} words={t.recapWords} streak={t.recapStreak} />
+      {t.story ? <StoryCard done={t.story.done} best={t.story.best} /> : null}
 
       {/* Stats */}
       <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -511,6 +527,37 @@ function RecapCard({ done, words, streak }: { done: boolean; words: number; stre
         <span className="block text-xs text-muted-foreground">
           {done ? uz.recap.cardDone(words) : uz.recap.cardTodo}
           {streak > 1 ? ` · ${uz.recap.streak(streak)}` : ""}
+        </span>
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
+  );
+}
+
+/** Haftalik hikoya: on the weekend, memorize and retell a story made of the week's words. */
+function StoryCard({ done, best }: { done: boolean; best: number }) {
+  return (
+    <Link
+      href="/hikoya"
+      className={cn(
+        "mt-3 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-(--shadow-soft) transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        done
+          ? "bg-card hover:border-primary/30"
+          : "border-highlight-foreground/30 bg-highlight-soft hover:brightness-95",
+      )}
+    >
+      <span
+        className={cn(
+          "grid size-10 shrink-0 place-items-center rounded-xl",
+          done ? "bg-success-soft text-success" : "bg-highlight-foreground text-background",
+        )}
+      >
+        {done ? <Check className="size-5" aria-hidden /> : <BookHeart className="size-5" aria-hidden />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{uz.story.card}</span>
+        <span className="block text-xs text-muted-foreground">
+          {done ? uz.story.cardDone(best) : uz.story.cardTodo}
         </span>
       </span>
       <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />

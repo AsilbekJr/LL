@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import {
   BarChart3,
+  BookHeart,
   BookOpen,
   BookOpenText,
   CalendarDays,
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/kalendar", label: uz.nav.calendar, icon: CalendarDays },
   { href: "/nutq", label: uz.nav.speaking, icon: Mic },
   { href: "/matnlar", label: uz.nav.texts, icon: BookOpenText },
+  { href: "/hikoya", label: uz.nav.story, icon: BookHeart },
   { href: "/import", label: uz.nav.import, icon: Upload },
   { href: "/statistika", label: uz.nav.stats, icon: BarChart3 },
   { href: "/sozlamalar", label: uz.nav.settings, icon: Settings },
