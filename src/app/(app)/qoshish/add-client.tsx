@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge, Checkbox, Field, Notice, Select, Textarea } from "@/components/ui/form-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAddItems, useExistingKeys } from "@/hooks/use-items";
+import { queueContextSentences } from "@/lib/items/context-queue";
 import { setFlash } from "@/lib/app/flash";
 import { dedupeItems } from "@/lib/items/dedupe";
 import { enrichDrafts } from "@/lib/items/enrich";
@@ -60,7 +61,12 @@ function SingleAdd({ aiEnabled, shared }: { aiEnabled: boolean; shared?: string 
       setResult({ tone: "warning", text: uz.add.duplicate(draft.english) });
       return;
     }
-    setFlash({ tone: "success", text: uz.add.added(draft.english, r.scheduledCards > 0) });
+    // Gap orqali yodlash: 5 sentences in different situations, written in the background.
+    if (aiEnabled && draft.type !== "sentence") queueContextSentences(r.insertedIds);
+    setFlash({
+      tone: "success",
+      text: `${uz.add.added(draft.english, r.scheduledCards > 0)}${aiEnabled && draft.type !== "sentence" ? ` ${uz.add.contextQueued}` : ""}`,
+    });
     router.push(AFTER_ADD);
   }
 
@@ -129,7 +135,11 @@ function ListAdd({ aiEnabled }: { aiEnabled: boolean }) {
         await keys.refetch();
         return;
       }
-      setFlash({ tone: "success", text: t.listAdded(r.inserted, r.duplicates) });
+      if (aiEnabled) queueContextSentences(r.insertedIds);
+      setFlash({
+        tone: "success",
+        text: `${t.listAdded(r.inserted, r.duplicates)}${aiEnabled ? ` ${t.contextQueued}` : ""}`,
+      });
       router.push(AFTER_ADD);
     } catch (e) {
       setEnriching(false);

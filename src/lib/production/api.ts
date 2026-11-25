@@ -1,6 +1,7 @@
 import { DbWriteError } from "@/lib/supabase/write-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json, Tables, TablesInsert } from "@/lib/supabase/database.types";
+import { countsAsActive } from "@/lib/speaking/help";
 import type { AiFeedback } from "./feedback";
 
 type Client = SupabaseClient<Database>;
@@ -99,18 +100,23 @@ export async function fetchPracticeItems(sb: Client, limit = 200): Promise<Drill
 
 export type SpokenUse = Pick<Tables<"productions">, "item_id" | "created_at">;
 
-/** Passed spoken productions (not shadowing) — the input for "active vocabulary". */
+/**
+ * Passed spoken productions (not shadowing, not said after seeing the model
+ * answer) — the input for "active vocabulary".
+ */
 export async function fetchSpokenUses(sb: Client): Promise<SpokenUse[]> {
   const { data, error } = await sb
     .from("productions")
-    .select("item_id, created_at")
+    .select("item_id, created_at, context")
     .eq("passed", true)
     .eq("mode", "spoken")
     .neq("exercise", "shadowing")
     .order("created_at", { ascending: false })
     .limit(20000);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? [])
+    .filter((u) => countsAsActive(u.context))
+    .map(({ item_id, created_at }) => ({ item_id, created_at }));
 }
 
 export type Correction = Pick<

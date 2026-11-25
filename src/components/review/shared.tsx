@@ -46,10 +46,13 @@ export function SpeakButton({
   text,
   prefs,
   autoPlay,
+  compact,
 }: {
   text: string;
   prefs: SpeechPrefs;
   autoPlay?: boolean;
+  /** One small icon button, no prefetch (for lists of sentences). */
+  compact?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +71,8 @@ export function SpeakButton({
   }, []);
 
   useEffect(() => {
-    prefetchSpeech([text]);
-  }, [text]);
+    if (!compact) prefetchSpeech([text]);
+  }, [text, compact]);
 
   useEffect(() => {
     // A failed autoplay is expected (no tap yet); only taps report errors.
@@ -77,6 +80,20 @@ export function SpeakButton({
   }, [autoPlay, available, text, prefs.rate, prefs.voice]);
 
   if (!available) return null;
+  if (compact) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="shrink-0"
+        onClick={() => play()}
+        aria-label={uz.review.listen}
+        title={error ? `${uz.review.listen} (${error})` : uz.review.listen}
+      >
+        <Volume2 className={cn(playing && "animate-pulse", error && "text-destructive")} aria-hidden />
+      </Button>
+    );
+  }
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex justify-center gap-2">

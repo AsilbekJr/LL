@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import {
   ChoiceView,
   ClozeView,
+  SentenceView,
   EncounterView,
   ListeningView,
   OrderView,
@@ -369,6 +370,8 @@ function Session({
               <ListeningView ex={exercise} speech={speech} onAnswer={onAnswer} />
             ) : exercise.kind === "cloze" ? (
               <ClozeView ex={exercise} onAnswer={onAnswer} />
+            ) : exercise.kind === "sentence" ? (
+              <SentenceView ex={exercise} speech={speech} onAnswer={onAnswer} />
             ) : (
               <OrderView ex={exercise} speech={speech} onAnswer={onAnswer} />
             )}

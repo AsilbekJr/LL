@@ -28,7 +28,8 @@ export type ReviewMethod =
   | "writing"
   | "speaking"
   | "shadowing"
-  | "drill";
+  | "drill"
+  | "sentence";
 export type DirectionMode = "random" | "en_uz" | "uz_en" | "both";
 export type SrsMode = "ladder" | "fsrs";
 
@@ -86,6 +87,7 @@ export type Database = {
           part_of_speech: string | null;
           example_en: string | null;
           example_uz: string | null;
+          context_sentences: Json;
           notes: string | null;
           tags: string[];
           source: "manual" | "import";
@@ -103,6 +105,7 @@ export type Database = {
           part_of_speech?: string | null;
           example_en?: string | null;
           example_uz?: string | null;
+          context_sentences?: Json;
           notes?: string | null;
           tags?: string[];
           source?: "manual" | "import";

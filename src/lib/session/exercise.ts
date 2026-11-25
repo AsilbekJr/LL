@@ -7,6 +7,7 @@ import { pickContext } from "@/lib/production/contexts";
 import { methodForStage } from "@/lib/srs/stages";
 import type { ItemType, ProductionProgress, ReviewMethod, SrsCard } from "@/lib/srs/types";
 import { clozeLongestWord, makeCloze, sentenceTokens } from "@/lib/text/answer";
+import { contextSentences, pickContextSentence, TRANSLATE_FROM_STAGE } from "@/lib/items/context-sentences";
 
 export interface SessionItem {
   id: string;
@@ -18,6 +19,8 @@ export interface SessionItem {
   part_of_speech: string | null;
   notes: string | null;
   cefr_level?: CefrLevel | null;
+  /** Gap orqali yodlash: sentences in different situations (jsonb; parse with contextSentences). */
+  context_sentences?: unknown;
 }
 
 export interface SessionCard {
@@ -64,6 +67,15 @@ export type Exercise =
   | { kind: "listening"; method: "listening"; say: string; answer: string; hint: string }
   | { kind: "cloze"; method: "cloze"; before: string; after: string; answer: string; hint: string }
   | { kind: "order"; method: "word_order"; tokens: string[]; answer: string[]; hint: string }
+  /** Gap orqali yodlash: say the word's context sentence in English from its Uzbek version. */
+  | {
+      kind: "sentence";
+      method: "sentence";
+      situation: string;
+      prompt: string;
+      reference: string;
+      term: string;
+    }
   /** Production gate: the learner writes / says their own sentence with the word. */
   | { kind: "write"; method: "writing"; contextId: string }
   | { kind: "speak"; method: "speaking"; contextId: string };
@@ -183,6 +195,37 @@ function order(sc: SessionCard, random: () => number): Exercise | null {
   return { kind: "order", method: "word_order", tokens, answer, hint };
 }
 
+/**
+ * Gap orqali yodlash: every other review of a word that has context sentences
+ * asks for one of them (a different one each time) instead of the stage
+ * method — a cloze while the word is new, the whole sentence (UZ → EN) once
+ * the card reaches TRANSLATE_FROM_STAGE. Encounters stay as they are.
+ */
+export function contextExercise(sc: SessionCard): Exercise | null {
+  if (sc.item.type === "sentence" || sc.card.stage < 2 || sc.card.reps % 2 === 0) return null;
+  const pick = pickContextSentence(
+    contextSentences(sc.item.context_sentences),
+    Math.floor(sc.card.reps / 2),
+    sc.card.direction,
+  );
+  if (!pick) return null;
+  const hint = `${pick.situation} · ${pick.uz}`;
+  if (sc.card.stage < TRANSLATE_FROM_STAGE) {
+    const c = makeCloze(pick.en, pick.form || sc.item.english) ?? makeCloze(pick.en, sc.item.english);
+    return c
+      ? { kind: "cloze", method: "cloze", before: c.before, after: c.after, answer: c.answer, hint }
+      : null;
+  }
+  return {
+    kind: "sentence",
+    method: "sentence",
+    situation: pick.situation,
+    prompt: pick.uz,
+    reference: pick.en,
+    term: sc.item.english,
+  };
+}
+
 /** Build the exercise for a card from its stage, with graceful fallbacks. */
 export function planExercise(sc: SessionCard, env: ExerciseEnv): Exercise {
   if (isProductionPending(sc, env)) {
@@ -191,6 +234,9 @@ export function planExercise(sc: SessionCard, env: ExerciseEnv): Exercise {
       ? { kind: "speak", method: "speaking", contextId }
       : { kind: "write", method: "writing", contextId };
   }
+
+  const context = contextExercise(sc);
+  if (context) return context;
 
   const method: ReviewMethod = methodForStage(sc.card.stage, sc.item.type);
   switch (method) {

@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { DialogPractice } from "./dialog-practice";
 import { FixPractice } from "./fix-practice";
 import { PatternDrill } from "./pattern-drill";
+import { PyramidDrill } from "./pyramid-drill";
 import { TranslationDrill } from "./translation-drill";
 
 const sb = () => getSupabaseBrowserClient();
@@ -69,7 +70,7 @@ export function SpeakingClient({
   const save = useSave();
   const qc = useQueryClient();
   const speech = useMemo(() => ({ rate: ttsRate, voice: ttsVoice }), [ttsRate, ttsVoice]);
-  const [extra, setExtra] = useState<"translate" | "drill" | "shadow">("translate");
+  const [extra, setExtra] = useState<"pyramid" | "translate" | "drill" | "shadow">("pyramid");
   const onSave = (rows: ProductionWrite[]) => {
     void save
       .mutateAsync(rows)
@@ -153,9 +154,14 @@ export function SpeakingClient({
           <FixPractice speech={speech} onSave={onSave} />
         </TabsContent>
         <TabsContent value="more">
-          <div role="radiogroup" aria-label={t.moreTab} className="mb-5 grid grid-cols-3 gap-1.5">
+          <div
+            role="radiogroup"
+            aria-label={t.moreTab}
+            className="mb-5 grid grid-cols-2 gap-1.5 sm:grid-cols-4"
+          >
             {(
               [
+                ["pyramid", t.pyramidTab],
                 ["translate", t.translateTab],
                 ["drill", t.drillTab],
                 ["shadow", t.shadowTab],
@@ -178,7 +184,15 @@ export function SpeakingClient({
               </button>
             ))}
           </div>
-          {extra === "translate" ? (
+          {extra === "pyramid" ? (
+            <PyramidDrill
+              items={items.data}
+              speech={speech}
+              progress={progress}
+              onSave={onSave}
+              aiEnabled={aiEnabled}
+            />
+          ) : extra === "translate" ? (
             <TranslationDrill
               items={items.data}
               speech={speech}

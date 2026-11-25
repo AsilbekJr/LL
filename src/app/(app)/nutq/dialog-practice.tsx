@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  Languages,
   Lightbulb,
   Loader2,
   MessagesSquare,
@@ -19,6 +18,7 @@ import { ACTIVE_DAYS } from "@/lib/production/active";
 import { FIX_CONTEXT, type DrillItem, type ProductionWrite } from "@/lib/production/api";
 import { fetchDialogTurn } from "@/lib/speaking/client";
 import { pickDialogWords, type DialogTurn } from "@/lib/speaking/dialog";
+import { HELP_MODEL, withHelp } from "@/lib/speaking/help";
 import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { fixPassed } from "@/lib/speaking/repeat";
 import { usesTerm } from "@/lib/text/usage";
@@ -36,6 +36,8 @@ interface Turn extends DialogTurn {
   firstTry?: boolean;
   passed?: boolean;
   corrected?: string;
+  /** Deepest help-ladder step opened for this question (0 = none). */
+  help?: number;
 }
 
 type Phase = "intro" | "talk" | "repeat" | "done";
@@ -66,6 +68,7 @@ export function DialogPractice({
   const [turns, setTurns] = useState<Turn[]>([]);
   const [attempts, setAttempts] = useState(0);
   const [repeatIndex, setRepeatIndex] = useState(0);
+  const [help, setHelp] = useState(0);
   const answer = useSpokenAnswer();
 
   const ask = useMutation({
@@ -119,6 +122,7 @@ export function DialogPractice({
     setTurns([]);
     setAttempts(0);
     setRepeatIndex(0);
+    setHelp(0);
     answer.reset();
     setPhase("talk");
     ask.mutate({ word: picked[0]!, history: [] });
@@ -136,7 +140,7 @@ export function DialogPractice({
         itemId: current.word.id,
         mode: "spoken",
         exercise: "situation",
-        context: "dialog",
+        context: withHelp("dialog", help),
         prompt: current.question,
         text: said,
         passed,
@@ -151,10 +155,12 @@ export function DialogPractice({
       passed,
       firstTry: passed && attempts === 0,
       corrected,
+      help,
     };
     const history = [...turns.slice(0, -1), closed];
     setTurns(history);
     setAttempts(0);
+    setHelp(0);
     answer.reset();
     const nextWord = words[history.length];
     if (nextWord) ask.mutate({ word: nextWord, history });
@@ -218,7 +224,13 @@ export function DialogPractice({
                   {turn.question}
                 </p>
                 {i === turns.length - 1 && !turn.answer && phase === "talk" ? (
-                  <QuestionHelp turn={turn} speech={speech} progress={progress.get(turn.word.id) ?? 0} />
+                  <HelpLadder
+                    turn={turn}
+                    speech={speech}
+                    progress={progress.get(turn.word.id) ?? 0}
+                    help={help}
+                    onOpen={(step) => setHelp((h) => Math.max(h, step))}
+                  />
                 ) : null}
               </Bubble>
               {turn.answer ? (
@@ -305,6 +317,9 @@ export function DialogPractice({
           <p className="mt-1 text-sm text-muted-foreground">
             {t.dialogScore(turns.filter((h) => h.firstTry).length, turns.length)}
           </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {t.dialogFree(turns.filter((h) => h.firstTry && !h.help).length, turns.length)}
+          </p>
           <Button className="mt-4" onClick={() => setPhase("intro")}>
             <MessagesSquare aria-hidden />
             {t.dialogNew}
@@ -345,32 +360,107 @@ function Bubble({
   );
 }
 
-function QuestionHelp({ turn, speech, progress }: { turn: Turn; speech: SpeechPrefs; progress: number }) {
+/**
+ * Help ladder under the coach's question: each tap opens one more step
+ * (translation → how to start → chunk + starter → model answer). The
+ * deepest step is saved with the answer; after the model, the answer is
+ * repetition and does not count toward "active".
+ */
+function HelpLadder({
+  turn,
+  speech,
+  progress,
+  help,
+  onOpen,
+}: {
+  turn: Turn;
+  speech: SpeechPrefs;
+  progress: number;
+  help: number;
+  onOpen: (step: number) => void;
+}) {
   const t = uz.speaking;
-  const [open, setOpen] = useState<"none" | "uz" | "hint">("none");
+  const steps = [
+    {
+      level: 1,
+      label: t.helpUz,
+      body: turn.question_uz ? <p lang="uz">{turn.question_uz}</p> : null,
+    },
+    {
+      level: 2,
+      label: t.helpHint,
+      body: turn.hint_uz ? <p lang="uz">{turn.hint_uz}</p> : null,
+    },
+    {
+      level: 3,
+      label: t.helpChunk,
+      body:
+        turn.collocation || turn.starter ? (
+          <>
+            {turn.collocation ? (
+              <p className="font-semibold" lang="en">
+                {turn.collocation}
+              </p>
+            ) : null}
+            {turn.starter ? (
+              <p className="mt-1">
+                <span className="text-xs text-muted-foreground">{t.helpStarter}: </span>
+                <span lang="en">{turn.starter}</span>
+              </p>
+            ) : null}
+          </>
+        ) : null,
+    },
+    {
+      level: HELP_MODEL,
+      label: t.helpModel,
+      body: turn.model_answer ? (
+        <>
+          <p className="font-semibold" lang="en">
+            {turn.model_answer}
+          </p>
+          <div className="mt-1.5">
+            <SpeakButton text={turn.model_answer} prefs={speech} />
+          </div>
+          <p className="mt-1.5 text-xs text-warning">{t.helpModelNote}</p>
+        </>
+      ) : null,
+    },
+  ].filter((s) => s.body);
+  const opened = steps.filter((s) => s.level <= help);
+  const next = steps.find((s) => s.level > help);
+
   return (
     <div className="mt-2 flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <SpeakButton key={turn.question} text={turn.question} prefs={speech} autoPlay />
-        <Button variant="ghost" size="sm" onClick={() => setOpen(open === "uz" ? "none" : "uz")}>
-          <Languages aria-hidden />
-          {t.dialogTranslate}
-        </Button>
-        {turn.hint_uz ? (
-          <Button variant="ghost" size="sm" onClick={() => setOpen(open === "hint" ? "none" : "hint")}>
-            <Lightbulb aria-hidden />
-            {t.dialogHint}
-          </Button>
-        ) : null}
-      </div>
-      {open === "uz" ? <p className="text-sm text-muted-foreground">{turn.question_uz}</p> : null}
-      {open === "hint" ? <p className="text-sm text-muted-foreground">{turn.hint_uz}</p> : null}
+      <SpeakButton key={turn.question} text={turn.question} prefs={speech} autoPlay />
       <p className="rounded-lg bg-highlight-soft px-3 py-1.5 text-sm font-semibold text-highlight-foreground">
         {t.dialogUseWord(turn.word.english)} <span className="font-normal">— {turn.word.uzbek}</span>
         <span className="block text-xs font-normal">
           {progress >= ACTIVE_DAYS ? t.activeDone : t.activeProgress(progress, ACTIVE_DAYS)}
         </span>
       </p>
+      {opened.length ? (
+        <ol className="flex flex-col gap-1.5">
+          {opened.map((s) => (
+            <li key={s.level} className="rounded-lg border bg-background px-3 py-2 text-sm">
+              <p className="mb-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                {s.label}
+              </p>
+              {s.body}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t.helpIntro}</p>
+      )}
+      {next ? (
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => onOpen(next.level)}>
+            <Lightbulb aria-hidden />
+            {t.helpMore(opened.length + 1, steps.length)} · {next.label}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

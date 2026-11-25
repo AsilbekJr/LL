@@ -1,6 +1,7 @@
 import { judgeSchema, type Judge, type JudgeRequest } from "./judge";
 import { dialogTurnSchema, type DialogRequest, type DialogTurn } from "./dialog";
 import { fitSchema, type FitRequest, type PatternFit } from "./fit";
+import { builderSchema, type Builder, type BuilderRequest } from "./pyramid";
 import { recapSchema, type Recap, type RecapRequest } from "./recap";
 
 /** Strict AI check of one spoken answer. null = AI off or unreachable (fall back to the offline check). */
@@ -90,6 +91,26 @@ export async function fetchRecap(req: RecapRequest): Promise<Recap | null> {
     if (!res.ok) return null;
     const out = recapSchema.safeParse(await res.json());
     return out.success ? out.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A situation + pieces for the first pyramid sentence. null = AI off or unreachable (use the offline builder). */
+export async function fetchPyramidBuilder(
+  req: BuilderRequest,
+  signal?: AbortSignal,
+): Promise<Builder | null> {
+  try {
+    const res = await fetch("/api/speaking-pyramid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+      signal: signal ?? AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return null;
+    const out = builderSchema.safeParse(await res.json());
+    return out.success && out.data.model ? out.data : null;
   } catch {
     return null;
   }

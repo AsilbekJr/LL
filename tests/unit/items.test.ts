@@ -118,6 +118,7 @@ describe("library", () => {
     uzbek: "olma",
     cefr_level: "A1",
     part_of_speech: null,
+    context_sentences: [],
     example_en: null,
     example_uz: null,
     notes: null,

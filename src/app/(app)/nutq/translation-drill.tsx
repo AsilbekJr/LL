@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Eye, RefreshCw, RotateCcw } from "lucide-react";
+import { AlertTriangle, Eye, Lightbulb, RefreshCw, RotateCcw } from "lucide-react";
 import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/form-controls";
 import { ACTIVE_DAYS } from "@/lib/production/active";
 import type { DrillItem, ProductionWrite } from "@/lib/production/api";
 import { englishKey } from "@/lib/schemas/item";
+import { HELP_MODEL, sentenceStart, withHelp } from "@/lib/speaking/help";
 import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { wordSimilarity } from "@/lib/text/usage";
 import { loadTranslations, pickTranslation, type TranslationPrompt } from "@/lib/vocab/sentences";
@@ -42,7 +43,9 @@ export function TranslationDrill({
   const byKey = useMemo(() => new Map(items.map((i) => [englishKey(i.english), i])), [items]);
   const known = useMemo(() => new Set(byKey.keys()), [byKey]);
   const [current, setCurrent] = useState<{ prompt: TranslationPrompt; word: string | null } | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  // Help ladder: 0 none, 2 first words shown, 4 full answer shown (before answering).
+  const [help, setHelp] = useState(0);
+  const revealed = help >= HELP_MODEL;
   const answer = useSpokenAnswer();
 
   // First pick / level change, once the bank is loaded.
@@ -52,6 +55,7 @@ export function TranslationDrill({
   }
 
   const item = current?.word ? (byKey.get(current.word) ?? null) : null;
+  const start = current ? sentenceStart(current.prompt.english, item?.english) : null;
   const similarity = current && answer.answer ? wordSimilarity(answer.answer, current.prompt.english) : null;
   const restart = answer.answer ? findRestart(answer.answer) : null;
   // With AI the judge decides (any correct wording counts); without it, closeness to the reference.
@@ -96,6 +100,7 @@ export function TranslationDrill({
           itemId: item.id,
           mode: "spoken",
           exercise: "translation",
+          context: help ? withHelp("translation", help) : null,
           prompt: current.prompt.uzbek,
           text: answer.answer,
           passed,
@@ -105,7 +110,7 @@ export function TranslationDrill({
       ]);
     }
     answer.reset();
-    setRevealed(false);
+    setHelp(0);
     setCurrent(
       bank.data ? pickTranslation(bank.data, level, known, Math.random, current?.prompt.english) : null,
     );
@@ -134,6 +139,19 @@ export function TranslationDrill({
               </p>
             ) : null}
           </section>
+
+          {start && help >= 2 && !showAnswer ? (
+            <div className="rounded-xl border bg-card px-4 py-3 text-center">
+              <p className="text-xs font-semibold text-muted-foreground">{t.translateStartLabel}</p>
+              <p className="mt-1 text-lg font-semibold" lang="en">
+                {start}
+              </p>
+            </div>
+          ) : null}
+
+          {revealed && !answer.answer ? (
+            <p className="text-center text-xs text-warning">{t.modelShownNote}</p>
+          ) : null}
 
           {!answer.answer ? <SpokenAnswerInput state={answer} /> : null}
 
@@ -166,12 +184,24 @@ export function TranslationDrill({
 
           <div className="grid grid-cols-2 gap-2">
             {similarity !== null ? (
-              <Button variant="outline" onClick={() => answer.reset()}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // The answer is on screen now: a second try is repetition.
+                  setHelp(HELP_MODEL);
+                  answer.reset();
+                }}
+              >
                 <RotateCcw aria-hidden />
                 {uz.production.redo}
               </Button>
+            ) : start && help < 2 ? (
+              <Button variant="outline" onClick={() => setHelp(2)}>
+                <Lightbulb aria-hidden />
+                {t.translateStart}
+              </Button>
             ) : (
-              <Button variant="outline" onClick={() => setRevealed(true)} disabled={revealed}>
+              <Button variant="outline" onClick={() => setHelp(HELP_MODEL)} disabled={revealed}>
                 <Eye aria-hidden />
                 {t.showAnswer}
               </Button>

@@ -25,7 +25,8 @@ import { fillExamples } from "./examples";
 type Client = SupabaseClient<Database>;
 
 const STUDIED = ["learning", "review", "mastered"] as const;
-const ITEM_COLUMNS = "id, type, english, uzbek, example_en, example_uz, part_of_speech, notes, cefr_level";
+const ITEM_COLUMNS =
+  "id, type, english, uzbek, example_en, example_uz, part_of_speech, notes, cefr_level, context_sentences";
 const CARD_COLUMNS = `id, item_id, direction, stage, ladder_step, due_date, lapses, reps, status, fsrs_state, last_reviewed_at, items(${ITEM_COLUMNS})`;
 const LOAD_HORIZON_DAYS = 120;
 

@@ -11,6 +11,7 @@ import type { DrillItem, ProductionWrite } from "@/lib/production/api";
 import { checkPattern, type SpeakingPattern } from "@/lib/production/patterns";
 import { fetchPatternFits } from "@/lib/speaking/client";
 import type { PatternFit } from "@/lib/speaking/fit";
+import { HELP_MODEL, withHelp } from "@/lib/speaking/help";
 import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { pickSensiblePattern } from "@/lib/speaking/pattern-pick";
 import { englishKey } from "@/lib/schemas/item";
@@ -86,6 +87,9 @@ export function PatternDrill({
     retry: false,
   });
   const pick = picked.data ?? null;
+  // The ready answer with the word, once opened, makes the answer repetition (not counted as active).
+  const [modelShownFor, setModelShownFor] = useState<string | null>(null);
+  const modelShown = Boolean(pick?.model && modelShownFor === `${pick.pattern.id}|${pick.item.id}`);
   const picking = !ready || picked.isPending;
 
   const check = pick && answer.answer ? checkPattern(answer.answer, pick.pattern, pick.item.english) : null;
@@ -112,7 +116,7 @@ export function PatternDrill({
           itemId: pick.item.id,
           mode: "spoken",
           exercise: "pattern",
-          context: pick.pattern.id,
+          context: modelShown ? withHelp(pick.pattern.id, HELP_MODEL) : pick.pattern.id,
           prompt: pick.pattern.en,
           text: answer.answer,
           passed: verdict.status === "pass",
@@ -150,6 +154,8 @@ export function PatternDrill({
             days={progress.get(pick.item.id) ?? 0}
             speech={speech}
             model={pick.model}
+            modelShown={modelShown}
+            onShowModel={() => setModelShownFor(`${pick.pattern.id}|${pick.item.id}`)}
           />
 
           {!answer.answer ? <SpokenAnswerInput state={answer} /> : null}
@@ -219,15 +225,18 @@ function PatternCard({
   days,
   speech,
   model,
+  modelShown,
+  onShowModel,
 }: {
   pattern: SpeakingPattern;
   word: DrillItem;
   days: number;
   speech: SpeechPrefs;
   model: PatternFit | null;
+  modelShown: boolean;
+  onShowModel: () => void;
 }) {
   const t = uz.speaking;
-  const [shown, setShown] = useState<string | null>(null);
   const [before, after] = pattern.en.split("___");
   return (
     <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-lift)">
@@ -284,7 +293,7 @@ function PatternCard({
 
       {model ? (
         <div className="mt-3 border-t pt-3">
-          {shown === model.sentence ? (
+          {modelShown ? (
             <>
               <p className="text-xs font-semibold text-muted-foreground">{t.modelWithWord(word.english)}</p>
               <p className="mt-1 font-semibold" lang="en">
@@ -298,10 +307,11 @@ function PatternCard({
               <div className="mt-2">
                 <SpeakButton text={model.sentence} prefs={speech} />
               </div>
+              <p className="mt-1.5 text-xs text-warning">{t.modelShownNote}</p>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setShown(model.sentence)}>
+              <Button variant="ghost" size="sm" onClick={onShowModel}>
                 <Eye aria-hidden />
                 {t.showModel(word.english)}
               </Button>

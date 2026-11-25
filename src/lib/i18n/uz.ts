@@ -147,6 +147,8 @@ export const uz = {
     adding: "Qo'shilmoqda…",
     listAdded: (inserted: number, duplicates: number) =>
       `${inserted} ta so'z misollari bilan qo'shildi${duplicates ? ` (${duplicates} ta dublikat o'tkazib yuborildi)` : ""}.`,
+    contextQueued:
+      "Har biriga turli vaziyatlarda 5 ta gap tayyorlanmoqda — takrorlashda shu gaplar orqali so'raladi.",
   },
   library: {
     description: (n: number) => `${n} ta so'z va ibora`,
@@ -233,7 +235,20 @@ export const uz = {
       word_order: "Gapni tuzing",
       writing: "O'z gapingizni yozing",
       speaking: "O'z gapingizni ayting",
+      sentence: "Gapni inglizcha yozing",
     },
+    // gap orqali yodlash
+    contextTitle: "Turli vaziyatlarda",
+    sentenceTask: "Shu gapni inglizcha yozing — o'rganayotgan so'zingiz albatta qatnashsin.",
+    sentencePlaceholder: "Inglizcha gap…",
+    sentenceWordMissing: "O'rganayotgan so'zingiz gapda yo'q.",
+    sentenceGood: "Zo'r! Gap to'g'ri.",
+    sentenceClose: "Yaqin — namunaga solishtiring.",
+    sentenceFar: "Namunadan ancha farq qiladi.",
+    sentenceReference: "Namuna",
+    sentenceSimilarity: (p: number) => `O'xshashlik: ${p}%`,
+    sentenceMeaningOk: "Ma'nosi to'g'ri edi",
+    sentenceMeaningOkHint: "Boshqacha, lekin to'g'ri yozgan bo'lsangiz bosing.",
     productionPending:
       "Bu so'zni haqiqatan bilishingizni ko'rsatish vaqti: uni o'z gapingizda ishlating. Yozma va og'zaki mashqdan o'tmaguncha so'z oxirgi bosqichlarga chiqmaydi.",
     gotIt: "Tushundim",
@@ -346,7 +361,7 @@ export const uz = {
     level: "Daraja",
     activeTitle: "Faol so'z boyligi",
     activeBody: (days: number) =>
-      `So'z ${days} xil kunda nutqda to'g'ri ishlatilgach "faol" bo'ladi (shadowing hisobga kirmaydi).`,
+      `So'z ${days} xil kunda nutqda to'g'ri ishlatilgach "faol" bo'ladi (shadowing va namuna javobni ko'rib aytilganlar hisobga kirmaydi).`,
     activeCount: (active: number, total: number) => `${active} / ${total}`,
     activeProgress: (d: number, days: number) => `Faollik: ${d}/${days} kun`,
     activeDone: "Faol so'z ✓",
@@ -401,8 +416,6 @@ export const uz = {
     dialogStart: "Suhbatni boshlash",
     dialogWords: "Shu suhbatdagi so'zlaringiz",
     dialogUseWord: (w: string) => `Javobda ishlating: ${w}`,
-    dialogHint: "Maslahat",
-    dialogTranslate: "Tarjimasi",
     dialogThinking: "Hamsuhbat o'ylamoqda…",
     dialogRetry: "Qayta javob berish",
     dialogNext: "Keyingi savol",
@@ -412,6 +425,125 @@ export const uz = {
     dialogScore: (ok: number, total: number) =>
       `${total} ta javobdan ${ok} tasi birinchi urinishdayoq to'g'ri.`,
     dialogNew: "Yangi suhbat",
+    dialogFree: (n: number, total: number) => `Yordamsiz aytilgan: ${n} / ${total}`,
+    // help ladder
+    helpIntro: "Avval yordamsiz urinib ko'ring. Qiynalsangiz, yordamni bittadan oching.",
+    helpMore: (step: number, total: number) => `Yordam ${step}/${total}`,
+    helpUz: "Tarjimasi",
+    helpHint: "Qanday boshlash",
+    helpChunk: "Birikma",
+    helpStarter: "Gapni shunday boshlang",
+    helpModel: "Namuna javob",
+    helpModelNote:
+      "Namunani ko'rgach aytilgan javob saqlanadi, lekin faollikka hisoblanmaydi — bu takrorlash. Uni o'z so'zlaringiz bilan o'zgartirib ayting.",
+    // sentence pyramid
+    pyramidTab: "Piramida",
+    pyramidIntro:
+      "Bitta so'z bilan qisqa gapdan boshlaysiz va har qadamda bitta qism qo'shasiz. Har safar butun gapni boshidan, bir nafasda ayting — shunda so'z nutqqa o'tadi.",
+    pyramidStart: "Piramidani boshlash",
+    pyramidWord: "Bugungi so'z",
+    pyramidOtherWord: "Boshqa so'z",
+    pyramidStep: (n: number, total: number) => `${n}-qadam / ${total}`,
+    pyramidPrevious: "Hozirgi gapingiz",
+    pyramidSayWhole: "Butun gapni qo'shimcha bilan qayta ayting:",
+    pyramidSteps: {
+      base: {
+        title: "Asos",
+        task: "So'z bilan qisqa, to'liq gap ayting.",
+        tips: [] as string[],
+      },
+      when: {
+        title: "+ Qachon / qayerda",
+        task: "Gapga vaqt yoki joy qo'shing.",
+        tips: ["yesterday", "last week", "every morning", "at work", "until Friday"],
+      },
+      why: {
+        title: "+ Nega",
+        task: "Sababini yoki natijasini qo'shing.",
+        tips: ["because …", "so …", "to …"],
+      },
+      but: {
+        title: "+ Lekin",
+        task: "Qarama-qarshi fikr qo'shing.",
+        tips: ["but …", "although …"],
+      },
+      turn: {
+        title: "Shaklni o'zgartiring",
+        task: "Butun gapni savol yoki inkor gapga aylantiring.",
+        tips: ["Did you …?", "Why did …?", "I didn't …", "She never …"],
+      },
+    },
+    /** First step by word class: a noun is not "who did what". */
+    pyramidBase: {
+      noun: {
+        task: "Shu narsa yoki tushuncha qatnashgan qisqa, to'liq gap ayting.",
+        tips: ["I need a new …", "There is a … in my …", "My … is …", "I put it in the …"],
+      },
+      verb: {
+        task: "Shu harakat bilan qisqa gap ayting: kim + nima qildi.",
+        tips: ["Yesterday I …", "My friend … ", "We usually …"],
+      },
+      adjective: {
+        task: "Kim yoki nima qandayligini ayting.",
+        tips: ["My … is very …", "It looks …", "I feel …"],
+      },
+      adverb: {
+        task: "Harakat qanday bajarilganini ayting.",
+        tips: ["She spoke …", "He drives …", "I … finished it."],
+      },
+      other: {
+        task: "So'z yoki ibora bilan qisqa, to'liq gap ayting.",
+        tips: ["I …", "We …", "My friend …"],
+      },
+    },
+    pyramidClass: { noun: "ot", verb: "fe'l", adjective: "sifat", adverb: "ravish", other: "" },
+    pyramidHowTitle: "Qanday qilinadi",
+    pyramidHow: [
+      "Pastdagi mikrofonni bosing.",
+      "Gapni inglizcha ovoz chiqarib ayting.",
+      "Yana bosib to'xtating — gap tekshiriladi.",
+      "To'g'ri bo'lsa, keyingi qadamda o'sha gapga bitta qism qo'shib, boshidan qayta aytasiz.",
+    ],
+    pyramidSampleShow: "Namuna piramidani ko'rish",
+    pyramidSampleTitle: "Namuna („postpone” bilan)",
+    pyramidSample: [
+      "I postponed the meeting.",
+      "I postponed the meeting until Friday.",
+      "I postponed the meeting until Friday because my boss was sick.",
+      "I postponed the meeting until Friday because my boss was sick, but the client wasn't happy.",
+      "Why did you postpone the meeting until Friday?",
+    ],
+    // step 1 builder
+    builderSituation: "Shu vaziyatni inglizcha ayting",
+    builderOwn: (w: string) => `Bugungi kuningizdan „${w}” qatnashgan bitta voqeani o'ylang va shuni ayting.`,
+    builderLoading: "Vaziyat tayyorlanmoqda…",
+    builderOther: "Boshqa vaziyat",
+    builderHelp: (step: number, total: number) => `Yordam ${step}/${total}`,
+    builderChunks: "Kerakli bo'laklar — shularni bir gapga ulang",
+    builderStarter: "Gapni shunday boshlang",
+    builderModel: "Namuna gap",
+    builderModelNote:
+      "Namunani ko'rib aytilgan gap faollikka hisoblanmaydi. Iloji bo'lsa, unda bitta narsani o'zgartiring (kim, nima yoki qachon).",
+    pyramidChecks: {
+      used: (w: string) => `„${w}” eshitildi`,
+      kept: "Oldingi gap saqlandi",
+      grew: "Yangi qism qo'shildi",
+      marker: "Bog'lovchi / shakl",
+    },
+    pyramidLocalRetry: "Hammasi bajarilmadi — belgilanmagan qismlarni qo'shib, butun gapni qayta ayting.",
+    pyramidNext: "Keyingi qadam",
+    pyramidFinish: "Piramidani yakunlash",
+    pyramidUseCorrected: "Tuzatilgan gap bilan davom etish",
+    pyramidRetry: "Qayta aytish",
+    pyramidDone: "Piramida tayyor",
+    pyramidScore: (ok: number, total: number) => `${total} qadamdan ${ok} tasi birinchi urinishda to'g'ri.`,
+    pyramidFinal: "Eng to'liq gapingiz",
+    pyramidAll: "Qadamlar",
+    pyramidNew: "Yangi so'z bilan",
+    pyramidNoWord: "Piramida uchun so'z yo'q: kutubxonaga so'z yoki ibora qo'shing.",
+    translateStart: "Boshlanishini ko'rsatish",
+    translateStartLabel: "Boshlanishi",
+    modelShownNote: "Tayyor javobni ko'rgach aytilgan gap faollikka hisoblanmaydi.",
     you: "Siz",
     coach: "Hamsuhbat",
     // corrections

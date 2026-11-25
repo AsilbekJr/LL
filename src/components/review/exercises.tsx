@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Check, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/form-controls";
+import { contextSentences, gradeSentence, type SentenceGrade } from "@/lib/items/context-sentences";
 import type { Exercise, SessionItem } from "@/lib/session/exercise";
 import type { ReviewResult } from "@/lib/srs/types";
 import { uz } from "@/lib/i18n/uz";
@@ -58,6 +60,7 @@ export function EncounterView({
             ) : null}
           </div>
         ) : null}
+        <ContextList item={item} speech={speech} />
         {item.notes ? (
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             <span className="font-semibold">{uz.review.notes}:</span> {item.notes}
@@ -68,6 +71,39 @@ export function EncounterView({
       <Button size="lg" className="w-full" autoFocus onClick={() => onAnswer(null)}>
         {uz.review.gotIt}
       </Button>
+    </div>
+  );
+}
+
+/** Gap orqali yodlash: the word's sentences in different situations, met on the first encounter. */
+function ContextList({ item, speech }: { item: SessionItem; speech: SpeechPrefs }) {
+  const sentences = contextSentences(item.context_sentences);
+  if (!sentences.length) return null;
+  return (
+    <div className="mx-auto mt-4 max-w-md rounded-xl bg-background/70 px-4 py-3 text-left">
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        {uz.review.contextTitle}
+      </p>
+      <ol className="mt-2 flex flex-col gap-3">
+        {sentences.map((s) => (
+          <li key={s.en}>
+            <span className="inline-block rounded-md bg-sunken px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              {s.situation}
+            </span>
+            <div className="mt-1 flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium" lang="en">
+                  {s.en}
+                </p>
+                <p className="text-sm text-muted-foreground" lang="uz">
+                  {s.uz}
+                </p>
+              </div>
+              <SpeakButton text={s.en} prefs={speech} compact />
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -381,6 +417,101 @@ export function OrderView({
           </div>
           <SpeakButton text={ex.answer.join(" ")} prefs={speech} />
           <ContinueButton onClick={finish} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------- Gap orqali yodlash: context sentence UZ → EN -------------------------
+
+export function SentenceView({
+  ex,
+  speech,
+  onAnswer,
+}: ExerciseProps & { ex: Of<"sentence">; speech: SpeechPrefs }) {
+  const t = uz.review;
+  const [value, setValue] = useState("");
+  const [grade, setGrade] = useState<SentenceGrade | null>(null);
+  const check = () => {
+    if (value.trim()) setGrade(gradeSentence(value, ex.reference, ex.term));
+  };
+  const finish = (r: ReviewResult) => onAnswer(r, value);
+  useEnter(() => grade && finish(grade.result), grade !== null);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="rounded-2xl border bg-card px-5 py-7 shadow-(--shadow-lift)">
+        <span className="inline-block rounded-md bg-sunken px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+          {ex.situation}
+        </span>
+        <Prompt lang="uz" className="mt-3">
+          {ex.prompt}
+        </Prompt>
+        <p className="mt-3 text-sm text-muted-foreground">{t.sentenceTask}</p>
+      </div>
+
+      <Textarea
+        rows={3}
+        lang="en"
+        autoFocus
+        autoComplete="off"
+        autoCapitalize="sentences"
+        spellCheck={false}
+        placeholder={t.sentencePlaceholder}
+        value={value}
+        disabled={grade !== null}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && !grade) {
+            e.preventDefault();
+            check();
+          }
+        }}
+      />
+
+      {!grade ? (
+        <Button size="lg" className="w-full" onClick={check} disabled={!value.trim()}>
+          {t.check}
+        </Button>
+      ) : (
+        <>
+          <div
+            role="status"
+            className={cn(
+              "rounded-xl border px-4 py-3",
+              grade.result === "good"
+                ? "border-success/30 bg-success-soft text-success"
+                : grade.result === "hard"
+                  ? "border-warning/30 bg-warning-soft text-warning"
+                  : "border-destructive/30 bg-destructive-soft text-destructive",
+            )}
+          >
+            <p className="font-semibold">
+              {!grade.used
+                ? t.sentenceWordMissing
+                : grade.result === "good"
+                  ? t.sentenceGood
+                  : grade.result === "hard"
+                    ? t.sentenceClose
+                    : t.sentenceFar}
+            </p>
+            <p className="mt-0.5 text-xs opacity-80">
+              {t.sentenceSimilarity(Math.round(grade.similarity * 100))}
+            </p>
+            <p className="mt-2 text-sm text-foreground" lang="en">
+              <span className="text-muted-foreground">{t.sentenceReference}:</span>{" "}
+              <span className="font-semibold">{ex.reference}</span>
+            </p>
+          </div>
+          <SpeakButton text={ex.reference} prefs={speech} autoPlay />
+          <ContinueButton onClick={() => finish(grade.result)} />
+          {grade.result !== "good" && grade.used ? (
+            <Button variant="ghost" onClick={() => finish("good")} title={t.sentenceMeaningOkHint}>
+              <Check aria-hidden />
+              {t.sentenceMeaningOk}
+            </Button>
+          ) : null}
         </>
       )}
     </div>
