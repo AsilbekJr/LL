@@ -33,8 +33,25 @@ describe("studyStreak", () => {
     expect(studyStreak(["2026-11-05", "2026-11-04"], today)).toBe(2);
   });
 
-  it("is 0 after a missed day", () => {
-    expect(studyStreak(["2026-11-04", "2026-11-03"], today)).toBe(0);
+  it("forgives one rest day a week", () => {
+    // 11-05 missed (Thursday): a rest day; today not done yet.
+    expect(studyStreak(["2026-11-04", "2026-11-03"], today)).toBe(2);
+    // A rest day in the middle bridges the two runs.
+    expect(studyStreak(["2026-11-06", "2026-11-05", "2026-11-03", "2026-11-02"], today)).toBe(4);
+  });
+
+  it("ends after two missed days in a row or two in one week", () => {
+    expect(studyStreak(["2026-11-03", "2026-11-02"], today)).toBe(0);
+    // Mon 11-02 … Fri 11-06: misses on 11-05 and 11-03 (same week).
+    expect(studyStreak(["2026-11-06", "2026-11-04", "2026-11-02"], today)).toBe(2);
+    // Misses in different weeks are both forgiven (Sun 11-01 and Thu 11-05).
+    expect(studyStreak(["2026-11-06", "2026-11-04", "2026-11-03", "2026-11-02", "2026-10-31"], today)).toBe(
+      5,
+    );
     expect(studyStreak([], today)).toBe(0);
+  });
+
+  it("can be strict", () => {
+    expect(studyStreak(["2026-11-04", "2026-11-03"], today, 0)).toBe(0);
   });
 });

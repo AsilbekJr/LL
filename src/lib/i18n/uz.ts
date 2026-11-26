@@ -658,6 +658,14 @@ export const uz = {
     attribution:
       "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
   },
+  weekly: {
+    thisWeek: "Bu hafta",
+    lastWeek: "O'tgan hafta",
+    newActive: "Yangi faol so'zlar",
+    uses: "Nutqda ishlatildi",
+    top: "Eng ko'p ishlatganingiz:",
+    times: (n: number) => `(${n} marta)`,
+  },
   active: {
     gained: (n: number) => (n === 1 ? "Yangi faol so'z!" : `+${n} ta yangi faol so'z!`),
     milestone: (m: number) =>

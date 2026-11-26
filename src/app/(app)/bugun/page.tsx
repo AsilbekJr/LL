@@ -11,6 +11,7 @@ import {
   Play,
   Plus,
   RotateCcw,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -23,6 +24,7 @@ import { addDays, dayInTz, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } fro
 import { fetchRecapRows } from "@/lib/speaking/recap-api";
 import { recapProgress } from "@/lib/speaking/recap";
 import { storyWeek } from "@/lib/story/story";
+import { summaryWeek, weeklySummary } from "@/lib/production/weekly";
 import { buildDailyQueue } from "@/lib/srs/queue";
 import { loadTodayState } from "@/lib/session/today-state";
 import { loadCohortTotals, loadWordHistory } from "@/lib/session/cohorts";
@@ -112,6 +114,30 @@ async function getToday() {
       : Promise.resolve([]),
   ]);
   const retold = storyRows.filter((r) => r.retold_at);
+
+  // Haftalik xulosa: at the end of the week (and on Monday for the week just gone).
+  const sumWeek = summaryWeek(today);
+  const summary = sumWeek ? weeklySummary(uses, sumWeek, tz) : null;
+  const summaryIds = summary ? [...summary.newlyActive, ...(summary.top ? [summary.top.itemId] : [])] : [];
+  const names = summaryIds.length
+    ? await supabase
+        .from("items")
+        .select("id, english")
+        .in("id", summaryIds.slice(0, 50))
+        .then((r) => new Map((r.data ?? []).map((i) => [i.id, i.english])))
+    : new Map<string, string>();
+  const weekly =
+    summary && (summary.uses > 0 || summary.newlyActive.length > 0)
+      ? {
+          thisWeek: sumWeek === storyWeek(today).weekStart && storyWeek(today).current,
+          newlyActive: summary.newlyActive.flatMap((id) => (names.has(id) ? [names.get(id)!] : [])),
+          uses: summary.uses,
+          top:
+            summary.top && names.has(summary.top.itemId)
+              ? { english: names.get(summary.top.itemId)!, count: summary.top.count }
+              : null,
+        }
+      : null;
   const recap = recapProgress(recapRows, (iso) => dayInTz(new Date(iso), tz));
 
   const error = dueRes.error ?? stateRes.error ?? history.error ?? itemsRes.error;
@@ -240,6 +266,7 @@ async function getToday() {
     recapDone: recap.days.has(today),
     recapWords: recap.usedOn(today),
     recapStreak: studyStreak(recap.days, today),
+    weekly,
     story: week.current
       ? { done: retold.length > 0, best: Math.max(0, ...retold.map((r) => r.best_retell ?? 0)) }
       : null,
@@ -401,6 +428,7 @@ export default async function TodayPage() {
 
       <RecapCard done={t.recapDone} words={t.recapWords} streak={t.recapStreak} />
       {t.story ? <StoryCard done={t.story.done} best={t.story.best} /> : null}
+      {t.weekly ? <WeeklyCard {...t.weekly} /> : null}
 
       {!allDone ? <CohortMap cohorts={t.cohorts} today={t.today} /> : null}
 
@@ -461,6 +489,66 @@ function RecapCard({ done, words, streak }: { done: boolean; words: number; stre
       </span>
       <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
     </Link>
+  );
+}
+
+/** Haftalik xulosa: what the week of speaking added up to. */
+function WeeklyCard({
+  thisWeek,
+  newlyActive,
+  uses,
+  top,
+}: {
+  thisWeek: boolean;
+  newlyActive: string[];
+  uses: number;
+  top: { english: string; count: number } | null;
+}) {
+  const w = uz.weekly;
+  return (
+    <section className="mt-3 rounded-2xl border bg-card p-4 shadow-(--shadow-soft)">
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+        <Sparkles className="size-3.5" aria-hidden />
+        {thisWeek ? w.thisWeek : w.lastWeek}
+      </p>
+      <dl className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <dt className="text-xs text-muted-foreground">{w.newActive}</dt>
+          <dd className="font-display text-2xl font-semibold text-success tabular-nums">
+            {newlyActive.length}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">{w.uses}</dt>
+          <dd className="font-display text-2xl font-semibold tabular-nums">{uses}</dd>
+        </div>
+      </dl>
+      {newlyActive.length ? (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {newlyActive.slice(0, 8).map((e) => (
+            <li
+              key={e}
+              lang="en"
+              className="rounded-full border border-success/40 bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success"
+            >
+              {e}
+            </li>
+          ))}
+          {newlyActive.length > 8 ? (
+            <li className="px-1 text-xs text-muted-foreground">+{newlyActive.length - 8}</li>
+          ) : null}
+        </ul>
+      ) : null}
+      {top ? (
+        <p className="mt-3 text-sm">
+          {w.top}{" "}
+          <span className="font-semibold" lang="en">
+            {top.english}
+          </span>{" "}
+          <span className="text-muted-foreground">{w.times(top.count)}</span>
+        </p>
+      ) : null}
+    </section>
   );
 }
 

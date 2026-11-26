@@ -36,19 +36,46 @@ export function greetingUz(hour: number): "Xayrli tong" | "Xayrli kun" | "Xayrli
   return "Xayrli kech";
 }
 
+/** Missed days forgiven per calendar week (Mon–Sun): a rest day does not break a streak. */
+export const REST_DAYS_PER_WEEK = 1;
+
+function mondayOf(day: IsoDate): IsoDate {
+  const dow = (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7;
+  return addDays(day, -dow);
+}
+
 /**
  * Consecutive study days ending today (or yesterday, if today is not done yet,
  * so the streak does not look broken in the morning). `studiedDays` = days with ≥1 review.
+ * One missed day per calendar week is a rest day: it does not count, but it
+ * does not break the streak either — a streak should encourage, not scare.
+ * Two missed days in a row, or two in one week, end it.
  */
-export function studyStreak(studiedDays: Iterable<IsoDate>, today: IsoDate): number {
+export function studyStreak(
+  studiedDays: Iterable<IsoDate>,
+  today: IsoDate,
+  restPerWeek = REST_DAYS_PER_WEEK,
+): number {
   const set = new Set(studiedDays);
+  const rested = new Map<IsoDate, number>();
   let day = set.has(today) ? today : addDays(today, -1);
   let n = 0;
-  while (set.has(day)) {
-    n++;
-    day = addDays(day, -1);
+  for (;;) {
+    if (set.has(day)) {
+      n++;
+      day = addDays(day, -1);
+      continue;
+    }
+    const week = mondayOf(day);
+    const used = rested.get(week) ?? 0;
+    // A rest day only bridges two study days.
+    if (used < restPerWeek && set.has(addDays(day, -1))) {
+      rested.set(week, used + 1);
+      day = addDays(day, -1);
+      continue;
+    }
+    return n;
   }
-  return n;
 }
 
 /** Seconds a card usually takes: a known word is quick, a new one needs its sentences read. */
