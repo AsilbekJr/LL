@@ -24,6 +24,7 @@ import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Notice, Textarea } from "@/components/ui/form-controls";
 import { sttError, useLongRecorder } from "@/hooks/use-long-recorder";
+import { useStored } from "@/hooks/use-stored";
 import { useInputMode } from "@/hooks/use-input-mode";
 import { InputModeToggle } from "@/components/production/input-mode";
 import { ACTIVE_DAYS, spokenDays } from "@/lib/production/active";
@@ -77,24 +78,11 @@ const sb = () => getSupabaseBrowserClient();
 const t = uz.story;
 const LEVEL_KEY = "ll.story.level";
 
+/** The story level, remembered on this device (read after hydration: no mismatch). */
 function useStoryLevel() {
-  const [level, setLevel] = useState<StoryLevelId>(() => {
-    if (typeof window === "undefined") return DEFAULT_STORY_LEVEL;
-    try {
-      const saved = window.localStorage.getItem(LEVEL_KEY);
-      return STORY_LEVELS.some((l) => l.id === saved) ? (saved as StoryLevelId) : DEFAULT_STORY_LEVEL;
-    } catch {
-      return DEFAULT_STORY_LEVEL;
-    }
-  });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(LEVEL_KEY, level);
-    } catch {
-      // storage off: the level is only kept for this visit
-    }
-  }, [level]);
-  return [level, setLevel] as const;
+  const [saved, setSaved] = useStored(LEVEL_KEY);
+  const level = STORY_LEVELS.some((l) => l.id === saved) ? (saved as StoryLevelId) : DEFAULT_STORY_LEVEL;
+  return [level, (l: StoryLevelId) => setSaved(l)] as const;
 }
 
 export function StoryClient({

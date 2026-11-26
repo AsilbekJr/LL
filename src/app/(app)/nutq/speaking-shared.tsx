@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
 import { Checkbox, Textarea } from "@/components/ui/form-controls";
 import { InputModeToggle } from "@/components/production/input-mode";
 import { useInputMode } from "@/hooks/use-input-mode";
+import { useStored } from "@/hooks/use-stored";
 import { Button } from "@/components/ui/button";
 import { MicButton, sttMessage, useRecorder } from "@/components/production/production-task";
 import type { CefrLevel } from "@/lib/supabase/database.types";
@@ -16,19 +17,14 @@ const LEVEL_KEY = "ll.speaking.level";
 
 /** The learner's speaking level, remembered on this device. Defaults to their most common item level. */
 export function useSpeakingLevel(items: { cefr_level: CefrLevel | null }[]) {
-  const [level, setLevel] = useState<CefrLevel>(() => {
-    if (typeof window !== "undefined") {
-      const saved = window.localStorage.getItem(LEVEL_KEY) as CefrLevel | null;
-      if (saved && VOCAB_LEVELS.includes(saved)) return saved;
-    }
+  const [saved, setSaved] = useStored(LEVEL_KEY);
+  const fallback = useMemo(() => {
     const counts = new Map<CefrLevel, number>();
     for (const i of items) if (i.cefr_level) counts.set(i.cefr_level, (counts.get(i.cefr_level) ?? 0) + 1);
     return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "A2";
-  });
-  useEffect(() => {
-    window.localStorage.setItem(LEVEL_KEY, level);
-  }, [level]);
-  return [level, setLevel] as const;
+  }, [items]);
+  const level = saved && VOCAB_LEVELS.includes(saved as CefrLevel) ? (saved as CefrLevel) : fallback;
+  return [level, (l: CefrLevel) => setSaved(l)] as const;
 }
 
 export function LevelPicker({ value, onChange }: { value: CefrLevel; onChange: (l: CefrLevel) => void }) {

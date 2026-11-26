@@ -7,7 +7,8 @@
  */
 export type FeedbackKind = "success" | "error" | "complete";
 
-const KEY = "ll.feedback";
+export const FEEDBACK_KEY = "ll.feedback";
+const KEY = FEEDBACK_KEY;
 
 export function feedbackEnabled(): boolean {
   try {

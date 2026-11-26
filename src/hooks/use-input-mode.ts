@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
+import { useIsClient } from "./use-stored";
 import { canRecognize } from "@/lib/speech/stt";
 
 /**
@@ -53,6 +54,7 @@ export function setInputMode(mode: InputMode) {
 
 export function useInputMode() {
   const mode = useSyncExternalStore(subscribe, snapshot, (): InputMode => "voice");
-  const [canVoice] = useState(() => canRecognize());
+  // Browser-only check, done after hydration so server and client HTML match.
+  const canVoice = useIsClient() && canRecognize();
   return { mode, canVoice, voice: canVoice && mode === "voice", setMode: setInputMode };
 }

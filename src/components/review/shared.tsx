@@ -8,6 +8,7 @@ import { checkTyped, type TypedCheck } from "@/lib/text/answer";
 import { canAutoplay, canSpeak, isIOS, prefetchSpeech, preloadVoices, speak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
 import { feedback } from "@/lib/feedback/feedback";
+import { useIsClient } from "@/hooks/use-stored";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +58,7 @@ export function SpeakButton({
 }) {
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const available = typeof window !== "undefined" && canSpeak();
+  const available = useIsClient() && canSpeak();
 
   async function play(slow = false) {
     setPlaying(true);
