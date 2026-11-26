@@ -267,6 +267,7 @@ export const uz = {
     overrideCorrect: "Men to'g'ri yozgandim",
     grades: { again: "Qaytadan", hard: "Qiyin", good: "Yaxshi", easy: "Oson" },
     gradeHint: "O'zingizni baholang",
+    swipeHint: "← Qaytadan · surib baholang · Yaxshi →",
     interval: (days: number) =>
       days === 0 ? "bugun" : days === 1 ? "1 kun" : days < 30 ? `${days} kun` : `${Math.round(days / 30)} oy`,
     orderHint: "So'zlarni to'g'ri tartibda bosing",

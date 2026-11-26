@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, RotateCcw, X } from "lucide-react";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/form-controls";
 import { contextSentences, gradeSentence, type SentenceGrade } from "@/lib/items/context-sentences";
@@ -229,28 +230,31 @@ export function RecallView({
   const english = ex.promptLang === "en" ? ex.prompt : ex.answer;
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border bg-card px-5 py-8 shadow-(--shadow-lift)">
-        <Prompt lang={ex.promptLang}>{ex.prompt}</Prompt>
-        <div
-          className={cn(
-            "mt-6 border-t border-dashed pt-6 transition-opacity",
-            shown ? "opacity-100" : "pointer-events-none opacity-0",
-          )}
-          aria-hidden={!shown}
-        >
-          <Prompt lang={ex.promptLang === "en" ? "uz" : "en"} className="text-primary">
-            {ex.answer}
-          </Prompt>
-          <div className="mt-4">
-            {shown ? <SpeakButton text={english} prefs={speech} autoPlay={ex.promptLang === "uz"} /> : null}
+      <SwipeToGrade enabled={shown} onGrade={(r) => onAnswer(r)}>
+        <div className="rounded-2xl border bg-card px-5 py-8 shadow-(--shadow-lift)">
+          <Prompt lang={ex.promptLang}>{ex.prompt}</Prompt>
+          <div
+            className={cn(
+              "mt-6 border-t border-dashed pt-6 transition-opacity",
+              shown ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
+            aria-hidden={!shown}
+          >
+            <Prompt lang={ex.promptLang === "en" ? "uz" : "en"} className="text-primary">
+              {ex.answer}
+            </Prompt>
+            <div className="mt-4">
+              {shown ? <SpeakButton text={english} prefs={speech} autoPlay={ex.promptLang === "uz"} /> : null}
+            </div>
           </div>
         </div>
-      </div>
+      </SwipeToGrade>
 
       {shown ? (
         <div>
           <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
-            {uz.review.gradeHint}
+            <span className="sm:hidden">{uz.review.swipeHint}</span>
+            <span className="hidden sm:inline">{uz.review.gradeHint}</span>
           </p>
           <GradeButtons intervals={intervals} onGrade={(r) => onAnswer(r)} />
         </div>
@@ -260,6 +264,65 @@ export function RecallView({
         </Button>
       )}
     </div>
+  );
+}
+
+/**
+ * Recall card you can swipe once the answer is shown: right = "Bilaman"
+ * (good), left = "Qayta" (again). The grade buttons stay for precision
+ * (hard / easy) and for keyboards.
+ */
+function SwipeToGrade({
+  enabled,
+  onGrade,
+  children,
+}: {
+  enabled: boolean;
+  onGrade: (r: ReviewResult) => void;
+  children: ReactNode;
+}) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-240, 240], [-7, 7]);
+  const goodOpacity = useTransform(x, [24, 110], [0, 1]);
+  const againOpacity = useTransform(x, [-110, -24], [1, 0]);
+
+  function fling(r: ReviewResult, to: number) {
+    feedback(r === "again" ? "error" : "success");
+    void animate(x, to, { duration: 0.18, ease: "easeIn" }).then(() => onGrade(r));
+  }
+
+  return (
+    <motion.div
+      className="relative touch-pan-y"
+      style={{ x, rotate }}
+      drag={enabled ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.9}
+      onDragEnd={(_, info) => {
+        if (info.offset.x > 110 || info.velocity.x > 700) fling("good", 520);
+        else if (info.offset.x < -110 || info.velocity.x < -700) fling("again", -520);
+      }}
+    >
+      {children}
+      {enabled ? (
+        <>
+          <motion.span
+            aria-hidden
+            style={{ opacity: goodOpacity }}
+            className="pointer-events-none absolute top-4 left-4 -rotate-6 rounded-lg border-2 border-success bg-success-soft px-3 py-1 text-sm font-bold text-success"
+          >
+            {uz.review.grades.good}
+          </motion.span>
+          <motion.span
+            aria-hidden
+            style={{ opacity: againOpacity }}
+            className="pointer-events-none absolute top-4 right-4 rotate-6 rounded-lg border-2 border-destructive bg-destructive-soft px-3 py-1 text-sm font-bold text-destructive"
+          >
+            {uz.review.grades.again}
+          </motion.span>
+        </>
+      ) : null}
+    </motion.div>
   );
 }
 

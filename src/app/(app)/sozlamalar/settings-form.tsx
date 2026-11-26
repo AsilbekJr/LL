@@ -4,10 +4,11 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { useFieldArray, useForm, useFormState, useWatch } from "react-hook-form";
-import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Plus, Volume2, X } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Volume2, X } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Field, Notice, Select } from "@/components/ui/form-controls";
+import { Checkbox, Field, Select } from "@/components/ui/form-controls";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { MAX_REMINDERS, settingsFormSchema } from "@/lib/schemas/settings";
 import { englishVoices, testDeviceVoice, type VoiceTestResult } from "@/lib/speech/tts";
@@ -65,7 +66,6 @@ export function SettingsForm({
   const t = uz.settings;
   const formId = useId();
   const router = useRouter();
-  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceTest, setVoiceTest] = useState<"busy" | VoiceTestResult | null>(null);
   const timeZones = useMemo(() => {
@@ -102,7 +102,6 @@ export function SettingsForm({
   }, []);
 
   const onSubmit = handleSubmit(async (v) => {
-    setMessage(null);
     const parsed = settingsFormSchema.safeParse({
       ...v,
       reminder_times: v.reminder_times.map((r) => r.value),
@@ -120,11 +119,11 @@ export function SettingsForm({
       .update(parsed.data)
       .eq("user_id", initial.user_id);
     if (error) {
-      setMessage({ tone: "danger", text: error.message });
+      toast.error(error.message);
       return;
     }
     reset({ ...v, reminder_times: parsed.data.reminder_times.map((value) => ({ value })) });
-    setMessage({ tone: "success", text: t.saved });
+    toast.success(t.saved);
     router.refresh();
   });
 
@@ -320,12 +319,6 @@ export function SettingsForm({
           <ThemeToggle />
         </div>
       </Section>
-
-      {message ? (
-        <Notice tone={message.tone} icon={message.tone === "success" ? CheckCircle2 : AlertTriangle}>
-          {message.text}
-        </Notice>
-      ) : null}
 
       {/* Pinned to the bottom of the screen, so saving never needs scrolling. */}
       <BottomActionBar label={t.save}>

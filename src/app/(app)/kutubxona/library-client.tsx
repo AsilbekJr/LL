@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   BookOpen,
   CalendarPlus,
-  CheckCircle2,
   Loader2,
   Pause,
   Play,
@@ -23,6 +22,7 @@ import { ItemForm } from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { Badge, Notice, Select } from "@/components/ui/form-controls";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { useBulkAction, useLibrary, useToday, useUpdateItem } from "@/hooks/use-items";
 import {
@@ -70,7 +70,6 @@ export function LibraryClient({ hardOnly }: { hardOnly?: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
 
   const items = useMemo(() => library.data ?? [], [library.data]);
   const tags = useMemo(() => collectTags(items), [items]);
@@ -95,14 +94,13 @@ export function LibraryClient({ hardOnly }: { hardOnly?: boolean }) {
   }
 
   async function run(action: Bulk) {
-    setMessage(null);
     try {
       await bulk.mutateAsync({ action, ids: [...selected] });
-      setMessage({ tone: "success", text: t.done[action] });
+      toast.success(t.done[action]);
       setSelected(new Set());
       setConfirmDelete(false);
     } catch (e) {
-      setMessage({ tone: "danger", text: e instanceof Error ? e.message : uz.common.errorBody });
+      toast.error(e instanceof Error ? e.message : uz.common.errorBody);
     }
   }
 
@@ -310,12 +308,6 @@ export function LibraryClient({ hardOnly }: { hardOnly?: boolean }) {
         ) : null}
       </div>
 
-      {message ? (
-        <Notice tone={message.tone} icon={message.tone === "success" ? CheckCircle2 : AlertTriangle}>
-          {message.text}
-        </Notice>
-      ) : null}
-
       <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
         <span aria-live="polite">{t.results(results.length)}</span>
         {visible.length ? (
@@ -394,7 +386,7 @@ export function LibraryClient({ hardOnly }: { hardOnly?: boolean }) {
       <EditDialog
         item={editing}
         onClose={() => setEditing(null)}
-        onSaved={() => setMessage({ tone: "success", text: t.done.edit })}
+        onSaved={() => toast.success(t.done.edit)}
       />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>

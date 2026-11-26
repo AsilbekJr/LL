@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { activeCount, crossedMilestone, spokenDays } from "@/lib/production/active";
@@ -28,12 +29,6 @@ function writeSeen(n: number) {
   }
 }
 
-interface Toast {
-  count: number;
-  gained: number;
-  milestone: number | null;
-}
-
 /**
  * Celebrates the moment a word becomes ACTIVE (and the milestones on the way
  * to 500), wherever that happened — a conversation, the daily talk, the weekly
@@ -46,7 +41,6 @@ export function ActiveWatcher() {
     queryFn: () => fetchSpokenUses(getSupabaseBrowserClient()),
     staleTime: 5 * 60_000,
   });
-  const [toast, setToast] = useState<Toast | null>(null);
   const data = uses.data;
 
   useEffect(() => {
@@ -58,34 +52,12 @@ export function ActiveWatcher() {
     const milestone = crossedMilestone(seen, count);
     feedback("complete");
     void celebrate(milestone ? "big" : "small");
-    // Shown from an effect on purpose: it reacts to new data from the server.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setToast({ count, gained: count - seen, milestone });
+    const t = uz.active;
+    toast.success(milestone ? t.milestone(milestone) : t.gained(count - seen), {
+      description: t.total(count),
+      icon: <Sparkles className="size-5 text-success" aria-hidden />,
+    });
   }, [data]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(null), 4500);
-    return () => clearTimeout(id);
-  }, [toast]);
-
-  if (!toast) return null;
-  const t = uz.active;
-  return (
-    <div
-      role="status"
-      className="animate-pop fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-50 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-success/30 bg-card px-4 py-3 shadow-(--shadow-lift)"
-      onClick={() => setToast(null)}
-    >
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-success-soft text-success">
-        <Sparkles className="size-5" aria-hidden />
-      </span>
-      <span className="min-w-0">
-        <span className="block font-semibold">
-          {toast.milestone ? t.milestone(toast.milestone) : t.gained(toast.gained)}
-        </span>
-        <span className="block text-sm text-muted-foreground">{t.total(toast.count)}</span>
-      </span>
-    </div>
-  );
+  return null;
 }
