@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { addDays, diffDays, type IsoDate } from "@/lib/srs/dates";
 import type { StoryLevelId } from "@/lib/supabase/database.types";
-import { usesTerm, wordTokens } from "@/lib/text/usage";
+import { usesTerm, wordSimilarity, wordTokens } from "@/lib/text/usage";
 
 /**
  * "Haftalik hikoya": at the end of each week a short story is written from
@@ -317,7 +317,7 @@ export function parseStoryWords(value: unknown): StoryWord[] {
  * 3 — nothing in English (the Uzbek meaning only).
  */
 export const MASK_STEPS = 4;
-export const PART_PASS = 0.75;
+export const PART_PASS = 0.8;
 
 const WORD_RE = /[A-Za-z][A-Za-z'’-]*/g;
 
@@ -499,3 +499,23 @@ export function highlightWords(text: string, words: StoryWord[]): TextSegment[] 
   if (at < text.length) out.push({ text: text.slice(at) });
   return out;
 }
+
+export interface PartCheck {
+  similarity: number;
+  /** Target words of this part that were not heard. */
+  missing: string[];
+  passed: boolean;
+}
+
+/**
+ * One memorized part said aloud: close enough to the text AND every target
+ * word that is in this part heard (the words are the point of the story).
+ */
+export function checkPart(said: string, part: string, targets: string[]): PartCheck {
+  const similarity = wordSimilarity(said, part);
+  const missing = targets.filter((w) => usesTerm(part, w) && !usesTerm(said, w));
+  return { similarity, missing, passed: similarity >= PART_PASS && missing.length === 0 };
+}
+
+/** "Matnni ko'rsatish" shows the hidden text only this long. */
+export const PEEK_MS = 4000;

@@ -150,3 +150,15 @@ describe("retelling", () => {
     expect(retellUserMessage(req)).toContain("<transcript>");
   });
 });
+
+describe("memorizing a part", () => {
+  it("needs the text close enough and every target word of the part", async () => {
+    const { checkPart } = await import("@/lib/story/story");
+    const part = "Our tent was opposite a big green tree.";
+    expect(checkPart("our tent was opposite a big green tree", part, ["opposite"]).passed).toBe(true);
+    // Two wrong words in eight ("all that" for "our tent"): not yet.
+    expect(checkPart("all that was opposite a big green tree", part, ["opposite"]).passed).toBe(false);
+    const noWord = checkPart("our tent was across a big green tree", part, ["opposite", "sink"]);
+    expect(noWord).toMatchObject({ passed: false, missing: ["opposite"] });
+  });
+});

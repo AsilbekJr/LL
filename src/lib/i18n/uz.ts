@@ -870,6 +870,8 @@ export const uz = {
     partPassed: "Zo'r! Endi matn ko'proq yashirildi.",
     partDone: "Bu bo'lak yodlandi.",
     partRetry: (p: number) => `O'xshashlik ${p}% — yana bir bor urinib ko'ring.`,
+    partWordMissing: (w: string) => `„${w}” eshitilmadi — so'zingizni aniq aytib, qayta urinib ko'ring.`,
+    peekedRetry: "To'g'ri, lekin matnga qarab aytdingiz. Endi qaramasdan bir marta ayting.",
     nextPart: "Keyingi bo'lak",
     prevPart: "Oldingi bo'lak",
     showText: "Matnni ko'rsatish",

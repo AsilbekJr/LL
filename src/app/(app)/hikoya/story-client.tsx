@@ -38,13 +38,14 @@ import { fetchRetell, generateStory } from "@/lib/story/client";
 import {
   DEFAULT_STORY_LEVEL,
   highlightWords,
+  checkPart,
   maskPart,
   MASK_STEPS,
   missingWords,
   offlineRetellScore,
   parseStory,
   parseStoryWords,
-  PART_PASS,
+  PEEK_MS,
   pickStoryWords,
   RETELL_MAX_SECONDS,
   RETELL_MIN_WORDS,
@@ -63,7 +64,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { StoryLevelId } from "@/lib/supabase/database.types";
 import type { IsoDate } from "@/lib/srs/dates";
-import { usesTerm, wordSimilarity } from "@/lib/text/usage";
+import { usesTerm } from "@/lib/text/usage";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { SpokenAnswerInput, useSpokenAnswer } from "../nutq/speaking-shared";
@@ -511,17 +512,36 @@ function MemorizeStep({
   const [index, setIndex] = useState(() => Math.min(row.memorized_parts, total - 1));
   const [maskStep, setMaskStep] = useState(0);
   const [peek, setPeek] = useState(false);
+  // Peeked at the hidden text since the last answer: that answer does not move the part on.
+  const [peeked, setPeeked] = useState(false);
   const answer = useSpokenAnswer();
   const part = body.parts[index]!;
   const targets = useMemo(() => words.map((w) => w.english), [words]);
-  const similarity = answer.answer ? wordSimilarity(answer.answer, part.en) : null;
-  const passed = similarity !== null && similarity >= PART_PASS;
+  const check = answer.answer ? checkPart(answer.answer, part.en, targets) : null;
+  const lookedAt = peeked && maskStep > 0;
+  const passed = Boolean(check?.passed) && !lookedAt;
+
+  // A peek is short, and ends as soon as the learner starts speaking.
+  useEffect(() => {
+    if (!peek) return;
+    const id = setTimeout(() => setPeek(false), PEEK_MS);
+    return () => clearTimeout(id);
+  }, [peek]);
+  // Hidden again as soon as the learner starts speaking.
+  const showing = peek && !answer.rec.recording;
+
+  function retry() {
+    setPeeked(false);
+    setPeek(false);
+    answer.reset();
+  }
   const partDone = index < done;
 
   function go(i: number) {
     setIndex(i);
     setMaskStep(0);
     setPeek(false);
+    setPeeked(false);
     answer.reset();
   }
 
@@ -530,6 +550,7 @@ function MemorizeStep({
     if (maskStep + 1 < MASK_STEPS) {
       setMaskStep(maskStep + 1);
       setPeek(false);
+      setPeeked(false);
       answer.reset();
       return;
     }
@@ -544,7 +565,7 @@ function MemorizeStep({
   }
 
   const allDone = done >= total;
-  const shown = peek ? part.en : maskPart(part.en, maskStep, targets);
+  const shown = showing ? part.en : maskPart(part.en, maskStep, targets);
 
   return (
     <section className="flex flex-col gap-4">
@@ -578,7 +599,7 @@ function MemorizeStep({
         </div>
         {shown ? (
           <p className="mt-3 font-mono text-lg leading-relaxed tracking-tight" lang="en">
-            {peek || maskStep === 0 ? <Highlighted text={shown} words={words} /> : shown}
+            {showing || maskStep === 0 ? <Highlighted text={shown} words={words} /> : shown}
           </p>
         ) : null}
         <p className={cn("text-sm text-muted-foreground", shown && "mt-2")} lang="uz">
@@ -586,8 +607,15 @@ function MemorizeStep({
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <SpeakButton key={part.en} text={part.en} prefs={speech} autoPlay={maskStep === 0} />
-          {maskStep > 0 && !peek ? (
-            <Button variant="ghost" size="sm" onClick={() => setPeek(true)}>
+          {maskStep > 0 && !showing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setPeek(true);
+                setPeeked(true);
+              }}
+            >
               <Eye aria-hidden />
               {t.showText}
             </Button>
@@ -615,7 +643,13 @@ function MemorizeStep({
           )}
         >
           <p className="font-semibold">
-            {passed ? t.partPassed : t.partRetry(Math.round((similarity ?? 0) * 100))}
+            {passed
+              ? t.partPassed
+              : check?.passed && lookedAt
+                ? t.peekedRetry
+                : check?.missing.length
+                  ? t.partWordMissing(check.missing.join(", "))
+                  : t.partRetry(Math.round((check?.similarity ?? 0) * 100))}
           </p>
           <p className="mt-1 text-sm text-foreground" lang="en">
             <span className="text-muted-foreground">{uz.production.transcript}</span> {answer.answer}
@@ -625,7 +659,7 @@ function MemorizeStep({
 
       {answer.answer ? (
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={() => answer.reset()}>
+          <Button variant="outline" onClick={retry} autoFocus={!passed}>
             <RotateCcw aria-hidden />
             {uz.production.redo}
           </Button>
