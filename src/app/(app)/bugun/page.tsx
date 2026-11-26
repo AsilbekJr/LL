@@ -32,7 +32,7 @@ import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "@/lib/sessi
 import { intervalOf } from "@/lib/srs/backlog";
 import { groupTodayByCohort, wordCohort, type PlanWord } from "@/lib/srs/cohorts";
 import { CohortMap } from "@/components/cohorts/cohort-map";
-import { ACTIVE_MILESTONES, activeJourney, activeCount, spokenDays } from "@/lib/production/active";
+import { activeJourney, activeCount, spokenDays } from "@/lib/production/active";
 import { fetchCorrections, fetchSpokenUses } from "@/lib/production/api";
 import { HARD_LAPSES } from "@/lib/items/library";
 import { formatDayUz, greetingUz, sessionMinutes, studyStreak } from "@/lib/i18n/format";
@@ -432,7 +432,7 @@ export default async function TodayPage() {
 
       {!allDone ? <CohortMap cohorts={t.cohorts} today={t.today} /> : null}
 
-      {/* The goal of it all: 500 words you can actually use when speaking. */}
+      {/* The goal of it all: words you can actually use when speaking. */}
       <JourneyCard count={t.activeWords} />
 
       {t.fixes > 0 ? (
@@ -552,7 +552,7 @@ function WeeklyCard({
   );
 }
 
-/** "500 ta faol so'z sari": the count, the milestones passed and the next one. */
+/** Active vocabulary: the count, the milestone passed and the next one (the journey has no end). */
 function JourneyCard({ count }: { count: number }) {
   const j = activeJourney(count);
   const a = uz.active;
@@ -566,39 +566,26 @@ function JourneyCard({ count }: { count: number }) {
           <Mic className="size-3.5" aria-hidden />
           {a.journeyTitle}
         </p>
-        <p className="font-display tabular-nums">
-          <span className="text-2xl font-semibold">{j.count}</span>
-          <span className="text-sm text-muted-foreground"> / {j.goal}</span>
-        </p>
+        <p className="font-display text-2xl font-semibold tabular-nums">{j.count}</p>
       </div>
-      <div
-        className="relative mt-3 h-2.5 rounded-full bg-sunken"
-        role="progressbar"
-        aria-label={a.journeyTitle}
-        aria-valuemin={0}
-        aria-valuemax={j.goal}
-        aria-valuenow={j.count}
-      >
+      <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-muted-foreground tabular-nums">
+        <span>{j.prev}</span>
         <div
-          className="h-full rounded-full bg-success transition-[width] duration-700"
-          style={{ width: `${Math.max(j.count > 0 ? 2 : 0, Math.round(j.toGoal * 100))}%` }}
-        />
-        {/* Milestone ticks */}
-        {ACTIVE_MILESTONES.slice(0, -1).map((m) => (
-          <span
-            key={m}
-            aria-hidden
-            className={cn(
-              "absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
-              m <= j.count ? "bg-background/80" : "bg-muted-foreground/30",
-            )}
-            style={{ left: `${(m / j.goal) * 100}%` }}
+          className="h-2.5 flex-1 overflow-hidden rounded-full bg-sunken"
+          role="progressbar"
+          aria-label={a.journeyTitle}
+          aria-valuemin={j.prev}
+          aria-valuemax={j.next}
+          aria-valuenow={j.count}
+        >
+          <div
+            className="h-full rounded-full bg-success transition-[width] duration-700"
+            style={{ width: `${Math.max(j.count > j.prev ? 3 : 0, Math.round(j.toNext * 100))}%` }}
           />
-        ))}
+        </div>
+        <span>{j.next}</span>
       </div>
-      <p className="mt-2 text-xs font-medium">
-        {j.next === null ? a.goalReached : a.nextMilestone(j.next - j.count, j.next)}
-      </p>
+      <p className="mt-2 text-xs font-medium">{a.nextMilestone(j.next - j.count, j.next)}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{a.howTo}</p>
     </Link>
   );

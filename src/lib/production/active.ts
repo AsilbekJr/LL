@@ -27,41 +27,50 @@ export function activeCount(progress: Map<string, number>): number {
   return n;
 }
 
-// ---------- the 500 active words journey -------------------------------------------------
+// ---------- the active words journey -------------------------------------------------
 
-/** "1000 ta passiv emas, 500 ta aktiv so'z": the goal the app is built around. */
-export const ACTIVE_GOAL = 500;
-export const ACTIVE_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 400, 500] as const;
+/**
+ * "1000 ta passiv emas, 500 ta aktiv so'z" is a slogan, not a ceiling: the
+ * journey has no end. Milestones get wider as the vocabulary grows, and
+ * after the last listed one there is a new one every 1000 words.
+ */
+export const ACTIVE_MILESTONES = [10, 25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000] as const;
+const STEP_AFTER_LAST = 1000;
+const LAST_MILESTONE: number = ACTIVE_MILESTONES[ACTIVE_MILESTONES.length - 1]!;
+
+function milestoneAfter(n: number): number {
+  const listed = ACTIVE_MILESTONES.find((m) => m > n);
+  if (listed !== undefined) return listed;
+  const last = LAST_MILESTONE;
+  return last + STEP_AFTER_LAST * (Math.floor((n - last) / STEP_AFTER_LAST) + 1);
+}
+
+function milestoneAtOrBefore(n: number): number {
+  const last = LAST_MILESTONE;
+  if (n >= last) return last + STEP_AFTER_LAST * Math.floor((n - last) / STEP_AFTER_LAST);
+  return [...ACTIVE_MILESTONES].reverse().find((m) => m <= n) ?? 0;
+}
 
 export interface ActiveJourney {
   count: number;
-  goal: number;
   /** The milestone just passed (0 before the first). */
   prev: number;
-  /** The next milestone, null once the goal is reached. */
-  next: number | null;
-  /** 0..1 towards the next milestone. */
+  /** The next milestone — there always is one. */
+  next: number;
+  /** 0..1 from the previous milestone to the next. */
   toNext: number;
-  /** 0..1 towards the goal. */
-  toGoal: number;
 }
 
 export function activeJourney(count: number): ActiveJourney {
   const n = Math.max(0, Math.floor(count));
-  const next = ACTIVE_MILESTONES.find((m) => m > n) ?? null;
-  const prev = [...ACTIVE_MILESTONES].reverse().find((m) => m <= n) ?? 0;
-  return {
-    count: n,
-    goal: ACTIVE_GOAL,
-    prev,
-    next,
-    toNext: next === null ? 1 : (n - prev) / (next - prev),
-    toGoal: Math.min(1, n / ACTIVE_GOAL),
-  };
+  const prev = milestoneAtOrBefore(n);
+  const next = milestoneAfter(n);
+  return { count: n, prev, next, toNext: (n - prev) / (next - prev) };
 }
 
 /** The highest milestone crossed going from `before` to `after`, or null. */
 export function crossedMilestone(before: number, after: number): number | null {
-  const crossed = ACTIVE_MILESTONES.filter((m) => m > before && m <= after);
-  return crossed.length ? crossed[crossed.length - 1]! : null;
+  if (after <= before) return null;
+  const reached = milestoneAtOrBefore(after);
+  return reached > before && reached > 0 ? reached : null;
 }

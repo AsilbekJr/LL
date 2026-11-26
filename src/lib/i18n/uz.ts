@@ -668,12 +668,10 @@ export const uz = {
   },
   active: {
     gained: (n: number) => (n === 1 ? "Yangi faol so'z!" : `+${n} ta yangi faol so'z!`),
-    milestone: (m: number) =>
-      m >= 500 ? "500 ta faol so'z — maqsadga yetdingiz!" : `${m} ta faol so'z marrasi!`,
-    total: (n: number) => `Jami: ${n} / 500 faol so'z`,
-    journeyTitle: "500 ta faol so'z sari",
+    milestone: (m: number) => `${m} ta faol so'z marrasi!`,
+    total: (n: number) => `Jami: ${n} ta faol so'z`,
+    journeyTitle: "Faol so'zlaringiz",
     nextMilestone: (left: number, next: number) => `Keyingi marra ${next} — yana ${left} ta so'z`,
-    goalReached: "Maqsadga yetdingiz! Endi so'zlarni faol saqlang.",
     howTo: "So'z 3 xil kunda nutqda to'g'ri ishlatilsa — faol.",
   },
   story: {
