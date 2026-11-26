@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { checkTyped, type TypedCheck } from "@/lib/text/answer";
 import { canAutoplay, canSpeak, isIOS, prefetchSpeech, preloadVoices, speak } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
+import { feedback } from "@/lib/feedback/feedback";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
@@ -222,7 +223,9 @@ export function TypedAnswer({
 
   function submit() {
     if (!value.trim()) return;
-    setResult(checkTyped(value, expected));
+    const r = checkTyped(value, expected);
+    setResult(r);
+    feedback(r.verdict === "wrong" ? "error" : "success");
   }
 
   const finish = (r: ReviewResult) => onAnswer(r, value);
@@ -264,9 +267,9 @@ export function TypedAnswer({
           aria-label={uz.review.answerPlaceholder}
           className={cn(
             "h-14 text-center text-lg",
-            result?.verdict === "correct" && "border-success",
-            result?.verdict === "typo" && "border-warning",
-            result?.verdict === "wrong" && "border-destructive",
+            result?.verdict === "correct" && "animate-pop border-success",
+            result?.verdict === "typo" && "animate-pop border-warning",
+            result?.verdict === "wrong" && "animate-shake border-destructive",
           )}
         />
         {result ? null : (

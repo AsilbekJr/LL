@@ -50,3 +50,12 @@ export function studyStreak(studiedDays: Iterable<IsoDate>, today: IsoDate): num
   }
   return n;
 }
+
+/** Seconds a card usually takes: a known word is quick, a new one needs its sentences read. */
+const REVIEW_SECONDS = 15;
+const NEW_SECONDS = 40;
+
+/** Rough length of today's session in minutes ("~4 daqiqa"), at least 1. */
+export function sessionMinutes(reviews: number, newWords: number): number {
+  return Math.max(1, Math.round((reviews * REVIEW_SECONDS + newWords * NEW_SECONDS) / 60));
+}

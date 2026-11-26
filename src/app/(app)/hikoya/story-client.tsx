@@ -67,6 +67,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { StoryLevelId } from "@/lib/supabase/database.types";
 import type { IsoDate } from "@/lib/srs/dates";
 import { usesTerm } from "@/lib/text/usage";
+import { CelebrateOnMount } from "@/components/common/celebrate";
+import { feedback } from "@/lib/feedback/feedback";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { SpokenAnswerInput, useSpokenAnswer } from "../nutq/speaking-shared";
@@ -523,6 +525,12 @@ function MemorizeStep({
   const lookedAt = peeked && maskStep > 0;
   const passed = Boolean(check?.passed) && !lookedAt;
 
+  // Sound for each answer to a part.
+  const heardAnswer = answer.answer;
+  useEffect(() => {
+    if (heardAnswer) feedback(passed ? "success" : "error");
+  }, [heardAnswer, passed]);
+
   // A peek is short, and ends as soon as the learner starts speaking.
   useEffect(() => {
     if (!peek) return;
@@ -640,8 +648,8 @@ function MemorizeStep({
           className={cn(
             "rounded-xl border px-4 py-3",
             passed
-              ? "border-success/30 bg-success-soft text-success"
-              : "border-warning/30 bg-warning-soft text-warning",
+              ? "animate-pop border-success/30 bg-success-soft text-success"
+              : "animate-shake border-warning/30 bg-warning-soft text-warning",
           )}
         >
           <p className="font-semibold">
@@ -687,6 +695,7 @@ function MemorizeStep({
         </div>
       )}
 
+      {allDone ? <CelebrateOnMount /> : null}
       {allDone ? (
         <Notice tone="success" icon={CheckCircle2}>
           <div className="flex flex-1 flex-col gap-2">
@@ -972,6 +981,7 @@ function RetellResultView({
   const covered = points.filter(Boolean).length;
   return (
     <div className="animate-rise flex flex-col gap-4">
+      <CelebrateOnMount confetti={score >= 85 ? "big" : score >= 60 ? "small" : false} />
       <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-lift)">
         <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
           {t.scoreLabel}

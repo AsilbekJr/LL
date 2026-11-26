@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { uz } from "@/lib/i18n/uz";
+import { FeedbackToggle } from "./feedback-toggle";
 import { ResetData } from "./reset-data";
 import { SettingsForm } from "./settings-form";
 
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
       ) : (
         <div className="flex flex-col gap-5 pb-24">
           <SettingsForm initial={data} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+          <FeedbackToggle />
           {/* Import / backup: needed rarely, so it lives here, not in the menu. */}
           <Link
             href="/import"

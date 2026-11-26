@@ -50,6 +50,7 @@ import { InputModeToggle } from "@/components/production/input-mode";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { IsoDate } from "@/lib/srs/dates";
 import { usesTerm } from "@/lib/text/usage";
+import { CelebrateOnMount } from "@/components/common/celebrate";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
@@ -427,6 +428,7 @@ function RecapResult({
 
   return (
     <div className="animate-rise flex flex-col gap-4">
+      <CelebrateOnMount confetti={ok.length > 0 ? "small" : false} />
       <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-lift)">
         <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
           {t.resultTitle}

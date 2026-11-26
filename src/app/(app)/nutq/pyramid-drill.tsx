@@ -36,6 +36,7 @@ import {
 } from "@/lib/speaking/pyramid";
 import type { WordClass } from "@/lib/vocab/dictionary";
 import { loadExamples } from "@/lib/vocab/sentences";
+import { CelebrateOnMount } from "@/components/common/celebrate";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { useVerdict, VerdictView } from "./judge-result";
@@ -335,7 +336,8 @@ export function PyramidDrill({
       ) : null}
 
       {done ? (
-        <section className="rounded-2xl border bg-card p-5 shadow-(--shadow-soft)">
+        <section className="animate-rise rounded-2xl border bg-card p-5 shadow-(--shadow-soft)">
+          <CelebrateOnMount />
           <div className="text-center">
             <CheckCircle2 className="mx-auto size-8 text-success" aria-hidden />
             <h3 className="mt-2 font-display text-xl font-semibold">{t.pyramidDone}</h3>

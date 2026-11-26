@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/form-controls";
 import { contextSentences, gradeSentence, type SentenceGrade } from "@/lib/items/context-sentences";
 import type { Exercise, SessionItem } from "@/lib/session/exercise";
 import type { ReviewResult } from "@/lib/srs/types";
+import { feedback } from "@/lib/feedback/feedback";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import {
@@ -115,8 +116,12 @@ export function ChoiceView({
   speech,
   onAnswer,
 }: ExerciseProps & { ex: Of<"choice">; speech: SpeechPrefs }) {
-  const [picked, setPicked] = useState<number | null>(null);
+  const [picked, setPickedState] = useState<number | null>(null);
   const right = picked === ex.correct;
+  const setPicked = (i: number) => {
+    setPickedState(i);
+    feedback(i === ex.correct ? "success" : "error");
+  };
   const finish = () => onAnswer(right ? "good" : "again", ex.options[picked ?? 0]);
   useEnter(finish, picked !== null);
 
@@ -125,11 +130,14 @@ export function ChoiceView({
     if (picked !== null) return;
     const onKey = (e: KeyboardEvent) => {
       const n = Number(e.key);
-      if (n >= 1 && n <= ex.options.length) setPicked(n - 1);
+      if (n >= 1 && n <= ex.options.length) {
+        setPickedState(n - 1);
+        feedback(n - 1 === ex.correct ? "success" : "error");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [picked, ex.options.length]);
+  }, [picked, ex.options.length, ex.correct]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -179,7 +187,10 @@ export function ChoiceView({
         <>
           <p
             role="status"
-            className={cn("text-center font-semibold", right ? "text-success" : "text-destructive")}
+            className={cn(
+              "text-center font-semibold",
+              right ? "animate-pop text-success" : "animate-shake text-destructive",
+            )}
           >
             {right ? uz.review.correct : uz.review.wrong}
           </p>
@@ -355,8 +366,8 @@ export function OrderView({
         aria-live="polite"
         className={cn(
           "bg-ruled flex min-h-28 flex-wrap content-start gap-2 rounded-2xl border bg-card p-4 shadow-(--shadow-soft)",
-          checked === true && "border-success",
-          checked === false && "border-destructive",
+          checked === true && "animate-pop border-success",
+          checked === false && "animate-shake border-destructive",
         )}
       >
         {built.length === 0 ? (
@@ -381,7 +392,15 @@ export function OrderView({
             <button
               key={i}
               type="button"
-              onClick={() => setPicked((p) => [...p, i])}
+              onClick={() => {
+                const next = [...picked, i];
+                setPicked(next);
+                if (next.length === ex.tokens.length) {
+                  feedback(
+                    next.map((k) => ex.tokens[k]).join(" ") === ex.answer.join(" ") ? "success" : "error",
+                  );
+                }
+              }}
               className="h-11 rounded-lg border bg-card px-3.5 font-semibold shadow-(--shadow-soft) outline-none hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-95"
             >
               {tok}
@@ -434,7 +453,10 @@ export function SentenceView({
   const [value, setValue] = useState("");
   const [grade, setGrade] = useState<SentenceGrade | null>(null);
   const check = () => {
-    if (value.trim()) setGrade(gradeSentence(value, ex.reference, ex.term));
+    if (!value.trim()) return;
+    const g = gradeSentence(value, ex.reference, ex.term);
+    setGrade(g);
+    feedback(g.result === "again" ? "error" : "success");
   };
   const finish = (r: ReviewResult) => onAnswer(r, value);
   useEnter(() => grade && finish(grade.result), grade !== null);
@@ -480,6 +502,7 @@ export function SentenceView({
             role="status"
             className={cn(
               "rounded-xl border px-4 py-3",
+              grade.result === "again" ? "animate-shake" : "animate-pop",
               grade.result === "good"
                 ? "border-success/30 bg-success-soft text-success"
                 : grade.result === "hard"

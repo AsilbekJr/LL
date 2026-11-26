@@ -41,6 +41,7 @@ import { FixPractice } from "@/app/(app)/nutq/fix-practice";
 import { productionPrompt } from "@/lib/production/contexts";
 import { canSpeak, prefetchSpeech } from "@/lib/speech/tts";
 import type { ReviewResult } from "@/lib/srs/types";
+import { celebrate, feedback } from "@/lib/feedback/feedback";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
@@ -432,6 +433,11 @@ function Summary({
 }) {
   const acc = accuracy(state.stats);
   const t = uz.review;
+  // The session is done: a small celebration, once.
+  useEffect(() => {
+    feedback("complete");
+    void celebrate("small");
+  }, []);
   // Optional last stage; offline or on an error the session simply ends here.
   const fixes = useQuery({
     queryKey: ["speaking-corrections"],

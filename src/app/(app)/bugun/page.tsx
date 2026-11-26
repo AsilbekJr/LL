@@ -30,10 +30,10 @@ import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "@/lib/sessi
 import { intervalOf } from "@/lib/srs/backlog";
 import { groupTodayByCohort, wordCohort, type PlanWord } from "@/lib/srs/cohorts";
 import { CohortMap } from "@/components/cohorts/cohort-map";
-import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
+import { ACTIVE_MILESTONES, activeJourney, activeCount, spokenDays } from "@/lib/production/active";
 import { fetchCorrections, fetchSpokenUses } from "@/lib/production/api";
 import { HARD_LAPSES } from "@/lib/items/library";
-import { formatDayUz, greetingUz, studyStreak } from "@/lib/i18n/format";
+import { formatDayUz, greetingUz, sessionMinutes, studyStreak } from "@/lib/i18n/format";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 
@@ -54,45 +54,44 @@ async function getToday() {
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
   const tomorrow = addDays(today, 1);
-  const [dueRes, stateRes, history, studiedYesterday, itemsRes, nextRes, backlogStats] =
-    await Promise.all([
-      // Due today, plus tomorrow's cards for the "what comes next" line.
-      supabase
-        .from("cards")
-        .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
-        .in("status", [...STUDIED])
-        .lte("due_date", tomorrow)
-        .limit(10000),
-      // The very same loader the review session uses, so the numbers match it.
-      loadTodayState(supabase, dayStart).then(
-        (s) => ({ data: s, error: null }),
-        (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
-      ),
-      supabase
-        .from("daily_snapshots")
-        .select("day")
-        .gt("done_count", 0)
-        .order("day", { ascending: false })
-        .limit(366),
-      // Yesterday's snapshot is written just after midnight; until then read the logs.
-      supabase
-        .from("review_logs")
-        .select("id", { count: "exact", head: true })
-        .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
-        .lt("reviewed_at", dayStart)
-        .not("result", "is", null),
-      supabase.from("items").select("id", { count: "exact", head: true }),
-      // The next day with a review after tomorrow.
-      supabase
-        .from("cards")
-        .select("due_date")
-        .in("status", [...STUDIED])
-        .gt("due_date", tomorrow)
-        .order("due_date")
-        .limit(1),
-      // Qaytish rejimi: last study day and the usual daily load (null on error = off).
-      loadBacklogStats(supabase, today, tz),
-    ]);
+  const [dueRes, stateRes, history, studiedYesterday, itemsRes, nextRes, backlogStats] = await Promise.all([
+    // Due today, plus tomorrow's cards for the "what comes next" line.
+    supabase
+      .from("cards")
+      .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
+      .in("status", [...STUDIED])
+      .lte("due_date", tomorrow)
+      .limit(10000),
+    // The very same loader the review session uses, so the numbers match it.
+    loadTodayState(supabase, dayStart).then(
+      (s) => ({ data: s, error: null }),
+      (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+    ),
+    supabase
+      .from("daily_snapshots")
+      .select("day")
+      .gt("done_count", 0)
+      .order("day", { ascending: false })
+      .limit(366),
+    // Yesterday's snapshot is written just after midnight; until then read the logs.
+    supabase
+      .from("review_logs")
+      .select("id", { count: "exact", head: true })
+      .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
+      .lt("reviewed_at", dayStart)
+      .not("result", "is", null),
+    supabase.from("items").select("id", { count: "exact", head: true }),
+    // The next day with a review after tomorrow.
+    supabase
+      .from("cards")
+      .select("due_date")
+      .in("status", [...STUDIED])
+      .gt("due_date", tomorrow)
+      .order("due_date")
+      .limit(1),
+    // Qaytish rejimi: last study day and the usual daily load (null on error = off).
+    loadBacklogStats(supabase, today, tz),
+  ]);
 
   // Extras: speaking progress. Never fail the page because of them.
   // Haftalik hikoya: shown on the weekend, while this week's story is not retold yet.
@@ -373,7 +372,7 @@ export default async function TodayPage() {
                     ]
                       .filter(Boolean)
                       .join(" ")
-                  : uz.today.planBody(t.reviews, t.newWords)}
+                  : `${uz.today.planBody(t.reviews, t.newWords)} ${uz.today.minutes(sessionMinutes(t.reviews, t.newWords))}`}
             </p>
             {t.streak > 0 ? (
               <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-highlight-soft px-2 py-0.5 text-xs font-semibold text-highlight-foreground">
@@ -403,38 +402,10 @@ export default async function TodayPage() {
       <RecapCard done={t.recapDone} words={t.recapWords} streak={t.recapStreak} />
       {t.story ? <StoryCard done={t.story.done} best={t.story.best} /> : null}
 
-
       {!allDone ? <CohortMap cohorts={t.cohorts} today={t.today} /> : null}
 
-      {/* The goal of it all: words you can actually use when speaking. */}
-      <Link
-        href="/nutq"
-        className="mt-3 block rounded-xl border bg-card p-4 shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring/50"
-      >
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Mic className="size-3.5" aria-hidden />
-            {uz.today.activeTitle}
-          </p>
-          <p className="font-display text-xl font-semibold tabular-nums">
-            {t.activeWords} / {t.items}
-          </p>
-        </div>
-        <div
-          className="mt-2 h-2 overflow-hidden rounded-full bg-sunken"
-          role="progressbar"
-          aria-label={uz.today.activeTitle}
-          aria-valuemin={0}
-          aria-valuemax={t.items}
-          aria-valuenow={t.activeWords}
-        >
-          <div
-            className="h-full rounded-full bg-success"
-            style={{ width: `${t.items ? Math.round((t.activeWords / t.items) * 100) : 0}%` }}
-          />
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{uz.today.activeBody(ACTIVE_DAYS)}</p>
-      </Link>
+      {/* The goal of it all: 500 words you can actually use when speaking. */}
+      <JourneyCard count={t.activeWords} />
 
       {t.fixes > 0 ? (
         <Link
@@ -457,7 +428,6 @@ export default async function TodayPage() {
           <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
         </Link>
       ) : null}
-
     </>
   );
 }
@@ -490,6 +460,58 @@ function RecapCard({ done, words, streak }: { done: boolean; words: number; stre
         </span>
       </span>
       <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
+  );
+}
+
+/** "500 ta faol so'z sari": the count, the milestones passed and the next one. */
+function JourneyCard({ count }: { count: number }) {
+  const j = activeJourney(count);
+  const a = uz.active;
+  return (
+    <Link
+      href="/nutq"
+      className="mt-3 block rounded-2xl border bg-card p-4 shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Mic className="size-3.5" aria-hidden />
+          {a.journeyTitle}
+        </p>
+        <p className="font-display tabular-nums">
+          <span className="text-2xl font-semibold">{j.count}</span>
+          <span className="text-sm text-muted-foreground"> / {j.goal}</span>
+        </p>
+      </div>
+      <div
+        className="relative mt-3 h-2.5 rounded-full bg-sunken"
+        role="progressbar"
+        aria-label={a.journeyTitle}
+        aria-valuemin={0}
+        aria-valuemax={j.goal}
+        aria-valuenow={j.count}
+      >
+        <div
+          className="h-full rounded-full bg-success transition-[width] duration-700"
+          style={{ width: `${Math.max(j.count > 0 ? 2 : 0, Math.round(j.toGoal * 100))}%` }}
+        />
+        {/* Milestone ticks */}
+        {ACTIVE_MILESTONES.slice(0, -1).map((m) => (
+          <span
+            key={m}
+            aria-hidden
+            className={cn(
+              "absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+              m <= j.count ? "bg-background/80" : "bg-muted-foreground/30",
+            )}
+            style={{ left: `${(m / j.goal) * 100}%` }}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-xs font-medium">
+        {j.next === null ? a.goalReached : a.nextMilestone(j.next - j.count, j.next)}
+      </p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{a.howTo}</p>
     </Link>
   );
 }
@@ -555,5 +577,3 @@ function BacklogBanner({
     </div>
   );
 }
-
-

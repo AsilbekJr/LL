@@ -22,6 +22,7 @@ import { HELP_MODEL, withHelp } from "@/lib/speaking/help";
 import { findRestart, judgeToFeedback } from "@/lib/speaking/judge";
 import { fixPassed } from "@/lib/speaking/repeat";
 import { usesTerm } from "@/lib/text/usage";
+import { CelebrateOnMount } from "@/components/common/celebrate";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { useVerdict, VerdictView } from "./judge-result";
@@ -311,7 +312,8 @@ export function DialogPractice({
       ) : null}
 
       {phase === "done" ? (
-        <section className="rounded-2xl border bg-card p-5 text-center shadow-(--shadow-soft)">
+        <section className="animate-rise rounded-2xl border bg-card p-5 text-center shadow-(--shadow-soft)">
+          <CelebrateOnMount confetti={turns.some((h) => h.firstTry) ? "small" : false} />
           <CheckCircle2 className="mx-auto size-8 text-success" aria-hidden />
           <h3 className="mt-2 font-display text-xl font-semibold">{t.dialogDone}</h3>
           <p className="mt-1 text-sm text-muted-foreground">

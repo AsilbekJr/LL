@@ -40,6 +40,7 @@ export const uz = {
   },
   today: {
     streakChip: (n: number) => `${n} kun ketma-ket`,
+    minutes: (n: number) => `(~${n} daqiqa)`,
     dueTitle: "Bugungi takrorlash",
     planBody: (reviewWords: number, newWords: number) =>
       [reviewWords ? `${reviewWords} ta so'zni takrorlash` : "", newWords ? `${newWords} ta yangi so'z` : ""]
@@ -238,14 +239,12 @@ export const uz = {
     sentenceSimilarity: (p: number) => `O'xshashlik: ${p}%`,
     sentenceMeaningOk: "Ma'nosi to'g'ri edi",
     sentenceMeaningOkHint: "Boshqacha, lekin to'g'ri yozgan bo'lsangiz bosing.",
-    productionPending:
-      "Bu so'zni haqiqatan bilishingizni ko'rsatish vaqti: uni o'z gapingizda ishlating. Yozma va og'zaki mashqdan o'tmaguncha so'z oxirgi bosqichlarga chiqmaydi.",
+    productionPending: "So'zni o'z gapingizda ishlating — yozib va aytib.",
     gotIt: "Tushundim",
     fixStage: (n: number) => `Xato gaplarni to'g'rilash (${n})`,
     fixStageBody: (n: number) =>
       `Oxirgi bosqich: nutq mashqlarida xato aytilgan ${n} ta gapni to'g'ri variantida ovoz chiqarib ayting.`,
-    secondDirection:
-      "Bu so'zni tanib olishni o'rgandingiz. Endi keyingi bosqich: o'zbekchasini ko'rib, inglizchasini o'zingiz eslaysiz.",
+    secondDirection: "Endi teskari: o'zbekchasini ko'rib, inglizchasini eslang.",
     listen: "Tinglash",
     listenSlow: "Sekinroq",
     ttsCloudBusy: "Server ovozi bir daqiqaga band (limit). Birozdan keyin qayta bosing.",
@@ -328,7 +327,7 @@ export const uz = {
     shadowRetry: "Yana bir bor tinglab takrorlang.",
   },
   speaking: {
-    description: "So'zlarni erkin nutqda ishlating va talaffuzni mashq qiling.",
+    description: "Suhbatlashing, gap tuzing, xatolarni tuzating.",
     topic: "Mavzu",
     start: "Mashqni boshlash",
     seconds: (s: number) => `${s} s`,
@@ -360,8 +359,7 @@ export const uz = {
     checks: { grammar: "Grammatika", meaning: "Ma'no", word: "So'z", task: "Vazifa", fluent: "Ravonlik" },
     // dialog
     dialogTab: "Suhbat",
-    dialogIntro:
-      "AI hamsuhbat sizga qisqa savollar beradi — har bir savolga o'zingiz o'rganayotgan so'zni ishlatib, ovoz bilan javob bering. Har javob qat'iy tekshiriladi, oxirida tuzatilgan gaplarni takrorlaysiz.",
+    dialogIntro: "AI savol beradi — o'rganayotgan so'zingizni ishlatib javob bering.",
     dialogNeedsAi: "Suhbat uchun AI kerak. Sozlamalarda Gemini kaliti ulanganini tekshiring.",
     dialogStart: "Suhbatni boshlash",
     dialogWords: "Shu suhbatdagi so'zlaringiz",
@@ -377,19 +375,17 @@ export const uz = {
     dialogNew: "Yangi suhbat",
     dialogFree: (n: number, total: number) => `Yordamsiz aytilgan: ${n} / ${total}`,
     // help ladder
-    helpIntro: "Avval yordamsiz urinib ko'ring. Qiynalsangiz, yordamni bittadan oching.",
+    helpIntro: "Avval yordamsiz urinib ko'ring.",
     helpMore: (step: number, total: number) => `Yordam ${step}/${total}`,
     helpUz: "Tarjimasi",
     helpHint: "Qanday boshlash",
     helpChunk: "Birikma",
     helpStarter: "Gapni shunday boshlang",
     helpModel: "Namuna javob",
-    helpModelNote:
-      "Namunani ko'rgach aytilgan javob saqlanadi, lekin faollikka hisoblanmaydi — bu takrorlash. Uni o'z so'zlaringiz bilan o'zgartirib ayting.",
+    helpModelNote: "Namunadan keyingi javob faollikka hisoblanmaydi.",
     // sentence pyramid
     pyramidTab: "Piramida",
-    pyramidIntro:
-      "Bitta so'z bilan qisqa gapdan boshlaysiz va har qadamda bitta qism qo'shasiz. Har safar butun gapni boshidan, bir nafasda ayting — shunda so'z nutqqa o'tadi.",
+    pyramidIntro: "Qisqa gapdan boshlang, har qadamda bitta qism qo'shing va butun gapni qayta ayting.",
     pyramidStart: "Piramidani boshlash",
     pyramidWord: "Bugungi so'z",
     pyramidOtherWord: "Boshqa so'z",
@@ -472,8 +468,7 @@ export const uz = {
     builderChunks: "Kerakli bo'laklar — shularni bir gapga ulang",
     builderStarter: "Gapni shunday boshlang",
     builderModel: "Namuna gap",
-    builderModelNote:
-      "Namunani ko'rib aytilgan gap faollikka hisoblanmaydi. Iloji bo'lsa, unda bitta narsani o'zgartiring (kim, nima yoki qachon).",
+    builderModelNote: "Namunadan keyingi gap faollikka hisoblanmaydi — bitta narsasini o'zgartirib ayting.",
     pyramidChecks: {
       used: (w: string) => `„${w}” eshitildi`,
       kept: "Oldingi gap saqlandi",
@@ -495,8 +490,7 @@ export const uz = {
     coach: "Hamsuhbat",
     // corrections
     fixTab: "Xatolar",
-    fixIntro:
-      "Mashqlarda xato aytilgan gaplarning to'g'ri varianti shu yerda yig'iladi. Tinglang va bir nafasda takrorlang — to'g'ri aytilgach ro'yxatdan chiqadi.",
+    fixIntro: "Xato aytilgan gaplarning to'g'ri varianti. Tinglang va takrorlang.",
     fixEmpty: "Tuzatiladigan gap yo'q. Zo'r!",
     fixWas: "Siz aytgandingiz",
     fixSay: "Endi shunday ayting",
@@ -546,6 +540,8 @@ export const uz = {
     failed: "Tozalab bo'lmadi, hech narsa o'zgarmadi",
   },
   settings: {
+    feedbackTitle: "Ovoz va tebranish",
+    feedbackBody: "To'g'ri va xato javobda qisqa ovoz, telefonda yengil tebranish.",
     importTitle: "Import va zaxira nusxa",
     importBody: "Tayyor so'z to'plamlari, o'z JSON faylingiz, zaxira olish va tiklash.",
     description: "Kunlik reja, takrorlash algoritmi, ovoz va eslatmalar.",
@@ -661,9 +657,18 @@ export const uz = {
     attribution:
       "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
   },
+  active: {
+    gained: (n: number) => (n === 1 ? "Yangi faol so'z!" : `+${n} ta yangi faol so'z!`),
+    milestone: (m: number) =>
+      m >= 500 ? "500 ta faol so'z — maqsadga yetdingiz!" : `${m} ta faol so'z marrasi!`,
+    total: (n: number) => `Jami: ${n} / 500 faol so'z`,
+    journeyTitle: "500 ta faol so'z sari",
+    nextMilestone: (left: number, next: number) => `Keyingi marra ${next} — yana ${left} ta so'z`,
+    goalReached: "Maqsadga yetdingiz! Endi so'zlarni faol saqlang.",
+    howTo: "So'z 3 xil kunda nutqda to'g'ri ishlatilsa — faol.",
+  },
   story: {
-    description:
-      "Hafta oxirida shu hafta o'rgangan so'zlaringizdan kichik hikoya: o'qing, yodlang va aytib bering.",
+    description: "Haftaning so'zlaridan hikoya: o'qing, yodlang, aytib bering.",
     weekOf: (from: string, to: string) => `${from} – ${to}`,
     thisWeek: "Shu hafta",
     lastWeek: "O'tgan hafta",
@@ -673,7 +678,7 @@ export const uz = {
         : `Shu haftaning hikoyasi ${n} kundan keyin, shanba kuni ochiladi.`,
     level: "Hikoya darajasi",
     weekWords: (n: number) => `Haftaning so'zlari (${n})`,
-    weekWordsBody: "Hali faol bo'lmagan so'zlar birinchi olinadi.",
+    weekWordsBody: "Hali faol bo'lmaganlari birinchi.",
     tooFew: (min: number) =>
       `Bu haftada hikoya uchun so'z yetarli emas (kamida ${min} ta kerak). So'zlarni takrorlang yoki yangi so'z qo'shing.`,
     generate: "Hikoyani yaratish",
@@ -690,13 +695,11 @@ export const uz = {
     stepRetell: "3. Aytib berish",
     showUz: "Tarjimasini ko'rsatish",
     hideUz: "Tarjimani yashirish",
-    readHint:
-      "Hikoyani 2–3 marta o'qing va tinglang. So'zlaringiz qalin ko'rsatilgan — ustiga bosib tarjimasini ko'ring.",
+    readHint: "2–3 marta o'qing va tinglang. Belgilangan so'zni bossangiz — tarjimasi.",
     toMemorize: "Yodlashga o'tish",
     part: (n: number, total: number) => `${n}-bo'lak / ${total}`,
     maskStep: ["To'liq matn", "Faqat bosh harflar", "Faqat so'zlaringiz", "Matnsiz — faqat ma'nosi"],
-    memorizeHint:
-      "Bo'lakni tinglang va ovoz chiqarib ayting. Har to'g'ri aytganingizda matn ko'proq yashiriladi; oxirida matnsiz aytasiz.",
+    memorizeHint: "Tinglang va ayting — har safar matn ko'proq yashiriladi.",
     partPassed: "Zo'r! Endi matn ko'proq yashirildi.",
     partDone: "Bu bo'lak yodlandi.",
     partRetry: (p: number) => `O'xshashlik ${p}% — yana bir bor urinib ko'ring.`,
@@ -707,8 +710,7 @@ export const uz = {
     showText: "Matnni ko'rsatish",
     allMemorized: "Barcha bo'laklar yodlandi! Endi butun hikoyani aytib bering.",
     toRetell: "Aytib berishga o'tish",
-    retellIntro:
-      "Hikoyani boshidan oxirigacha o'z so'zlaringiz bilan aytib bering. Reja va so'zlaringiz yordam beradi; matnni so'zma-so'z aytish shart emas.",
+    retellIntro: "Hikoyani o'z so'zlaringiz bilan aytib bering — so'zma-so'z shart emas.",
     outline: "Reja",
     words: "Ishlatish kerak bo'lgan so'zlar",
     start: "Aytib berishni boshlash",
@@ -738,7 +740,7 @@ export const uz = {
   },
   recap: {
     title: "Kun yakuni",
-    description: "1–2 daqiqa ingliz tilida o'z kuningiz haqida gapiring. Tilga kirish shu yerdan boshlanadi.",
+    description: "1–2 daqiqa o'z kuningiz haqida inglizcha gapiring.",
     topic: "Bugungi mavzu",
     otherTopic: "Boshqa mavzu",
     hints: "Ishlatib ko'ring (majburiy emas)",

@@ -261,6 +261,42 @@
   .animate-rise {
     animation: rise 0.45s var(--ease-out-soft) both;
   }
+  /* Answer feedback: a small "yes" pop and a gentle "not yet" shake. */
+  .animate-pop {
+    animation: pop 0.32s var(--ease-out-soft) both;
+  }
+  .animate-shake {
+    animation: shake 0.36s ease-in-out both;
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.97);
+    }
+    55% {
+      transform: scale(1.025);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(5px);
+    }
+    60% {
+      transform: translateX(-3px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
   @keyframes rise {
     from {
       opacity: 0;

@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { fetchJudge } from "@/lib/speaking/client";
 import { judgePassed, type Judge, type JudgeRequest } from "@/lib/speaking/judge";
+import { feedback } from "@/lib/feedback/feedback";
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { Check } from "./speaking-shared";
@@ -58,12 +59,19 @@ export function VerdictView({
   const t = uz.speaking;
   const j = verdict.judge;
   const pass = verdict.status === "pass";
+  const status = verdict.status;
+  useEffect(() => {
+    if (status !== "checking") feedback(status === "pass" ? "success" : "error");
+  }, [status, said]);
   return (
     <div
+      key={`${status}-${said}`}
       role="status"
       aria-live="polite"
       className={cn(
         "rounded-xl border px-4 py-3",
+        status === "pass" && "animate-pop",
+        status === "fail" && "animate-shake",
         verdict.status === "checking"
           ? "bg-card"
           : pass

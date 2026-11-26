@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { ActiveWatcher } from "@/components/common/active-watcher";
 import { OutboxSync } from "@/components/common/outbox-sync";
 import { Sidebar } from "@/components/layout/sidebar";
 import { getCurrentUserId } from "@/lib/supabase/server";
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </main>
       <BottomNav />
       <OutboxSync />
+      <ActiveWatcher />
     </div>
   );
 }
