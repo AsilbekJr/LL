@@ -17,7 +17,7 @@ import { Checkbox, Textarea } from "@/components/ui/form-controls";
 import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { productionPrompt } from "@/lib/production/contexts";
 import type { AiFeedback } from "@/lib/production/feedback";
-import { canRecognize, listen, type Listener, type SttError } from "@/lib/speech/stt";
+import { listen, type Listener, type SttError } from "@/lib/speech/stt";
 import {
   checkProduction,
   MIN_PRODUCTION_WORDS,
@@ -27,6 +27,8 @@ import {
 import { uz } from "@/lib/i18n/uz";
 import { cn } from "@/lib/utils";
 import { useAiFeedback } from "./use-ai-feedback";
+import { InputModeToggle } from "./input-mode";
+import { useInputMode } from "@/hooks/use-input-mode";
 
 export interface ProductionResult {
   passed: boolean;
@@ -390,8 +392,8 @@ export function SpeakingTask({
 }) {
   const t = uz.production;
   const rec = useRecorder();
-  const [supported] = useState(() => canRecognize());
-  const typed = !supported || rec.error === "not-allowed";
+  const { canVoice: supported, mode } = useInputMode();
+  const typed = !supported || rec.error === "not-allowed" || mode === "text";
   const [saidAloud, setSaidAloud] = useState(false);
   const [checked, setChecked] = useState<ProductionCheck | null>(null);
   const ai = useAiFeedback();
@@ -411,12 +413,18 @@ export function SpeakingTask({
         <p className="mt-4 text-sm font-semibold">{productionPrompt(item.english, contextId, "spoken")}</p>
       </div>
 
+      {checked === null && !rec.recording ? <InputModeToggle className="self-center" /> : null}
+
       {typed ? (
         <>
-          <p className="flex items-start gap-2 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">
-            <MicOff className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {sttMessage(supported ? rec.error : "unsupported")}
-          </p>
+          {supported && mode === "text" && rec.error !== "not-allowed" ? (
+            <p className="text-sm text-muted-foreground">{t.typedHint}</p>
+          ) : (
+            <p className="flex items-start gap-2 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">
+              <MicOff className="mt-0.5 size-4 shrink-0" aria-hidden />
+              {sttMessage(supported ? rec.error : "unsupported")}
+            </p>
+          )}
           <Textarea
             rows={3}
             lang="en"
@@ -510,8 +518,12 @@ export function ShadowingTask({
 }) {
   const t = uz.production;
   const rec = useRecorder();
-  const [supported] = useState(() => canRecognize());
-  const done = rec.text && !rec.recording;
+  const { canVoice: supported, voice } = useInputMode();
+  const [draft, setDraft] = useState("");
+  const [aloud, setAloud] = useState(false);
+  // Typed: checked once submitted (not while typing).
+  const [submitted, setSubmitted] = useState(false);
+  const done = voice ? rec.text && !rec.recording : submitted && rec.text;
   const similarity = done ? wordSimilarity(rec.text, sentence) : null;
   const passed = similarity !== null && similarity >= SHADOW_PASS;
 
@@ -528,12 +540,41 @@ export function ShadowingTask({
       </div>
       <p className="text-center text-sm text-muted-foreground">{t.shadowHint}</p>
 
-      {supported ? (
+      {!done && !rec.recording ? <InputModeToggle className="self-center" /> : null}
+      {voice ? (
         <MicButton recording={rec.recording} onStart={rec.start} onStop={rec.stop} />
-      ) : (
-        <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">{t.sttUnsupported}</p>
-      )}
-      {sttMessage(rec.error) && supported ? (
+      ) : !done ? (
+        <div className="flex flex-col gap-3">
+          <p
+            className={cn(
+              "text-sm",
+              supported ? "text-muted-foreground" : "rounded-xl bg-warning-soft px-4 py-3 text-warning",
+            )}
+          >
+            {supported ? t.typedHint : t.sttUnsupported}
+          </p>
+          <Textarea
+            rows={2}
+            lang="en"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={t.placeholder}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <Checkbox label={t.saidAloud} checked={aloud} onChange={(e) => setAloud(e.target.checked)} />
+          <Button
+            onClick={() => {
+              rec.setText(draft.trim());
+              setSubmitted(true);
+            }}
+            disabled={!draft.trim() || !aloud}
+          >
+            {t.check}
+          </Button>
+        </div>
+      ) : null}
+      {sttMessage(rec.error) && voice ? (
         <p className="text-center text-sm text-destructive">{sttMessage(rec.error)}</p>
       ) : null}
 
@@ -556,7 +597,14 @@ export function ShadowingTask({
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={rec.start}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (voice) return rec.start();
+                rec.setText("");
+                setSubmitted(false);
+              }}
+            >
               <RotateCcw aria-hidden />
               {t.redo}
             </Button>

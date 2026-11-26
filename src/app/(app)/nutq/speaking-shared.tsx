@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
-import { Textarea } from "@/components/ui/form-controls";
+import { Checkbox, Textarea } from "@/components/ui/form-controls";
+import { InputModeToggle } from "@/components/production/input-mode";
+import { useInputMode } from "@/hooks/use-input-mode";
 import { Button } from "@/components/ui/button";
 import { MicButton, sttMessage, useRecorder } from "@/components/production/production-task";
-import { canRecognize } from "@/lib/speech/stt";
 import type { CefrLevel } from "@/lib/supabase/database.types";
 import { VOCAB_LEVELS } from "@/lib/vocab/dictionary";
 import { uz } from "@/lib/i18n/uz";
@@ -75,7 +76,8 @@ export function Check({ ok, label }: { ok: boolean; label: string }) {
  */
 export function useSpokenAnswer() {
   const rec = useRecorder();
-  const [supported] = useState(() => canRecognize());
+  // Voice, unless the learner chose to type (the microphone mishears) or it is unavailable.
+  const { voice: supported } = useInputMode();
   const [typed, setTyped] = useState<string | null>(null);
   const answer = supported ? (rec.text && !rec.recording ? rec.text : null) : typed;
   return {
@@ -93,13 +95,28 @@ export function useSpokenAnswer() {
 
 export function SpokenAnswerInput({ state }: { state: ReturnType<typeof useSpokenAnswer> }) {
   const [draft, setDraft] = useState("");
+  const [aloud, setAloud] = useState(false);
   const { rec, supported } = state;
   if (!supported) {
     return (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">{uz.speaking.typeInstead}</p>
-        <Textarea rows={2} lang="en" value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <Button onClick={() => state.setTyped(draft.trim() || null)} disabled={!draft.trim()}>
+      <div className="flex flex-col gap-3">
+        <InputModeToggle className="self-center" />
+        <p className="text-sm text-muted-foreground">{uz.production.typedHint}</p>
+        <Textarea
+          rows={2}
+          lang="en"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={uz.production.placeholder}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <Checkbox
+          label={uz.production.saidAloud}
+          checked={aloud}
+          onChange={(e) => setAloud(e.target.checked)}
+        />
+        <Button onClick={() => state.setTyped(draft.trim() || null)} disabled={!draft.trim() || !aloud}>
           {uz.production.check}
         </Button>
       </div>
@@ -107,6 +124,7 @@ export function SpokenAnswerInput({ state }: { state: ReturnType<typeof useSpoke
   }
   return (
     <div className="flex flex-col items-center gap-3">
+      {!rec.recording ? <InputModeToggle /> : null}
       <MicButton recording={rec.recording} onStart={rec.start} onStop={rec.stop} />
       {rec.recording && rec.text ? (
         <p className="w-full rounded-xl border bg-card px-4 py-3 text-lg" lang="en" aria-live="polite">

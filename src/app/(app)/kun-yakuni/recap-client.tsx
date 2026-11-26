@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
-import { Notice, Textarea } from "@/components/ui/form-controls";
+import { Checkbox, Notice, Textarea } from "@/components/ui/form-controls";
 import { addItems } from "@/lib/items/api";
 import { saveProductions, type ProductionWrite } from "@/lib/production/api";
 import { itemInputSchema } from "@/lib/schemas/item";
@@ -45,6 +45,8 @@ import {
   type RecapLibraryWord,
 } from "@/lib/speaking/recap-api";
 import { sttError, useLongRecorder } from "@/hooks/use-long-recorder";
+import { useInputMode } from "@/hooks/use-input-mode";
+import { InputModeToggle } from "@/components/production/input-mode";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { IsoDate } from "@/lib/srs/dates";
 import { usesTerm } from "@/lib/text/usage";
@@ -139,8 +141,12 @@ function RecapSession({
     ),
   );
   const rec = useLongRecorder(RECAP_MAX_SECONDS);
+  // Voice, unless the learner chose to type (the microphone mishears) or it is unavailable.
+  const { mode: inputMode } = useInputMode();
+  const voice = rec.supported && inputMode === "voice";
+  const [aloud, setAloud] = useState(false);
   const [typed, setTyped] = useState("");
-  const transcript = rec.supported ? rec.text : typed;
+  const transcript = voice ? rec.text : typed;
   const [phase, setPhase] = useState<"talk" | "checking" | "result">("talk");
   const [short, setShort] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -160,7 +166,7 @@ function RecapSession({
   });
 
   async function check() {
-    if (!recapCounts(rec.seconds, transcript, !rec.supported)) {
+    if (!recapCounts(rec.seconds, transcript, !voice)) {
       setShort(true);
       return;
     }
@@ -184,14 +190,14 @@ function RecapSession({
     const row = (itemId: string, passed: boolean): ProductionWrite => ({
       clientId: crypto.randomUUID(),
       itemId,
-      mode: rec.supported ? "spoken" : "written",
+      mode: voice || aloud ? "spoken" : "written",
       exercise: "drill",
       drillId,
       context: RECAP_CONTEXT,
       prompt: topic.en,
       text: said,
       passed,
-      durationMs: rec.supported ? rec.seconds * 1000 : null,
+      durationMs: voice ? rec.seconds * 1000 : null,
     });
     const rows = [
       ...found.map((w) => row(w.id, confirmed.has(w.id))),
@@ -301,7 +307,9 @@ function RecapSession({
         ) : null}
       </section>
 
-      {rec.supported ? (
+      {!talking && !hasTalk ? <InputModeToggle className="self-center" /> : null}
+
+      {voice ? (
         <div className="flex flex-col items-center gap-3">
           {talking || hasTalk ? (
             <div className="flex items-baseline gap-2 tabular-nums" role="timer">
@@ -344,14 +352,17 @@ function RecapSession({
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">{t.typeInstead}</p>
           <Textarea rows={6} lang="en" value={typed} onChange={(e) => setTyped(e.target.value)} />
+          <Checkbox
+            label={uz.production.saidAloud}
+            checked={aloud}
+            onChange={(e) => setAloud(e.target.checked)}
+          />
         </div>
       )}
 
       {short ? (
         <Notice tone="warning" icon={AlertTriangle}>
-          {rec.supported
-            ? t.tooShort(RECAP_MIN_SECONDS, RECAP_MIN_WORDS)
-            : t.tooShortTyped(RECAP_MIN_TYPED_WORDS)}
+          {voice ? t.tooShort(RECAP_MIN_SECONDS, RECAP_MIN_WORDS) : t.tooShortTyped(RECAP_MIN_TYPED_WORDS)}
         </Notice>
       ) : null}
 
@@ -365,7 +376,7 @@ function RecapSession({
           <Square className="fill-current" aria-hidden />
           {t.stop}
         </Button>
-      ) : rec.supported && !hasTalk ? (
+      ) : voice && !hasTalk ? (
         <Button size="lg" onClick={rec.start}>
           <Mic aria-hidden />
           {t.start}
@@ -376,7 +387,7 @@ function RecapSession({
             <CheckCircle2 aria-hidden />
             {t.check}
           </Button>
-          {rec.supported ? (
+          {voice ? (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={rec.start} disabled={rec.seconds >= RECAP_MAX_SECONDS}>
                 <Mic aria-hidden />

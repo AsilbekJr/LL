@@ -22,8 +22,10 @@ import {
 import { EmptyState } from "@/components/common/empty-state";
 import { SpeakButton, type SpeechPrefs } from "@/components/review/shared";
 import { Button } from "@/components/ui/button";
-import { Notice, Textarea } from "@/components/ui/form-controls";
+import { Checkbox, Notice, Textarea } from "@/components/ui/form-controls";
 import { sttError, useLongRecorder } from "@/hooks/use-long-recorder";
+import { useInputMode } from "@/hooks/use-input-mode";
+import { InputModeToggle } from "@/components/production/input-mode";
 import { ACTIVE_DAYS, spokenDays } from "@/lib/production/active";
 import { fetchSpokenUses, saveProductions, type ProductionWrite } from "@/lib/production/api";
 import {
@@ -724,8 +726,12 @@ function RetellStep({
 }) {
   const qc = useQueryClient();
   const rec = useLongRecorder(RETELL_MAX_SECONDS);
+  // Voice, unless the learner chose to type (the microphone mishears) or it is unavailable.
+  const { mode: inputMode } = useInputMode();
+  const voice = rec.supported && inputMode === "voice";
+  const [aloud, setAloud] = useState(false);
   const [typed, setTyped] = useState("");
-  const transcript = rec.supported ? rec.text : typed;
+  const transcript = voice ? rec.text : typed;
   const [phase, setPhase] = useState<"talk" | "checking" | "result">("talk");
   const [short, setShort] = useState(false);
   const [result, setResult] = useState<RetellResult | null>(null);
@@ -773,14 +779,14 @@ function RetellStep({
       .map((w) => ({
         clientId: crypto.randomUUID(),
         itemId: w.id,
-        mode: rec.supported ? "spoken" : "written",
+        mode: voice || aloud ? "spoken" : "written",
         exercise: "drill",
         drillId,
         context: STORY_CONTEXT,
         prompt: row.title,
         text: said,
         passed: used.has(w.id),
-        durationMs: rec.supported ? rec.seconds * 1000 : null,
+        durationMs: voice ? rec.seconds * 1000 : null,
       }));
     const saved = await save.mutateAsync({ rows, score }).then(
       () => true,
@@ -857,7 +863,9 @@ function RetellStep({
         </ul>
       </div>
 
-      {rec.supported ? (
+      {!talking && !hasTalk ? <InputModeToggle className="self-center" /> : null}
+
+      {voice ? (
         <div className="flex flex-col items-center gap-3">
           {talking || hasTalk ? (
             <p
@@ -891,6 +899,11 @@ function RetellStep({
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">{t.typeInstead}</p>
           <Textarea rows={8} lang="en" value={typed} onChange={(e) => setTyped(e.target.value)} />
+          <Checkbox
+            label={uz.production.saidAloud}
+            checked={aloud}
+            onChange={(e) => setAloud(e.target.checked)}
+          />
         </div>
       )}
 
@@ -910,7 +923,7 @@ function RetellStep({
           <Square className="fill-current" aria-hidden />
           {t.stop}
         </Button>
-      ) : rec.supported && !hasTalk ? (
+      ) : voice && !hasTalk ? (
         <Button size="lg" onClick={rec.start}>
           <Mic aria-hidden />
           {t.start}
@@ -921,7 +934,7 @@ function RetellStep({
             <CheckCircle2 aria-hidden />
             {t.check}
           </Button>
-          {rec.supported ? (
+          {voice ? (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={rec.start} disabled={rec.seconds >= RETELL_MAX_SECONDS}>
                 <Mic aria-hidden />

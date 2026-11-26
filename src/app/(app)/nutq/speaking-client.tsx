@@ -33,7 +33,7 @@ import {
 import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
 import { pickContext } from "@/lib/production/contexts";
 import { DRILL_MAX_SECONDS, pickDrillTargets, scoreDrill, shadowSentence } from "@/lib/production/drill";
-import { canRecognize, listen, type Listener } from "@/lib/speech/stt";
+import { listen, type Listener } from "@/lib/speech/stt";
 import type { CefrLevel } from "@/lib/supabase/database.types";
 import { VOCAB_LEVELS } from "@/lib/vocab/dictionary";
 import { loadExamples } from "@/lib/vocab/sentences";
@@ -44,6 +44,8 @@ import { DialogPractice } from "./dialog-practice";
 import { FixPractice } from "./fix-practice";
 import { PatternDrill } from "./pattern-drill";
 import { PyramidDrill } from "./pyramid-drill";
+import { InputModeToggle } from "@/components/production/input-mode";
+import { useInputMode } from "@/hooks/use-input-mode";
 import { TranslationDrill } from "./translation-drill";
 
 const sb = () => getSupabaseBrowserClient();
@@ -247,7 +249,7 @@ function Drill({ items }: { items: DrillItem[] }) {
   const [phase, setPhase] = useState<"ready" | "recording" | "done">("ready");
   const [text, setText] = useState("");
   const [seconds, setSeconds] = useState(0);
-  const [supported] = useState(() => canRecognize());
+  const { voice: supported } = useInputMode();
   const listener = useRef<Listener | null>(null);
   const startedAt = useRef(0);
 
@@ -365,6 +367,7 @@ function Drill({ items }: { items: DrillItem[] }) {
         </ul>
       </section>
 
+      {phase === "ready" ? <InputModeToggle className="self-center" /> : null}
       {phase === "ready" ? (
         <Button size="lg" onClick={start}>
           <Mic aria-hidden />
