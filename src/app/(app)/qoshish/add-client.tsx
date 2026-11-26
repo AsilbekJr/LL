@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, ListPlus, Loader2, PenLine, Plus, Share2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ListPlus,
+  Loader2,
+  PenLine,
+  Plus,
+  ScanText,
+  Share2,
+} from "lucide-react";
 import { BottomActionBar } from "@/components/common/bottom-action-bar";
 import { ItemForm } from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
@@ -17,6 +26,7 @@ import { enrichDrafts } from "@/lib/items/enrich";
 import { parsePasteList } from "@/lib/items/paste";
 import { CEFR_LEVELS, parseTags, type ItemDraft } from "@/lib/schemas/item";
 import { uz } from "@/lib/i18n/uz";
+import { TextAdd } from "./text-add";
 
 type Result = { tone: "success" | "danger" | "warning"; text: string } | null;
 
@@ -37,12 +47,19 @@ export function AddClient({ aiEnabled, shared }: { aiEnabled: boolean; shared?: 
           <ListPlus aria-hidden />
           {t.list}
         </TabsTrigger>
+        <TabsTrigger value="text">
+          <ScanText aria-hidden />
+          {t.textTab}
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="single">
         <SingleAdd aiEnabled={aiEnabled} shared={shared} />
       </TabsContent>
       <TabsContent value="list">
         <ListAdd aiEnabled={aiEnabled} />
+      </TabsContent>
+      <TabsContent value="text">
+        <TextAdd aiEnabled={aiEnabled} afterAdd={AFTER_ADD} />
       </TabsContent>
     </Tabs>
   );
