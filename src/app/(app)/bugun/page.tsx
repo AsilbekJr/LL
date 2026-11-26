@@ -5,17 +5,13 @@ import {
   ArrowRight,
   BookHeart,
   BookOpen,
-  BookOpenText,
-  CalendarClock,
   Check,
   Flame,
   Mic,
   Play,
   Plus,
   RotateCcw,
-  Sparkles,
   Upload,
-  type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
@@ -58,7 +54,7 @@ async function getToday() {
   const dayStart = startOfDayInTz(today, tz).toISOString();
 
   const tomorrow = addDays(today, 1);
-  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes, backlogStats] =
+  const [dueRes, stateRes, history, studiedYesterday, itemsRes, nextRes, backlogStats] =
     await Promise.all([
       // Due today, plus tomorrow's cards for the "what comes next" line.
       supabase
@@ -85,7 +81,6 @@ async function getToday() {
         .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
         .lt("reviewed_at", dayStart)
         .not("result", "is", null),
-      supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
       supabase.from("items").select("id", { count: "exact", head: true }),
       // The next day with a review after tomorrow.
       supabase
@@ -249,8 +244,6 @@ async function getToday() {
     story: week.current
       ? { done: retold.length > 0, best: Math.max(0, ...retold.map((r) => r.best_retell ?? 0)) }
       : null,
-    // Optional extra: never fail the page if texts are unavailable.
-    textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
   };
 }
 
@@ -382,6 +375,12 @@ export default async function TodayPage() {
                       .join(" ")
                   : uz.today.planBody(t.reviews, t.newWords)}
             </p>
+            {t.streak > 0 ? (
+              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-highlight-soft px-2 py-0.5 text-xs font-semibold text-highlight-foreground">
+                <Flame className="size-3.5" aria-hidden />
+                {uz.today.streakChip(t.streak)}
+              </p>
+            ) : null}
             {t.done > 0 && !allDone ? (
               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">
                 <span className="mark-highlight text-foreground">{uz.today.doneOf(t.done, total)}</span>{" "}
@@ -404,25 +403,6 @@ export default async function TodayPage() {
       <RecapCard done={t.recapDone} words={t.recapWords} streak={t.recapStreak} />
       {t.story ? <StoryCard done={t.story.done} best={t.story.best} /> : null}
 
-      {/* Stats */}
-      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label={uz.today.statDue} value={t.reviews} suffix={uz.today.words} icon={CalendarClock} />
-        <Stat
-          label={uz.today.statOverdue}
-          value={t.overdue}
-          suffix={uz.today.words}
-          icon={AlertTriangle}
-          tone={t.overdue > 0 ? "danger" : undefined}
-        />
-        <Stat label={uz.today.statNew} value={t.waitingWords} suffix={uz.today.words} icon={Sparkles} />
-        <Stat
-          label={uz.today.statStreak}
-          value={t.streak}
-          suffix={uz.today.days}
-          icon={Flame}
-          tone={t.streak > 0 ? "streak" : undefined}
-        />
-      </dl>
 
       {!allDone ? <CohortMap cohorts={t.cohorts} today={t.today} /> : null}
 
@@ -478,26 +458,6 @@ export default async function TodayPage() {
         </Link>
       ) : null}
 
-      {/* Quick actions */}
-      <section aria-labelledby="quick-title" className="mt-8">
-        <h2
-          id="quick-title"
-          className="mb-3 text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase"
-        >
-          {uz.today.quickTitle}
-        </h2>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          <QuickLink href="/qoshish" icon={Plus} label={uz.today.addWord} />
-          <QuickLink href="/import" icon={Upload} label={uz.today.importPack} />
-          <QuickLink href="/nutq" icon={Mic} label={uz.nav.speaking} />
-          <QuickLink
-            href="/matnlar"
-            icon={BookOpenText}
-            label={t.textsDue ? uz.today.textsDue(t.textsDue) : uz.nav.texts}
-            highlight={t.textsDue > 0}
-          />
-        </ul>
-      </section>
     </>
   );
 }
@@ -596,82 +556,4 @@ function BacklogBanner({
   );
 }
 
-function Stat({
-  label,
-  value,
-  icon: Icon,
-  tone,
-  suffix,
-}: {
-  label: string;
-  value: number;
-  icon: LucideIcon;
-  tone?: "danger" | "streak";
-  suffix?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border bg-card p-4 shadow-(--shadow-soft)",
-        tone === "danger" && "border-destructive/30 bg-destructive-soft",
-        tone === "streak" && "border-highlight/60 bg-highlight-soft",
-      )}
-    >
-      <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-        <Icon
-          className={cn(
-            "size-3.5",
-            tone === "danger" && "text-destructive",
-            tone === "streak" && "text-highlight-foreground",
-          )}
-          aria-hidden
-        />
-        {label}
-      </dt>
-      <dd className="mt-1.5 flex items-baseline gap-1">
-        <span
-          className={cn(
-            "font-display text-3xl leading-none font-semibold tabular-nums",
-            tone === "danger" && "text-destructive",
-          )}
-        >
-          {value}
-        </span>
-        {suffix ? <span className="text-xs font-semibold text-muted-foreground">{suffix}</span> : null}
-      </dd>
-    </div>
-  );
-}
 
-function QuickLink({
-  href,
-  icon: Icon,
-  label,
-  highlight,
-}: {
-  href: "/qoshish" | "/import" | "/nutq" | "/matnlar";
-  icon: LucideIcon;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className={cn(
-          "group flex h-14 items-center gap-3 rounded-xl border bg-card px-4 text-sm font-semibold shadow-(--shadow-soft) transition-colors outline-none hover:border-primary/30 hover:bg-primary-soft/40 focus-visible:ring-2 focus-visible:ring-ring/50",
-          highlight && "border-highlight/60 bg-highlight-soft",
-        )}
-      >
-        <span className="grid size-8 place-items-center rounded-lg bg-primary-soft text-primary-soft-foreground">
-          <Icon className="size-4" aria-hidden />
-        </span>
-        <span className="flex-1">{label}</span>
-        <ArrowRight
-          className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-          aria-hidden
-        />
-      </Link>
-    </li>
-  );
-}

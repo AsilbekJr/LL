@@ -1,38 +1,9 @@
-import { addDays, diffDays, type IsoDate } from "@/lib/srs/dates";
+import { addDays, type IsoDate } from "@/lib/srs/dates";
 
 /** Day of week, Monday = 0 … Sunday = 6 (Uzbek calendars start on Monday). */
 export function weekdayMon0(day: IsoDate): number {
   const [y, m, d] = day.split("-").map(Number) as [number, number, number];
   return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
-}
-
-export function monthStart(day: IsoDate): IsoDate {
-  return `${day.slice(0, 7)}-01`;
-}
-
-export function monthEnd(day: IsoDate): IsoDate {
-  const [y, m] = day.split("-").map(Number) as [number, number];
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return `${day.slice(0, 7)}-${String(last).padStart(2, "0")}`;
-}
-
-/** First day of the month `delta` months away. */
-export function shiftMonth(day: IsoDate, delta: number): IsoDate {
-  const [y, m] = day.split("-").map(Number) as [number, number];
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return d.toISOString().slice(0, 10);
-}
-
-/** Weeks (Mon–Sun) covering the month; days outside the month are null. */
-export function monthGrid(anyDayInMonth: IsoDate): (IsoDate | null)[][] {
-  const first = monthStart(anyDayInMonth);
-  const last = monthEnd(anyDayInMonth);
-  const cells: (IsoDate | null)[] = Array.from({ length: weekdayMon0(first) }, () => null);
-  for (let d = first; d <= last; d = addDays(d, 1)) cells.push(d);
-  while (cells.length % 7) cells.push(null);
-  const weeks: (IsoDate | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-  return weeks;
 }
 
 /** Heatmap columns: `weeks` Mon–Sun columns ending with the week that contains `end`. */
@@ -61,24 +32,6 @@ export function heatLevels(values: number[]): (v: number) => 0 | 1 | 2 | 3 | 4 |
   };
 }
 
-export type DayStatus = "done" | "partial" | "missed" | "planned" | "rest";
-
-export interface DayCounts {
-  due: number;
-  done: number;
-  missed: number;
-}
-
-/** Status of a calendar day for the month view. */
-export function dayStatus(day: IsoDate, today: IsoDate, c: DayCounts | undefined): DayStatus {
-  if (!c || (c.due === 0 && c.done === 0)) return "rest";
-  if (day > today) return "planned";
-  // Today: `due` is what is still left, `done` what is already reviewed.
-  if (day === today) return c.due === 0 ? "done" : c.done > 0 ? "partial" : "planned";
-  if (c.missed === 0) return "done";
-  return c.done > 0 ? "partial" : "missed";
-}
-
 /** Fill a dense series of `n` days ending at `end` from a sparse day→value map. */
 export function denseSeries(
   map: ReadonlyMap<IsoDate, number>,
@@ -104,8 +57,4 @@ export function niceMax(max: number): number {
   const p = 10 ** Math.floor(Math.log10(max));
   for (const m of [1, 2, 5, 10]) if (m * p >= max) return m * p;
   return 10 * p;
-}
-
-export function daysInRange(from: IsoDate, to: IsoDate): number {
-  return diffDays(to, from) + 1;
 }

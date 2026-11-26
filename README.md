@@ -14,7 +14,7 @@ Reja, papka tuzilmasi va DB sxemasi: [`docs/PLAN.md`](docs/PLAN.md).
 | 3 | Qo'shish / Kutubxona / Import / Backup | ✅ |
 | 4 | Takrorlash sessiyasi (1–6 bosqich) | ✅ |
 | 5 | Production (yozish, gapirish, shadowing) + AI (Gemini / Claude) | ✅ |
-| 6 | Kalendar, statistika, push, offline sync | ✅ |
+| 6 | Statistika (yillik xarita), push, offline sync | ✅ |
 | 7 | Polish, Lighthouse, E2E, deploy | ✅ |
 
 ## 1. O'rnatish (Windows, PowerShell)
@@ -84,7 +84,7 @@ npm run test:e2e
 - `tests/e2e/app.spec.ts` — test hisobi bilan: bo'sh kutubxona, barcha ekranlar 360px ga
   sig'ishi, so'z qo'shish + dublikat, ro'yxat qo'shish, qidiruv, import (xato fayl + namunaviy
   to'plam), takrorlash sessiyasi **o'rtasida internet uziladi va qaytgach sinxronlanadi**,
-  kalendar, statistika, sozlamalar, oxirida tozalash.
+  nutq (Suhbat), statistika, sozlamalar, oxirida tozalash.
 - Test hisobi haqiqiy hisobingizdan alohida (RLS ularni to'liq ajratadi). Uni yaratish:
   Supabase → Authentication → Users → Add user (yoki SQL), parolni `.env.local` dagi
   `E2E_EMAIL` / `E2E_PASSWORD` ga yozing.
@@ -132,19 +132,21 @@ Best Practices 100, SEO 100 (LCP 0.7 s, TBT 0 ms). Mobil (tuzatishlardan oldin) 
   (CC BY-SA 4.0); o'zbekcha tarjimalar `data/vocab/uz/*.tsv` da. Qayta yig'ish:
   `node scripts/vocab/normalize.mjs && node scripts/vocab/build.mjs` (batafsil:
   `data/vocab/source/README.md`).
-- **Matnlar** (`/matnlar`, "Matn zinapoyasi"): darajali matnlar (A1–C2, har birida 4 ta,
-  ilova uchun yozilgan, `data/texts/*.json` → `node scripts/texts/build.mjs` tekshiradi va
-  `public/texts/` ga chiqaradi) va Gemini kutubxonangizdagi so'zlar bilan yozadigan shaxsiy
-  matnlar (`/api/ai-text`). Mashq: 1) tinglash/o'qish (so'zni bossangiz tarjima + kutubxonaga
-  qo'shish), 2) gapma-gap shadowing, 3) o'zbekchadan eslab aytish, 4) kalit so'zlar bilan
-  qayta hikoya. Matn o'zi 1, 3, 7, 16, 35 kunlik oraliqda takrorlanadi (`reading_texts`).
-- **Nutq mashqi** (`/nutq`): *Qoliplar* (60 ta gap qolipi, A1–C2, kutubxonadagi so'z bilan
-  to'ldirib aytiladi), *Tarjima* (o'zbekcha gap → inglizcha og'zaki), *Erkin nutq*, *Shadowing*.
-  So'z 3 xil kunda nutqda to'g'ri ishlatilgach "faol" sanaladi (statistikada ko'rinadi).
-  Gaplar: [Tatoeba](https://tatoeba.org) (CC BY 2.0 FR) → `public/sentences/*.json`.
-  Qayta yig'ish: `eng_sentences.tsv` ni [Tatoeba eksportidan](https://downloads.tatoeba.org/exports/per_language/eng/)
-  yuklab, `node scripts/vocab/sentences.mjs <papka>`; tarjima mashqlari
-  `data/vocab/sentences/uz/*.tsv` dan: `node scripts/vocab/translations.mjs`.
+- **Asosiy yo'l** (ixcham menyu: Bugun, Qo'shish, Kutubxona, Nutq, Hikoya, Statistika,
+  Sozlamalar; Import — Sozlamalar ichida):
+  1. *Qo'shish* — yangi so'zga AI turli vaziyatlarda 5 ta gap yozadi (`/api/context-sentences`).
+  2. *Takrorlash* — har ikkinchi takrorlashda so'zning gaplaridan biri: yangi so'zda bo'sh joy,
+     4-bosqichdan butun gapni tarjima qilish.
+  3. *Kun yakuni* (`/kun-yakuni`) — har kuni 1–2 daqiqa erkin gapirish.
+  4. *Nutq* (`/nutq`) — *Suhbat* (AI savol beradi), *Piramida* (gapni 5 qadamda o'stirish,
+     1-qadamda "gap quruvchi"), *Xatolar* (tuzatilgan gaplarni takrorlash). Yordam bittadan
+     ochiladi; namunani ko'rib aytilgan javob faollikka hisoblanmaydi.
+  5. *Haftalik hikoya* (`/hikoya`) — hafta oxirida haftaning so'zlaridan hikoya (Beginner…IELTS):
+     o'qish → bo'lakma-bo'lak yodlash → aytib berish (AI baho).
+  So'z 3 xil kunda nutqda to'g'ri ishlatilgach "faol" sanaladi. Mikrofon xato eshitsa, har
+  mashqda "Yozib" rejimi bor (gap avval ovoz chiqarib aytiladi, keyin yoziladi).
+  Misol gaplar bazasi: [Tatoeba](https://tatoeba.org) (CC BY 2.0 FR) → `public/sentences/*.json`
+  (`node scripts/vocab/sentences.mjs <papka>`, `node scripts/vocab/translations.mjs`).
 
 ## Env o'zgaruvchilar
 

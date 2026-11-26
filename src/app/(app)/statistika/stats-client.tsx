@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { EmptyState } from "@/components/common/empty-state";
 import { ColumnChart, SegmentedBar, StatTile, type Column, type Segment } from "@/components/charts/charts";
+import { ReviewHeatmap } from "@/components/charts/heatmap";
 import { Button } from "@/components/ui/button";
 import { activeCount, spokenDays } from "@/lib/production/active";
 import { fetchSpokenUses } from "@/lib/production/api";
@@ -78,7 +79,7 @@ export function StatsClient() {
         ink: "light",
       },
     ];
-    return { reviews, forecast, status };
+    return { reviews, forecast, status, heat: reviewsMap };
   }, [q.data]);
 
   if (q.isPending) {
@@ -124,6 +125,11 @@ export function StatsClient() {
           sub={t.activeSub}
         />
       </div>
+
+      {/* The year at a glance (was the Kalendar page). */}
+      <Card title={t.heatmapTitle}>
+        <ReviewHeatmap values={charts.heat} today={d.today} label={t.heatmapTitle} />
+      </Card>
 
       <Card title={t.reviewsTitle}>
         <ColumnChart

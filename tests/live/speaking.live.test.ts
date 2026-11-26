@@ -21,34 +21,22 @@ describe("live speaking judge", () => {
   const sleepy = { english: "sleepy", uzbek: "uyqusiragan" };
   it("fails a restart and a nonsense sentence", async () => {
     const j = await judge({
-      kind: "pattern",
+      kind: "dialog",
       said: "it's so it's too sleepy for me",
       word: sleepy,
-      prompt: "It's too ___ for me.",
+      prompt: "How do you feel in the evening after work?",
       level: "A2",
     });
     expect(J.judgePassed(j)).toBe(false);
   }, 60_000);
 
-  it("passes a good pattern sentence", async () => {
+  it("passes a good first pyramid sentence", async () => {
     const j = await judge({
-      kind: "pattern",
+      kind: "pyramid",
       said: "this movie is too boring for me",
       word: { english: "boring", uzbek: "zerikarli" },
-      prompt: "It's too ___ for me.",
+      prompt: "Say one short, complete sentence (3–10 words) with the target word.",
       level: "A2",
-    });
-    expect(J.judgePassed(j)).toBe(true);
-  }, 60_000);
-
-  it("accepts a correct paraphrase in translation", async () => {
-    const j = await judge({
-      kind: "translation",
-      said: "I am going to the shop tomorrow",
-      word: { english: "shop", uzbek: "do'kon" },
-      prompt: "Ertaga do'konga boraman.",
-      reference: "I will go to the store tomorrow.",
-      level: "A1",
     });
     expect(J.judgePassed(j)).toBe(true);
   }, 60_000);

@@ -7,7 +7,7 @@ import { SpeakingClient } from "./speaking-client";
 
 export const metadata: Metadata = { title: uz.nav.speaking };
 
-const TABS = ["dialog", "pattern", "fix", "more"] as const;
+const TABS = ["dialog", "pyramid", "fix"] as const;
 
 export default async function SpeakingPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;

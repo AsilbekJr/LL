@@ -48,12 +48,11 @@ test("every main screen fits 360 px", async ({ page }) => {
     "/bugun",
     "/qoshish",
     "/kutubxona",
-    "/kalendar",
     "/statistika",
     "/sozlamalar",
     "/import",
     "/nutq",
-    "/yodlanganlar",
+    "/hikoya",
     "/koproq",
   ]) {
     await page.goto(path);
@@ -272,6 +271,8 @@ test("speaking conversation: strict check, AI judge, next question", async ({ pa
 
   // A restarted sentence fails offline, before any AI call.
   await answerBox.fill("I I think so");
+  // Typed answers are said aloud first (the learner confirms it).
+  await page.getByLabel("Gapni ovoz chiqarib aytdim").check();
   await page.getByRole("button", { name: "Tekshirish" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Gap qaytadan boshlandi" })).toBeVisible();
 
@@ -285,6 +286,7 @@ test("speaking conversation: strict check, AI judge, next question", async ({ pa
     .split("—")[0]!
     .trim();
   await page.getByRole("textbox").fill(`Yesterday I talked about ${target} with my friend.`);
+  await page.getByLabel("Gapni ovoz chiqarib aytdim").check();
   await page.getByRole("button", { name: "Tekshirish" }).click();
   await expect(
     page
@@ -293,42 +295,6 @@ test("speaking conversation: strict check, AI judge, next question", async ({ pa
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Keyingi savol" })).toBeEnabled();
   await noHorizontalScroll(page);
-});
-
-test("speaking patterns: a sensible frame for the word, or an honest 'no fit'", async ({ page }) => {
-  await page.goto("/nutq");
-  await page.getByRole("tab", { name: "Qoliplar" }).click();
-  await page.getByRole("radio", { name: "A1" }).click();
-  const card = page.getByText("Bo'sh joyga (…) shu so'zni qo'ying");
-  const noFit = page.getByText(/Bu darajadagi qoliplar uchun mos so'z yo'q/);
-  // AI checks are time-boxed (12 s + one request), then part of speech decides.
-  await expect(card.or(noFit)).toBeVisible({ timeout: 45_000 });
-  if (await card.isVisible()) {
-    const word = (await card.locator("..").locator("span[lang=en]").textContent())!;
-    expect(word.trim().length).toBeGreaterThan(0);
-    // With AI: a ready model sentence for the learner's own word, hidden until asked for.
-    const show = page.getByRole("button", { name: /bilan tayyor javobni ko'rish$/ });
-    if (await show.isVisible()) {
-      await show.click();
-      await expect(page.getByText(/bilan tayyor javob$/)).toBeVisible();
-    }
-  }
-  await noHorizontalScroll(page);
-});
-
-test("calendar shows today's reviewed words", async ({ page }) => {
-  await page.goto("/kalendar");
-  const todayNumber = Number(
-    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent", day: "numeric" }).format(new Date()),
-  );
-  await page
-    .locator("button[aria-pressed]")
-    .filter({ has: page.getByText(String(todayNumber), { exact: true }) })
-    .first()
-    .click();
-  // Cards answered "again" stay due today, so today can show either list.
-  await expect(page.getByText(/Rejadagi so'zlar|Takrorlangan so'zlar/)).toBeVisible();
-  await expect(page.getByText(word, { exact: false }).first()).toBeVisible();
 });
 
 test("statistics count today's reviews", async ({ page }) => {

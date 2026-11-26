@@ -8,7 +8,7 @@ import { wordTokens } from "@/lib/text/usage";
  * sentence is grammatical, makes sense, uses the word in its meaning and was
  * said fluently. Shared by /api/speaking-judge, /api/speaking-dialog and the UI.
  */
-export const JUDGE_KINDS = ["pattern", "translation", "dialog", "pyramid"] as const;
+export const JUDGE_KINDS = ["dialog", "pyramid"] as const;
 export type JudgeKind = (typeof JUDGE_KINDS)[number];
 
 export const judgeRequestSchema = z.object({
@@ -19,10 +19,8 @@ export const judgeRequestSchema = z.object({
   word: z
     .object({ english: z.string().trim().min(1).max(120), uzbek: z.string().trim().max(200) })
     .optional(),
-  /** pattern: the frame with ___ ; translation: the Uzbek sentence ; dialog: the question asked ; pyramid: the step task. */
+  /** dialog: the question asked ; pyramid: the step task. */
   prompt: z.string().trim().min(1).max(800),
-  /** translation: one correct English version (others are fine too). */
-  reference: z.string().trim().max(400).optional(),
 });
 export type JudgeRequest = z.infer<typeof judgeRequestSchema>;
 
@@ -63,7 +61,7 @@ const JUDGE_PROPERTIES = {
   task_ok: {
     type: "boolean",
     description:
-      "pattern: the frame is used as given. translation: the answer means the same as the Uzbek sentence (any correct wording counts). dialog: it really answers the question. pyramid: it keeps the previous sentence and adds exactly what the step asks.",
+      "dialog: it really answers the question. pyramid: it keeps the previous sentence and adds exactly what the step asks.",
   },
   grammar_ok: { type: "boolean", description: "No grammar mistakes in the whole answer." },
   natural: {
@@ -130,13 +128,9 @@ You get a speech-to-text transcript of ONE spoken answer and must judge it hones
 
 export function judgeUserMessage(r: JudgeRequest): string {
   const task =
-    r.kind === "pattern"
-      ? `Task: say one sentence built on the frame "${r.prompt}" (___ = the learner's word). The frame's fixed words must be used, but the subject may change to make sense (e.g. "It's too ___ for me" -> "This jacket is too expensive for me").`
-      : r.kind === "translation"
-        ? `Task: say this Uzbek sentence in English: "${r.prompt}"${r.reference ? ` (one correct version: "${r.reference}")` : ""}.`
-        : r.kind === "pyramid"
-          ? `Task (sentence-building step): ${r.prompt}`
-          : `Task: answer the question "${r.prompt}" in one or two sentences, using the target word.`;
+    r.kind === "pyramid"
+      ? `Task (sentence-building step): ${r.prompt}`
+      : `Task: answer the question "${r.prompt}" in one or two sentences, using the target word.`;
   return [
     task,
     r.word
