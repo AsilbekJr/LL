@@ -24,10 +24,20 @@ const dict = [
   E("meeting", "A2"),
   E("because", "A1", "conjunction"),
   E("because of", "B1", "preposition/adverb"),
-  E("pick up", "A2", "verb"),
+  E("pick up", "A2", "phrasal verb"),
   E("pick", "A1", "verb"),
   E("Paris", "A1"),
   E("abandon", "C1", "verb"),
+  E("like", "A1", "conjunction/preposition/verb"),
+  E("the", "A1", "determiner"),
+  E("turn down", "B1", "phrasal verb"),
+  E("turn", "A1", "verb"),
+  E("music", "A1"),
+  E("look up", "B1", "phrasal verb"),
+  E("look", "A1", "verb"),
+  E("sky", "A1"),
+  E("make up one's mind", "B1", "phrase"),
+  E("IT", "B1", "noun"),
 ];
 const index = buildIndex(dict);
 
@@ -73,5 +83,37 @@ describe("words from a text", () => {
       " the meeting.",
     ]);
     expect(markInSentence("Nothing here.", "postpone")).toBeNull();
+  });
+});
+
+describe("phrasal verbs and phrases", () => {
+  it("finds separated phrasal verbs, but not a verb and a preposition", () => {
+    const found = extractWords(
+      "Please pick it up. She turned the music down. We looked at the sky up there.",
+      index,
+    ).map((w) => w.entry.english);
+    expect(found).toContain("pick up");
+    expect(found).toContain("turn down");
+    expect(found).not.toContain("look up");
+  });
+
+  it("matches phrases with a placeholder and keeps 'like' as a verb", () => {
+    const found = extractWords("Finally I made up my mind. I like music.", index).map((w) => w.entry.english);
+    expect(found).toContain("make up one's mind");
+    expect(found).toContain("like");
+    expect(found).not.toContain("the");
+  });
+
+  it("marks a separated phrasal verb from verb to particle", () => {
+    expect(markInSentence("She turned the music down again.", "turn down")).toEqual([
+      "She ",
+      "turned the music down",
+      " again.",
+    ]);
+  });
+
+  it("knows an abbreviation only in capitals", () => {
+    expect(extractWords("Pick it up.", index).map((w) => w.entry.english)).not.toContain("IT");
+    expect(extractWords("She works in IT now.", index).map((w) => w.entry.english)).toContain("IT");
   });
 });

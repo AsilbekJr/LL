@@ -37,6 +37,26 @@ for (const h of headwords) {
 }
 for (const extra of uz.keys()) problems.push(`translation without headword: ${extra}`);
 
+// Phrasal verbs and fixed phrases the CEFR lists lack ("give up", "look out"):
+// data/vocab/phrases.tsv — english, uzbek, level, part of speech.
+const known = new Set(headwords.map((h) => h.e.toLowerCase()));
+const phraseSeen = new Set();
+readFileSync("data/vocab/phrases.tsv", "utf8")
+  .split(/\r?\n/)
+  .forEach((line, i) => {
+    if (!line.trim() || line.startsWith("#")) return;
+    const [e, u, level, pos, ...rest] = line.split("\t");
+    const where = `phrases.tsv:${i + 1}`;
+    if (!e || !u || !level || !pos || rest.length) return problems.push(`${where} malformed: ${line}`);
+    if (!LEVELS.includes(level)) return problems.push(`${where} bad level: ${level}`);
+    if (!/^[A-Za-z0-9 '’(),;.\-/✓%]+$/.test(u)) problems.push(`${where} non-Latin chars: ${u}`);
+    const key = e.toLowerCase();
+    if (known.has(key)) problems.push(`${where} already a headword: ${e}`);
+    if (phraseSeen.has(key)) problems.push(`${where} duplicate: ${e}`);
+    phraseSeen.add(key);
+    out[level].push({ e, u: u.trim(), p: pos });
+  });
+
 if (problems.length) {
   console.error(problems.slice(0, 40).join("\n"));
   console.error(`\n${problems.length} problem(s)`);
@@ -58,6 +78,7 @@ writeFileSync(
       sources: [
         "The CEFR-J Wordlist Version 1.5, compiled by Yukio Tono, Tokyo University of Foreign Studies",
         "Octanove Vocabulary Profile C1/C2 1.0 by Octanove Labs (CC BY-SA 4.0)",
+        "LL phrasal verbs and phrases (data/vocab/phrases.tsv)",
       ],
       levels: index,
     },
