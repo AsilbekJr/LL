@@ -1,0 +1,810 @@
+From 2b631b34726720d5fbc6d1c75c3504e40e71a9c2 Mon Sep 17 00:00:00 2001
+From: Asilbek <asilbekjabborov0295@gmail.com>
+Date: Tue, 24 Nov 2026 11:13:13 +0500
+Subject: [PATCH] Qaytish rejimi: tanaffusdan keyin yuk odatdagi hajmda, xavfli
+ so'zlar birinchi
+
+- 2+ kun kirilmasa yoki bugungi yuk odatdagidan 1,5 baravar ko'p bo'lsa:
+  bugun odatdagi hajm (so'nggi 14 o'qish kunining medianasi, kamida 20 ta
+  so'z), qolgani keyingi kunlarga; due_date o'zgarmaydi.
+- Qarz yopilguncha yangi so'zlar to'xtaydi.
+- Navbat unutilish xavfi bo'yicha: o'rganilayotganlar, keyin kechikish
+  kunlari / interval nisbati yuqorilari (yosh so'z yetukdan oldin).
+- Bugun: "Qaytish" banneri va "Bugungi ulush bajarildi" xabari; sessiya
+  xulosasida qarz izohi. Bugun va sessiya bir xil hisoblaydi.
+- tests/unit/backlog.test.ts: 15 ta test.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JwED8iYWwYafd7jmpsl7qJ
+---
+ src/app/(app)/bugun/page.tsx                  | 162 +++++++++++------
+ src/app/(focus)/takrorlash/session-client.tsx |  10 +-
+ src/lib/i18n/uz.ts                            |  12 ++
+ src/lib/session/api.ts                        |  12 +-
+ src/lib/session/backlog-state.ts              |  63 +++++++
+ src/lib/srs/backlog.ts                        |  94 ++++++++++
+ src/lib/srs/queue.ts                          |  17 +-
+ tests/unit/backlog.test.ts                    | 163 ++++++++++++++++++
+ 8 files changed, 480 insertions(+), 53 deletions(-)
+ create mode 100644 src/lib/session/backlog-state.ts
+ create mode 100644 src/lib/srs/backlog.ts
+ create mode 100644 tests/unit/backlog.test.ts
+
+diff --git a/src/app/(app)/bugun/page.tsx b/src/app/(app)/bugun/page.tsx
+index bd52a87..69e5690 100644
+--- a/src/app/(app)/bugun/page.tsx
++++ b/src/app/(app)/bugun/page.tsx
+@@ -11,6 +11,7 @@ import {
+   Mic,
+   Play,
+   Plus,
++  RotateCcw,
+   Sparkles,
+   Upload,
+   type LucideIcon,
+@@ -25,6 +26,8 @@ import { addDays, DEFAULT_TZ, hourInTz, startOfDayInTz, todayInTz } from "@/lib/
+ import { buildDailyQueue } from "@/lib/srs/queue";
+ import { loadTodayState } from "@/lib/session/today-state";
+ import { loadCohortTotals, loadWordHistory } from "@/lib/session/cohorts";
++import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "@/lib/session/backlog-state";
++import { intervalOf } from "@/lib/srs/backlog";
+ import { groupTodayByCohort, wordCohort, type PlanWord } from "@/lib/srs/cohorts";
+ import { CohortMap } from "@/components/cohorts/cohort-map";
+ import { ACTIVE_DAYS, activeCount, spokenDays } from "@/lib/production/active";
+@@ -51,43 +54,46 @@ async function getToday() {
+   const dayStart = startOfDayInTz(today, tz).toISOString();
+ 
+   const tomorrow = addDays(today, 1);
+-  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes] = await Promise.all([
+-    // Due today, plus tomorrow's cards for the "what comes next" line.
+-    supabase
+-      .from("cards")
+-      .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
+-      .in("status", [...STUDIED])
+-      .lte("due_date", tomorrow)
+-      .limit(10000),
+-    // The very same loader the review session uses, so the numbers match it.
+-    loadTodayState(supabase, dayStart).then(
+-      (s) => ({ data: s, error: null }),
+-      (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+-    ),
+-    supabase
+-      .from("daily_snapshots")
+-      .select("day")
+-      .gt("done_count", 0)
+-      .order("day", { ascending: false })
+-      .limit(366),
+-    // Yesterday's snapshot is written just after midnight; until then read the logs.
+-    supabase
+-      .from("review_logs")
+-      .select("id", { count: "exact", head: true })
+-      .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
+-      .lt("reviewed_at", dayStart)
+-      .not("result", "is", null),
+-    supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
+-    supabase.from("items").select("id", { count: "exact", head: true }),
+-    // The next day with a review after tomorrow.
+-    supabase
+-      .from("cards")
+-      .select("due_date")
+-      .in("status", [...STUDIED])
+-      .gt("due_date", tomorrow)
+-      .order("due_date")
+-      .limit(1),
+-  ]);
++  const [dueRes, stateRes, history, studiedYesterday, textsDue, itemsRes, nextRes, backlogStats] =
++    await Promise.all([
++      // Due today, plus tomorrow's cards for the "what comes next" line.
++      supabase
++        .from("cards")
++        .select("id, item_id, direction, due_date, status, last_reviewed_at, lapses")
++        .in("status", [...STUDIED])
++        .lte("due_date", tomorrow)
++        .limit(10000),
++      // The very same loader the review session uses, so the numbers match it.
++      loadTodayState(supabase, dayStart).then(
++        (s) => ({ data: s, error: null }),
++        (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
++      ),
++      supabase
++        .from("daily_snapshots")
++        .select("day")
++        .gt("done_count", 0)
++        .order("day", { ascending: false })
++        .limit(366),
++      // Yesterday's snapshot is written just after midnight; until then read the logs.
++      supabase
++        .from("review_logs")
++        .select("id", { count: "exact", head: true })
++        .gte("reviewed_at", startOfDayInTz(yesterday, tz).toISOString())
++        .lt("reviewed_at", dayStart)
++        .not("result", "is", null),
++      supabase.from("reading_texts").select("id", { count: "exact", head: true }).lte("due_date", today),
++      supabase.from("items").select("id", { count: "exact", head: true }),
++      // The next day with a review after tomorrow.
++      supabase
++        .from("cards")
++        .select("due_date")
++        .in("status", [...STUDIED])
++        .gt("due_date", tomorrow)
++        .order("due_date")
++        .limit(1),
++      // Qaytish rejimi: last study day and the usual daily load (null on error = off).
++      loadBacklogStats(supabase, today, tz),
++    ]);
+ 
+   // Extras: speaking progress. Never fail the page because of them.
+   const [uses, corrections, hardCards] = await Promise.all([
+@@ -101,6 +107,11 @@ async function getToday() {
+   const state = stateRes.data;
+   const scheduled = dueRes.data ?? [];
+   const dueRows = scheduled.filter((c) => c.due_date <= today);
++  const backlog = todayBacklog(backlogStats, {
++    today,
++    dueRows,
++    reviewsDoneToday: state?.reviewsDoneToday ?? 0,
++  });
+ 
+   // Build today's queue exactly as the session does (random = first direction; only counts matter).
+   const plan = buildDailyQueue({
+@@ -112,6 +123,7 @@ async function getToday() {
+         dueDate: r.due_date,
+         status: r.status,
+         lastReviewedAt: r.last_reviewed_at,
++        intervalDays: intervalOf(r.due_date, r.last_reviewed_at, tz),
+       })),
+       ...(state?.newCards ?? []).map((r) => ({
+         id: r.id,
+@@ -122,8 +134,8 @@ async function getToday() {
+       })),
+     ],
+     today,
+-    newLimit: settings?.daily_new_limit ?? 15,
+     reviewLimit: settings?.daily_review_limit ?? 150,
++    ...backlogQueueOptions(backlog, settings?.daily_new_limit ?? 15),
+     newItemsDoneToday: state?.newItemsDoneToday ?? 0,
+     reviewsDoneToday: state?.reviewsDoneToday ?? 0,
+     startedItems: state?.startedItems,
+@@ -213,6 +225,7 @@ async function getToday() {
+     nextDay: tomorrowWords.size ? null : (nextRes.data?.[0]?.due_date ?? null),
+     streak: studyStreak(studiedDays, today),
+     cohorts,
++    backlog,
+     // Optional extra: never fail the page if texts are unavailable.
+     textsDue: textsDue.error ? 0 : (textsDue.count ?? 0),
+   };
+@@ -277,7 +290,15 @@ export default async function TodayPage() {
+     <>
+       {header}
+ 
+-      {t.overdue > 0 ? (
++      {t.backlog.active ? (
++        <BacklogBanner
++          gapDays={t.backlog.gapDays}
++          cap={t.backlog.todayCap}
++          remaining={t.dueLater}
++          days={Math.ceil(t.dueLater / Math.max(1, t.backlog.normal))}
++          done={allDone}
++        />
++      ) : t.overdue > 0 ? (
+         <div
+           role="status"
+           className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/25 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
+@@ -313,18 +334,30 @@ export default async function TodayPage() {
+ 
+           <div className="min-w-0 flex-1">
+             <h2 id="today-title" className="font-display text-2xl leading-tight font-semibold">
+-              {allDone ? (t.done > 0 ? uz.today.allDone : uz.today.restDay) : uz.today.dueTitle}
++              {allDone
++                ? t.backlog.active
++                  ? uz.backlog.doneTitle
++                  : t.done > 0
++                    ? uz.today.allDone
++                    : uz.today.restDay
++                : uz.today.dueTitle}
+             </h2>
+             <p className="mt-1 text-sm text-muted-foreground">
+-              {allDone
+-                ? [
+-                    t.laterWords > 0 ? uz.today.newLimitReached(t.laterWords) : "",
+-                    t.dueLater > 0 ? uz.today.reviewLimitReached(t.dueLater) : "",
+-                    uz.today.next(t.tomorrowWords, t.tomorrowNew, t.nextDay ? formatDayUz(t.nextDay) : null),
+-                  ]
+-                    .filter(Boolean)
+-                    .join(" ")
+-                : uz.today.planBody(t.reviews, t.newWords)}
++              {allDone && t.backlog.active
++                ? uz.backlog.doneBody(t.dueLater, Math.ceil(t.dueLater / Math.max(1, t.backlog.normal)))
++                : allDone
++                  ? [
++                      t.laterWords > 0 ? uz.today.newLimitReached(t.laterWords) : "",
++                      t.dueLater > 0 ? uz.today.reviewLimitReached(t.dueLater) : "",
++                      uz.today.next(
++                        t.tomorrowWords,
++                        t.tomorrowNew,
++                        t.nextDay ? formatDayUz(t.nextDay) : null,
++                      ),
++                    ]
++                      .filter(Boolean)
++                      .join(" ")
++                  : uz.today.planBody(t.reviews, t.newWords)}
+             </p>
+             {t.done > 0 && !allDone ? (
+               <p className="mt-2 text-xs font-semibold text-muted-foreground tabular-nums">
+@@ -443,6 +476,37 @@ export default async function TodayPage() {
+   );
+ }
+ 
++/** Qaytish rejimi: today takes the usual load, the rest waits, new words pause. */
++function BacklogBanner({
++  gapDays,
++  cap,
++  remaining,
++  days,
++  done,
++}: {
++  gapDays: number;
++  cap: number;
++  remaining: number;
++  days: number;
++  done: boolean;
++}) {
++  return (
++    <div
++      role="status"
++      className="mb-4 flex items-start gap-3 rounded-xl border border-highlight/60 bg-highlight-soft px-4 py-3 text-sm text-highlight-foreground"
++    >
++      <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden />
++      <div className="space-y-1">
++        <p className="font-semibold">{gapDays >= 2 ? uz.backlog.titleAway(gapDays) : uz.backlog.titleBusy}</p>
++        {!done && remaining > 0 ? <p>{uz.backlog.body(cap, remaining, days)}</p> : null}
++        <p>
++          {uz.backlog.order} {uz.backlog.paused}
++        </p>
++      </div>
++    </div>
++  );
++}
++
+ function Stat({
+   label,
+   value,
+diff --git a/src/app/(focus)/takrorlash/session-client.tsx b/src/app/(focus)/takrorlash/session-client.tsx
+index 8b60b6f..535eb91 100644
+--- a/src/app/(focus)/takrorlash/session-client.tsx
++++ b/src/app/(focus)/takrorlash/session-client.tsx
+@@ -323,6 +323,7 @@ function Session({
+             state={state}
+             minutes={Math.max(1, Math.round(((finishedAt ?? startedAt) - startedAt) / 60_000))}
+             dueRemaining={data.dueRemaining}
++            backlog={data.backlog?.active ?? false}
+             onRestart={onRestart}
+             saving={writer.pending > 0}
+           />
+@@ -412,6 +413,7 @@ function Summary({
+   state,
+   minutes,
+   dueRemaining,
++  backlog,
+   onRestart,
+   saving,
+ }: {
+@@ -419,6 +421,8 @@ function Summary({
+   state: SessionState;
+   minutes: number;
+   dueRemaining: number;
++  /** Qaytish rejimi: the remaining due words are planned for the next days. */
++  backlog: boolean;
+   onRestart: () => void;
+   /** Answers still being written: reloading now would read stale cards. */
+   saving: boolean;
+@@ -456,7 +460,11 @@ function Summary({
+           </div>
+         ))}
+       </dl>
+-      {dueRemaining > 0 ? <p className="text-sm text-muted-foreground">{t.moreDue(dueRemaining)}</p> : null}
++      {dueRemaining > 0 ? (
++        <p className="text-sm text-muted-foreground">
++          {backlog ? uz.backlog.sessionMore(dueRemaining) : t.moreDue(dueRemaining)}
++        </p>
++      ) : null}
+       <div className="flex w-full max-w-sm flex-col gap-2">
+         {fixCount > 0 ? (
+           <>
+diff --git a/src/lib/i18n/uz.ts b/src/lib/i18n/uz.ts
+index e9c20b8..7b3353c 100644
+--- a/src/lib/i18n/uz.ts
++++ b/src/lib/i18n/uz.ts
+@@ -697,6 +697,18 @@ export const uz = {
+     attribution:
+       "Manba: The CEFR-J Wordlist 1.5 (Tono Lab, TUFS) va Octanove Vocabulary Profile C1/C2 (CC BY-SA 4.0). O'zbekcha tarjimalar avtomatik tayyorlangan — xato ko'rsangiz, so'zni kutubxonada tahrirlang.",
+   },
++  backlog: {
++    titleAway: (days: number) => `${days} kunlik tanaffusdan keyin xush kelibsiz!`,
++    titleBusy: "Bugun yuk odatdagidan ko'p",
++    body: (cap: number, remaining: number, days: number) =>
++      `Bugun odatdagi hajm — ${cap} ta so'z. Qolgan ${remaining} tasi keyingi ${days} kunda yopiladi.`,
++    order: "Unutilish xavfi yuqori so'zlar birinchi chiqadi.",
++    paused: "Qarz yopilguncha yangi so'zlar to'xtatildi.",
++    doneTitle: "Bugungi ulush bajarildi",
++    doneBody: (remaining: number, days: number) =>
++      `Qarz: ${remaining} ta so'z, ${days} kunda yopiladi. Ertaga shu tartibda davom etamiz.`,
++    sessionMore: (n: number) => `Qarz: yana ${n} ta so'z keyingi kunlarga qoldi — bu reja bo'yicha.`,
++  },
+   cohorts: {
+     mapTitle: "Takrorlash xaritasi",
+     mapSummary: (words: number, groups: number) => `${words} ta so'z · ${groups} ta kun`,
+diff --git a/src/lib/session/api.ts b/src/lib/session/api.ts
+index b322736..0832112 100644
+--- a/src/lib/session/api.ts
++++ b/src/lib/session/api.ts
+@@ -16,6 +16,8 @@ import type { Database, Json, Tables } from "@/lib/supabase/database.types";
+ import { saveProductions, type ProductionWrite } from "@/lib/production/api";
+ import { loadTodayState } from "./today-state";
+ import { loadWordHistory } from "./cohorts";
++import { backlogQueueOptions, loadBacklogStats, todayBacklog } from "./backlog-state";
++import { intervalOf, type Backlog } from "@/lib/srs/backlog";
+ import { cohortChips } from "@/lib/srs/cohorts";
+ import type { SessionCard, SessionItem, SiblingPatch } from "./exercise";
+ import { fillExamples } from "./examples";
+@@ -55,6 +57,8 @@ export interface LoadedSession {
+   pool: SessionItem[];
+   load: Map<IsoDate, number>;
+   dueRemaining: number;
++  /** Qaytish rejimi state (missing in snapshots cached before it existed). */
++  backlog?: Backlog;
+ }
+ 
+ function check<T>(r: { data: T | null; error: { message: string } | null }): T {
+@@ -95,7 +99,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
+   const dayStart = startOfDayInTz(today, settings.timezone).toISOString();
+   const newLimit = settingsRow?.daily_new_limit ?? 15;
+ 
+-  const [due, state, upcoming] = await Promise.all([
++  const [due, state, upcoming, backlogStats] = await Promise.all([
+     sb
+       .from("cards")
+       .select(CARD_COLUMNS)
+@@ -109,9 +113,11 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
+       .in("status", [...STUDIED])
+       .gt("due_date", today)
+       .lte("due_date", addDays(today, LOAD_HORIZON_DAYS)),
++    loadBacklogStats(sb, today, settings.timezone),
+   ]);
+ 
+   const dueRows = check(due).filter((r) => r.items);
++  const backlog = todayBacklog(backlogStats, { today, dueRows, reviewsDoneToday: state.reviewsDoneToday });
+   const plan = buildDailyQueue({
+     cards: [
+       ...dueRows.map((r) => ({
+@@ -121,6 +127,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
+         dueDate: r.due_date,
+         status: r.status,
+         lastReviewedAt: r.last_reviewed_at,
++        intervalDays: intervalOf(r.due_date, r.last_reviewed_at, settings.timezone),
+       })),
+       ...state.newCards.map((r) => ({
+         id: r.id,
+@@ -131,8 +138,8 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
+       })),
+     ],
+     today,
+-    newLimit,
+     reviewLimit: settingsRow?.daily_review_limit ?? 150,
++    ...backlogQueueOptions(backlog, newLimit),
+     newItemsDoneToday: state.newItemsDoneToday,
+     reviewsDoneToday: state.reviewsDoneToday,
+     startedItems: state.startedItems,
+@@ -225,6 +232,7 @@ export async function loadSession(sb: Client, now = new Date()): Promise<LoadedS
+     pool: [...pool.values()],
+     load,
+     dueRemaining: queue.dueRemaining,
++    backlog,
+   };
+ }
+ 
+diff --git a/src/lib/session/backlog-state.ts b/src/lib/session/backlog-state.ts
+new file mode 100644
+index 0000000..c0bb4f3
+--- /dev/null
++++ b/src/lib/session/backlog-state.ts
+@@ -0,0 +1,63 @@
++import type { SupabaseClient } from "@supabase/supabase-js";
++import { addDays, dayInTz, startOfDayInTz, type IsoDate } from "@/lib/srs/dates";
++import { BACKLOG_HISTORY_DAYS, detectBacklog, dueWordCount, type Backlog } from "@/lib/srs/backlog";
++import type { Database } from "@/lib/supabase/database.types";
++
++type Client = SupabaseClient<Database>;
++
++/** Recent study history for the Qaytish rejimi; null when it could not be read. */
++export type BacklogStats = { lastStudyDay: IsoDate | null; recentDone: number[] } | null;
++
++/** The last study day before today and recent daily loads. Never throws (null on error). */
++export async function loadBacklogStats(sb: Client, today: IsoDate, tz: string): Promise<BacklogStats> {
++  const dayStart = startOfDayInTz(today, tz).toISOString();
++  try {
++    const [last, snapshots] = await Promise.all([
++      sb
++        .from("review_logs")
++        .select("reviewed_at")
++        .lt("reviewed_at", dayStart)
++        .not("result", "is", null)
++        .order("reviewed_at", { ascending: false })
++        .limit(1),
++      sb
++        .from("daily_snapshots")
++        .select("day, done_count")
++        .gt("done_count", 0)
++        .lt("day", today)
++        .gte("day", addDays(today, -60))
++        .order("day", { ascending: false })
++        .limit(BACKLOG_HISTORY_DAYS),
++    ]);
++    if (last.error || snapshots.error) return null;
++    const at = last.data?.[0]?.reviewed_at;
++    return {
++      lastStudyDay: at ? dayInTz(new Date(at), tz) : null,
++      recentDone: (snapshots.data ?? []).map((r) => r.done_count),
++    };
++  } catch {
++    return null;
++  }
++}
++
++/**
++ * Today's Qaytish rejimi state, computed the same way by the Bugun page and
++ * the session. `dueRows` = cards due today or earlier; `reviewsDoneToday` =
++ * cards already reviewed today (they were part of the day's load). Without
++ * stats the mode is off.
++ */
++export function todayBacklog(
++  stats: BacklogStats,
++  opts: { today: IsoDate; dueRows: { item_id: string }[]; reviewsDoneToday: number },
++): Backlog {
++  const due = dueWordCount(opts.dueRows) + opts.reviewsDoneToday;
++  if (!stats) return { active: false, normal: due, gapDays: 0, todayCap: due, remaining: 0, daysToClear: 0 };
++  return detectBacklog({ dueAtStart: due, today: opts.today, ...stats });
++}
++
++/** The extra buildDailyQueue inputs for today's backlog state. */
++export function backlogQueueOptions(backlog: Backlog, newLimit: number) {
++  return backlog.active
++    ? { newLimit: 0, reviewCap: backlog.todayCap, riskFirst: true }
++    : { newLimit, reviewCap: undefined, riskFirst: false };
++}
+diff --git a/src/lib/srs/backlog.ts b/src/lib/srs/backlog.ts
+new file mode 100644
+index 0000000..5d8251d
+--- /dev/null
++++ b/src/lib/srs/backlog.ts
+@@ -0,0 +1,94 @@
++import { dayInTz, diffDays, type IsoDate } from "./dates";
++
++/**
++ * "Qaytish rejimi": after a break (or on an overloaded day) today's reviews
++ * are capped at the user's usual daily load, new words pause, and the rest
++ * waits for the next days. Nothing is moved in the database — due dates stay
++ * as they are; only today's queue takes less, the most at-risk words first.
++ */
++
++/** Never cap a day below this many words. */
++export const BACKLOG_MIN_CAP = 20;
++/** Missed days that count as a break. */
++export const BACKLOG_GAP_DAYS = 2;
++/** A day this many times over the usual load is overloaded even without a break. */
++export const BACKLOG_FACTOR = 1.5;
++/** Study days looked at for the usual load. */
++export const BACKLOG_HISTORY_DAYS = 14;
++
++export interface BacklogInput {
++  /** Words due today, counting the ones already reviewed today (the day's starting load). */
++  dueAtStart: number;
++  today: IsoDate;
++  /** The last day before today with at least one answer; null if none. */
++  lastStudyDay: IsoDate | null;
++  /** Cards done on each recent study day (most recent first or any order). */
++  recentDone: number[];
++}
++
++export interface Backlog {
++  active: boolean;
++  /** The user's usual daily load (words). */
++  normal: number;
++  /** Full days missed before today. */
++  gapDays: number;
++  /** Words to review today: `normal` when active, all due otherwise. */
++  todayCap: number;
++  /** Due words left for the next days. */
++  remaining: number;
++  /** Days after today needed to clear `remaining` at the usual pace. */
++  daysToClear: number;
++}
++
++function median(values: number[]): number {
++  if (values.length === 0) return 0;
++  const s = [...values].sort((a, b) => a - b);
++  const mid = Math.floor(s.length / 2);
++  return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
++}
++
++/** Usual daily load: the median of recent study days, never below the minimum. */
++export function normalLoad(recentDone: number[]): number {
++  const days = recentDone.filter((n) => n > 0).slice(0, BACKLOG_HISTORY_DAYS);
++  return Math.max(BACKLOG_MIN_CAP, Math.round(median(days)));
++}
++
++export function detectBacklog(input: BacklogInput): Backlog {
++  const normal = normalLoad(input.recentDone);
++  const gapDays = input.lastStudyDay ? Math.max(0, diffDays(input.today, input.lastStudyDay) - 1) : 0;
++  const due = Math.max(0, input.dueAtStart);
++  const away = gapDays >= BACKLOG_GAP_DAYS;
++  const overloaded = due > normal * BACKLOG_FACTOR;
++  const active = due > normal && (away || overloaded);
++  if (!active) return { active, normal, gapDays, todayCap: due, remaining: 0, daysToClear: 0 };
++  const remaining = due - normal;
++  return { active, normal, gapDays, todayCap: normal, remaining, daysToClear: Math.ceil(remaining / normal) };
++}
++
++/** Days between a card's last answer and its due date (its current interval); null if never answered. */
++export function intervalOf(
++  dueDate: IsoDate,
++  lastReviewedAt: string | null | undefined,
++  tz: string,
++): number | null {
++  if (!lastReviewedAt) return null;
++  return Math.max(1, diffDays(dueDate, dayInTz(new Date(lastReviewedAt), tz)));
++}
++
++/** Number of distinct words among due cards (one card per word a day). */
++export function dueWordCount(cards: { item_id: string }[]): number {
++  return new Set(cards.map((c) => c.item_id)).size;
++}
++
++/**
++ * How close a due card is to being forgotten: days late relative to its
++ * interval. A 1-day word 3 days late (3) is far more at risk than a 35-day
++ * word 3 days late (≈0.09). Cards still being learned always come first.
++ */
++export function forgettingRisk(
++  card: { status: string; intervalDays?: number | null },
++  overdueDays: number,
++): number {
++  const base = overdueDays / Math.max(1, card.intervalDays ?? 1);
++  return card.status === "learning" ? 1000 + base : base;
++}
+diff --git a/src/lib/srs/queue.ts b/src/lib/srs/queue.ts
+index 2f02a16..70abd08 100644
+--- a/src/lib/srs/queue.ts
++++ b/src/lib/srs/queue.ts
+@@ -1,10 +1,13 @@
+ import { addDays, overdueDays, type IsoDate } from "./dates";
++import { forgettingRisk } from "./backlog";
+ import { isDue } from "./overdue";
+ import type { SrsCard } from "./types";
+ 
+ export type QueueCard = Pick<SrsCard, "id" | "itemId" | "direction" | "dueDate" | "status"> & {
+   /** When the card was last graded (null = never); breaks ties so both directions take turns. */
+   lastReviewedAt?: string | null;
++  /** The card's current interval in days (see backlog.intervalOf); used by `riskFirst`. */
++  intervalDays?: number | null;
+ };
+ 
+ /** The direction a new word starts with: understanding (EN→UZ) before producing (UZ→EN). */
+@@ -34,6 +37,13 @@ export interface DailyQueueInput<C extends QueueCard> {
+   readyItems?: ReadonlySet<string>;
+   /** Words that had a card seen for the first time today. */
+   touchedToday?: ReadonlySet<string>;
++  /** Qaytish rejimi: at most this many reviews today (together with `reviewLimit`). */
++  reviewCap?: number;
++  /**
++   * Qaytish rejimi: order due cards by forgetting risk (learning cards, then
++   * days late relative to the interval) instead of by days late.
++   */
++  riskFirst?: boolean;
+ }
+ 
+ export interface DailyQueue<C extends QueueCard> {
+@@ -61,6 +71,8 @@ export interface DailyQueue<C extends QueueCard> {
+  * Today's study queue. The unit is the WORD: a word has two cards (EN→UZ and
+  * UZ→EN), but shows at most one of them a day.
+  * 1. Due cards (overdue roll over to today), most overdue first, up to the review limit.
++ *    Qaytish rejimi (`riskFirst`, `reviewCap`): most at risk of being forgotten first,
++ *    up to the user's usual daily load; the rest waits (due dates are not changed).
+  *    If both directions of a word are due, the more overdue one (on a tie the one
+  *    reviewed longer ago) comes today and the other is deferred.
+  * 2. New words up to the new limit, starting with EN→UZ.
+@@ -71,10 +83,12 @@ export interface DailyQueue<C extends QueueCard> {
+ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>): DailyQueue<C> {
+   const { today } = input;
+ 
++  const risk = (c: C) => (input.riskFirst ? forgettingRisk(c, overdueDays(c.dueDate, today)) : 0);
+   const allDue = input.cards
+     .filter((c) => isDue(c, today))
+     .sort(
+       (a, b) =>
++        risk(b) - risk(a) ||
+         overdueDays(b.dueDate, today) - overdueDays(a.dueDate, today) ||
+         (a.lastReviewedAt ?? "").localeCompare(b.lastReviewedAt ?? "") ||
+         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+@@ -89,7 +103,8 @@ export function buildDailyQueue<C extends QueueCard>(input: DailyQueueInput<C>):
+     dueItems.add(c.itemId);
+     return true;
+   });
+-  const reviewBudget = Math.max(0, input.reviewLimit - (input.reviewsDoneToday ?? 0));
++  const limit = Math.min(input.reviewLimit, input.reviewCap ?? Infinity);
++  const reviewBudget = Math.max(0, limit - (input.reviewsDoneToday ?? 0));
+   const reviews = due.slice(0, reviewBudget);
+ 
+   // Group new cards by item, keeping first-seen item order.
+diff --git a/tests/unit/backlog.test.ts b/tests/unit/backlog.test.ts
+new file mode 100644
+index 0000000..49015a4
+--- /dev/null
++++ b/tests/unit/backlog.test.ts
+@@ -0,0 +1,163 @@
++import { describe, expect, it } from "vitest";
++import {
++  BACKLOG_MIN_CAP,
++  detectBacklog,
++  dueWordCount,
++  forgettingRisk,
++  intervalOf,
++  normalLoad,
++} from "@/lib/srs/backlog";
++import { buildDailyQueue, type QueueCard } from "@/lib/srs/queue";
++
++const TODAY = "2026-11-25";
++
++describe("normalLoad", () => {
++  it("is the median of recent study days", () => {
++    expect(normalLoad([30, 24, 26, 90, 25])).toBe(26);
++  });
++  it("never goes below the minimum, also without history", () => {
++    expect(normalLoad([5, 8])).toBe(BACKLOG_MIN_CAP);
++    expect(normalLoad([])).toBe(BACKLOG_MIN_CAP);
++  });
++});
++
++describe("detectBacklog", () => {
++  const usual = [24, 24, 24, 24];
++
++  it("is off on an ordinary day", () => {
++    const b = detectBacklog({ dueAtStart: 26, today: TODAY, lastStudyDay: "2026-11-24", recentDone: usual });
++    expect(b).toMatchObject({ active: false, todayCap: 26, remaining: 0, gapDays: 0 });
++  });
++
++  it("turns on after a 2+ day break when more than the usual load is due", () => {
++    const b = detectBacklog({ dueAtStart: 65, today: TODAY, lastStudyDay: "2026-11-21", recentDone: usual });
++    expect(b).toEqual({ active: true, normal: 24, gapDays: 3, todayCap: 24, remaining: 41, daysToClear: 2 });
++  });
++
++  it("stays off after a break if the due words fit in a usual day", () => {
++    const b = detectBacklog({ dueAtStart: 20, today: TODAY, lastStudyDay: "2026-11-20", recentDone: usual });
++    expect(b.active).toBe(false);
++  });
++
++  it("turns on for an overloaded day even without a break", () => {
++    expect(
++      detectBacklog({ dueAtStart: 37, today: TODAY, lastStudyDay: "2026-11-24", recentDone: usual }).active,
++    ).toBe(true);
++    expect(
++      detectBacklog({ dueAtStart: 36, today: TODAY, lastStudyDay: "2026-11-24", recentDone: usual }).active,
++    ).toBe(false);
++  });
++
++  it("a one-day gap is not a break", () => {
++    const b = detectBacklog({ dueAtStart: 30, today: TODAY, lastStudyDay: "2026-11-23", recentDone: usual });
++    expect([b.gapDays, b.active]).toEqual([1, false]);
++  });
++});
++
++describe("helpers", () => {
++  it("intervalOf: days from the last answer to the due date", () => {
++    expect(intervalOf("2026-11-20", "2026-11-13T10:00:00Z", "Asia/Tashkent")).toBe(7);
++    expect(intervalOf("2026-11-20", null, "Asia/Tashkent")).toBeNull();
++  });
++  it("dueWordCount counts words, not cards", () => {
++    expect(dueWordCount([{ item_id: "a" }, { item_id: "a" }, { item_id: "b" }])).toBe(2);
++  });
++  it("a young word is more at risk than a mature one equally late; learning cards come first", () => {
++    expect(forgettingRisk({ status: "review", intervalDays: 1 }, 3)).toBeGreaterThan(
++      forgettingRisk({ status: "review", intervalDays: 35 }, 3),
++    );
++    expect(forgettingRisk({ status: "learning", intervalDays: 1 }, 0)).toBeGreaterThan(
++      forgettingRisk({ status: "review", intervalDays: 1 }, 10),
++    );
++  });
++});
++
++describe("buildDailyQueue in Qaytish rejimi", () => {
++  const due = (id: string, over: Partial<QueueCard> = {}): QueueCard => ({
++    id,
++    itemId: id,
++    direction: "en_uz",
++    dueDate: "2026-11-22",
++    status: "review",
++    ...over,
++  });
++  const newWord = (id: string): QueueCard => ({
++    id,
++    itemId: id,
++    direction: "en_uz",
++    dueDate: TODAY,
++    status: "new",
++  });
++
++  it("caps today's reviews and lets no new words in", () => {
++    const cards = [...Array.from({ length: 10 }, (_, i) => due(`d${i}`)), newWord("n1"), newWord("n2")];
++    const q = buildDailyQueue({
++      cards,
++      today: TODAY,
++      newLimit: 0,
++      reviewLimit: 150,
++      reviewCap: 4,
++      riskFirst: true,
++    });
++    expect(q.queue).toHaveLength(4);
++    expect(q.newWords).toBe(0);
++    expect(q.dueRemaining).toBe(6);
++  });
++
++  it("the cap counts reviews already done today", () => {
++    const cards = Array.from({ length: 10 }, (_, i) => due(`d${i}`));
++    const q = buildDailyQueue({
++      cards,
++      today: TODAY,
++      newLimit: 0,
++      reviewLimit: 150,
++      reviewCap: 4,
++      reviewsDoneToday: 3,
++    });
++    expect(q.queue).toHaveLength(1);
++  });
++
++  it("puts young and learning words before mature ones, whatever the days late", () => {
++    const cards = [
++      due("mature", { dueDate: "2026-11-15", intervalDays: 35 }), // 10 days late, 35-day word
++      due("young", { dueDate: "2026-11-22", intervalDays: 1 }), // 3 days late, 1-day word
++      due("learning", { dueDate: TODAY, status: "learning", intervalDays: 1 }),
++    ];
++    const q = buildDailyQueue({
++      cards,
++      today: TODAY,
++      newLimit: 0,
++      reviewLimit: 150,
++      reviewCap: 2,
++      riskFirst: true,
++    });
++    expect(q.queue.map((c) => c.id)).toEqual(["learning", "young"]);
++  });
++
++  it("without riskFirst keeps the usual most-overdue-first order", () => {
++    const cards = [
++      due("young", { dueDate: "2026-11-22", intervalDays: 1 }),
++      due("mature", { dueDate: "2026-11-15", intervalDays: 35 }),
++    ];
++    const q = buildDailyQueue({ cards, today: TODAY, newLimit: 0, reviewLimit: 150 });
++    expect(q.queue.map((c) => c.id)).toEqual(["mature", "young"]);
++  });
++
++  it("still shows at most one card per word", () => {
++    const cards = [
++      due("a1", { itemId: "a", direction: "en_uz", intervalDays: 1 }),
++      due("a2", { itemId: "a", direction: "uz_en", intervalDays: 3 }),
++      due("b1", { itemId: "b", intervalDays: 2 }),
++    ];
++    const q = buildDailyQueue({
++      cards,
++      today: TODAY,
++      newLimit: 0,
++      reviewLimit: 150,
++      reviewCap: 5,
++      riskFirst: true,
++    });
++    const items = q.queue.map((c) => c.itemId);
++    expect(new Set(items).size).toBe(items.length);
++  });
++});
+-- 
+2.43.0
+
