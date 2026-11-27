@@ -117,3 +117,14 @@ describe("phrasal verbs and phrases", () => {
     expect(extractWords("She works in IT now.", index).map((w) => w.entry.english)).toContain("IT");
   });
 });
+
+describe("irregular verbs in phrases", () => {
+  it("recognises past forms of common irregular verbs", async () => {
+    const { usesTerm } = await import("@/lib/text/usage");
+    expect(usesTerm("I grew up in Bukhara", "grow up")).toBe(true);
+    expect(usesTerm("We hung out at the mall", "hang out")).toBe(true);
+    expect(usesTerm("She drove off quickly", "drive off")).toBe(true);
+    expect(usesTerm("The tickets were sold out", "sell out")).toBe(true);
+    expect(usesTerm("He threw it away", "throw away")).toBe(false); // separated: handled by the extractor
+  });
+});

@@ -9,27 +9,27 @@
     {
       "level": "A1",
       "file": "a1.json",
-      "count": 1086
+      "count": 1092
     },
     {
       "level": "A2",
       "file": "a2.json",
-      "count": 1305
+      "count": 1344
     },
     {
       "level": "B1",
       "file": "b1.json",
-      "count": 2284
+      "count": 2385
     },
     {
       "level": "B2",
       "file": "b2.json",
-      "count": 2499
+      "count": 2635
     },
     {
       "level": "C1",
       "file": "c1.json",
-      "count": 936
+      "count": 989
     },
     {
       "level": "C2",
