@@ -775,6 +775,8 @@ export const uz = {
   },
   recap: {
     title: "Kun yakuni",
+    plan: "Reja — har savolga 1–2 gap",
+    nextStep: "Keyingi savol",
     description: "1–2 daqiqa o'z kuningiz haqida inglizcha gapiring.",
     topic: "Bugungi mavzu",
     otherTopic: "Boshqa mavzu",

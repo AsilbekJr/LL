@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowRight,
   CheckCircle2,
   Circle,
   Lightbulb,
@@ -37,6 +38,7 @@ import {
   RECAP_MIN_WORDS,
   RECAP_TARGET_SECONDS,
   type Recap,
+  type RecapStep,
 } from "@/lib/speaking/recap";
 import {
   fetchRecapLibrary,
@@ -134,6 +136,8 @@ function RecapSession({
   const qc = useQueryClient();
   const [shift, setShift] = useState(0);
   const topic = recapTopic(today, shift);
+  // The plan: one small question at a time, each with a sentence start.
+  const [step, setStep] = useState(0);
   const [hints, setHints] = useState(() =>
     pickRecapHints(
       library.filter((w) => reviewedIds.has(w.id)),
@@ -218,6 +222,7 @@ function RecapSession({
     setResult(null);
     setShort(false);
     setShift((s) => s + 1);
+    setStep(0);
     setHints(
       pickRecapHints(
         library.filter((w) => reviewedIds.has(w.id)),
@@ -269,12 +274,21 @@ function RecapSession({
             </p>
           </div>
           {!talking && !hasTalk ? (
-            <Button variant="ghost" size="sm" onClick={() => setShift((s) => s + 1)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShift((s) => s + 1);
+                setStep(0);
+              }}
+            >
               <Shuffle aria-hidden />
               {t.otherTopic}
             </Button>
           ) : null}
         </div>
+
+        <TalkPlan steps={topic.steps} current={step} onPick={setStep} />
 
         {hints.length ? (
           <>
@@ -298,7 +312,12 @@ function RecapSession({
                     ) : (
                       <Circle className="size-4 text-muted-foreground" aria-hidden />
                     )}
-                    <span lang="en">{h.english}</span>
+                    <span className="flex flex-col leading-tight">
+                      <span lang="en">{h.english}</span>
+                      <span className="text-[11px] font-normal text-muted-foreground" lang="uz">
+                        {h.uzbek}
+                      </span>
+                    </span>
                   </li>
                 );
               })}
@@ -365,6 +384,13 @@ function RecapSession({
         <Notice tone="warning" icon={AlertTriangle}>
           {voice ? t.tooShort(RECAP_MIN_SECONDS, RECAP_MIN_WORDS) : t.tooShortTyped(RECAP_MIN_TYPED_WORDS)}
         </Notice>
+      ) : null}
+
+      {phase !== "checking" && (talking || hasTalk) && step < topic.steps.length - 1 ? (
+        <Button variant="outline" onClick={() => setStep((n) => Math.min(topic.steps.length - 1, n + 1))}>
+          {t.nextStep}
+          <ArrowRight aria-hidden />
+        </Button>
       ) : null}
 
       {phase === "checking" ? (
@@ -563,5 +589,67 @@ function PhraseCard({ phrase }: { phrase: Recap["phrase"] }) {
       )}
       {add.isError ? <p className="mt-2 text-sm text-destructive">{t.saveFailed}</p> : null}
     </section>
+  );
+}
+
+/**
+ * The talk as 4 small questions: the current one is large, with its sentence
+ * start; answered ones are ticked. Tapping a question jumps to it.
+ */
+function TalkPlan({
+  steps,
+  current,
+  onPick,
+}: {
+  steps: readonly RecapStep[];
+  current: number;
+  onPick: (i: number) => void;
+}) {
+  return (
+    <div className="mt-5">
+      <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">{t.plan}</p>
+      <ol className="mt-2 flex flex-col gap-1.5">
+        {steps.map((s, i) => (
+          <li key={s.uz}>
+            <button
+              type="button"
+              onClick={() => onPick(i)}
+              aria-current={i === current ? "step" : undefined}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                i === current
+                  ? "border-primary/40 bg-primary-soft"
+                  : "bg-background/70 hover:border-primary/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold",
+                  i < current
+                    ? "bg-success-soft text-success"
+                    : i === current
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-sunken text-muted-foreground",
+                )}
+              >
+                {i < current ? <CheckCircle2 className="size-3.5" aria-hidden /> : i + 1}
+              </span>
+              <span className="min-w-0">
+                <span
+                  className={cn("block text-sm", i === current ? "font-semibold" : "text-muted-foreground")}
+                >
+                  {s.uz}
+                </span>
+                {i === current ? (
+                  <span className="mt-0.5 block text-base font-semibold text-primary" lang="en">
+                    {s.start}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }

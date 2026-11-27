@@ -132,3 +132,16 @@ describe("recapUserMessage", () => {
     expect(msg).toContain("- (none)");
   });
 });
+
+describe("recap plans", () => {
+  it("every topic has 4 questions with an English start", async () => {
+    const { RECAP_TOPICS: topics } = await import("@/lib/speaking/recap");
+    for (const topic of topics) {
+      expect(topic.steps).toHaveLength(4);
+      for (const s of topic.steps) {
+        expect(s.uz.trim().length).toBeGreaterThan(5);
+        expect(s.start).toMatch(/^[A-Z].*[…]$/);
+      }
+    }
+  });
+});

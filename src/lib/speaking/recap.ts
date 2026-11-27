@@ -25,31 +25,131 @@ export const RECAP_MAX_HINTS = 5;
 /** At most this many detected words go to the AI check. */
 export const RECAP_MAX_CANDIDATES = 40;
 
-/** Topics about the learner's own life, one per day in turn. */
+/**
+ * Topics about the learner's own life, one per day in turn. Each comes with
+ * a short plan — 4 small questions with an English sentence start — so the
+ * talk is built step by step instead of from a blank page.
+ */
+export interface RecapStep {
+  uz: string;
+  /** How the answer can start (shown, not required). */
+  start: string;
+}
+
+const step = (uz: string, start: string): RecapStep => ({ uz, start });
+
 export const RECAP_TOPICS = [
-  { id: "day", uz: "Bugun kuningiz qanday o'tdi? Nima qildingiz?", en: "How was your day?" },
-  { id: "work", uz: "Bugun ishda nima bo'ldi?", en: "What happened at work today?" },
-  { id: "tomorrow", uz: "Ertangi rejangiz qanday?", en: "What are your plans for tomorrow?" },
-  { id: "people", uz: "Bugun kim bilan gaplashdingiz va nima haqida?", en: "Who did you talk to today?" },
+  {
+    id: "day",
+    uz: "Bugun kuningiz qanday o'tdi? Nima qildingiz?",
+    en: "How was your day?",
+    steps: [
+      step("Ertalab nima qildingiz?", "This morning I…"),
+      step("Kun davomida nima bo'ldi?", "During the day…"),
+      step("Kim bilan gaplashdingiz yoki ko'rishdingiz?", "I talked to…"),
+      step("Kuningiz qanday o'tdi — yaxshi, charchatadigan?", "All in all, my day was…"),
+    ],
+  },
+  {
+    id: "work",
+    uz: "Bugun ishda nima bo'ldi?",
+    en: "What happened at work today?",
+    steps: [
+      step("Ishda asosan nima bilan band bo'ldingiz?", "Today at work I…"),
+      step("Qiyin yoki qiziq nima bo'ldi?", "The most interesting thing was…"),
+      step("Biror muammo bo'ldimi, uni qanday hal qildingiz?", "We had a problem with… so I…"),
+      step("Ertaga ishda nima qilasiz?", "Tomorrow I need to…"),
+    ],
+  },
+  {
+    id: "tomorrow",
+    uz: "Ertangi rejangiz qanday?",
+    en: "What are your plans for tomorrow?",
+    steps: [
+      step("Ertalab nima qilasiz?", "Tomorrow morning I'm going to…"),
+      step("Kunduzi eng muhim ish nima?", "The most important thing is…"),
+      step("Kim bilan ko'rishasiz yoki gaplashasiz?", "I'm meeting…"),
+      step("Kechqurun nima qilmoqchisiz?", "In the evening I'd like to…"),
+    ],
+  },
+  {
+    id: "people",
+    uz: "Bugun kim bilan gaplashdingiz va nima haqida?",
+    en: "Who did you talk to today?",
+    steps: [
+      step("Kim bilan gaplashdingiz?", "Today I talked to…"),
+      step("U kim — do'st, hamkasb, qarindosh?", "He / She is my…"),
+      step("Nima haqida gaplashdingiz?", "We talked about…"),
+      step("Suhbatdan keyin nima his qildingiz?", "After that, I felt…"),
+    ],
+  },
   {
     id: "feel",
     uz: "Bugun o'zingizni qanday his qildingiz va nega?",
     en: "How did you feel today, and why?",
+    steps: [
+      step("Bugun kayfiyatingiz qanday edi?", "Today I felt…"),
+      step("Bunga nima sabab bo'ldi?", "It was because…"),
+      step("Kayfiyatingizni nima o'zgartirdi?", "Things changed when…"),
+      step("Ertaga nimani boshqacha qilasiz?", "Tomorrow I will…"),
+    ],
   },
-  { id: "learned", uz: "Bugun nimani o'rgandingiz yoki bildingiz?", en: "What did you learn today?" },
-  { id: "food", uz: "Bugun nima yedingiz? Eng mazali taom nima edi?", en: "What did you eat today?" },
+  {
+    id: "learned",
+    uz: "Bugun nimani o'rgandingiz yoki bildingiz?",
+    en: "What did you learn today?",
+    steps: [
+      step("Bugun nimani o'rgandingiz?", "Today I learned that…"),
+      step("Buni qayerdan bildingiz?", "I found out from…"),
+      step("Bu sizga nima uchun foydali?", "It's useful because…"),
+      step("Uni qanday ishlatasiz?", "I'm going to use it to…"),
+    ],
+  },
+  {
+    id: "food",
+    uz: "Bugun nima yedingiz? Eng mazali taom nima edi?",
+    en: "What did you eat today?",
+    steps: [
+      step("Nonushtaga nima yedingiz?", "For breakfast I had…"),
+      step("Tushlikda-chi?", "For lunch I ate…"),
+      step("Eng mazalisi qaysi edi va nega?", "The best thing was… because…"),
+      step("Ertaga nima yemoqchisiz?", "Tomorrow I want to try…"),
+    ],
+  },
   {
     id: "history",
     uz: "Sizga yoqqan bir tarixiy voqea haqida gapiring.",
     en: "Talk about a historical event you like.",
+    steps: [
+      step("Qaysi voqea haqida gapirasiz?", "I'd like to talk about…"),
+      step("Bu qachon va qayerda bo'lgan?", "It happened in…"),
+      step("Nima sodir bo'lgan?", "At that time…"),
+      step("Nega u sizga qiziq?", "I find it interesting because…"),
+    ],
   },
-  { id: "week", uz: "Bu hafta nima bo'ldi? Nima yaxshi, nima qiyin bo'ldi?", en: "How is your week going?" },
+  {
+    id: "week",
+    uz: "Bu hafta nima bo'ldi? Nima yaxshi, nima qiyin bo'ldi?",
+    en: "How is your week going?",
+    steps: [
+      step("Bu hafta asosan nima bilan band bo'ldingiz?", "This week I've been busy with…"),
+      step("Eng yaxshi lahza qaysi bo'ldi?", "The best moment was when…"),
+      step("Nima qiyin bo'ldi?", "The hardest part was…"),
+      step("Dam olish kunlari nima qilasiz?", "At the weekend I'm going to…"),
+    ],
+  },
   {
     id: "goal",
     uz: "Ingliz tilini nima uchun o'rganyapsiz? Qanday maqsadingiz bor?",
     en: "Why are you learning English?",
+    steps: [
+      step("Ingliz tilini nima uchun o'rganyapsiz?", "I'm learning English because…"),
+      step("Qachondan beri o'rganyapsiz?", "I've been learning it for…"),
+      step("Eng qiyini nima?", "The hardest thing for me is…"),
+      step("Bir yildan keyin nimaga erishmoqchisiz?", "In a year, I want to…"),
+    ],
   },
-] as const;
+] as const satisfies readonly { id: string; uz: string; en: string; steps: readonly RecapStep[] }[];
 export type RecapTopic = (typeof RECAP_TOPICS)[number];
 
 /** Today's topic; `shift` moves to the next one ("boshqa mavzu"). */
